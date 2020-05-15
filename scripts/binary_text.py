@@ -17,6 +17,8 @@ v0.3 added extractsjis, extract by tbl or arbitary extract implement, patch usin
 
 def isCjk(c): 
     ranges = [
+            {"from": ord(u"\u2000"), "to": ord(u"\u206f")},         # punctuation
+            {"from": ord(u"\u3000"), "to": ord(u"\u303f")},         # punctuation cjk
             {"from": ord(u"\u3300"), "to": ord(u"\u33ff")},         # compatibility ideographs
             {"from": ord(u"\ufe30"), "to": ord(u"\ufe4f")},         # compatibility ideographs
             {"from": ord(u"\uf900"), "to": ord(u"\ufaff")},         # compatibility ideographs

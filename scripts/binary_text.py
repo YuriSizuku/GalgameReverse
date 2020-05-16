@@ -12,6 +12,7 @@ A binary text tool for text exporting and importing, checking
 v0.1 initial version with utf-8 support
 v0.2 added tbl and decodetbl, encodetbl, check with tbl
 v0.3 added extractsjis, extract by tbl or arbitary extract implement, patch using tbl
+v0.3.1 added punctuation cjk, added try in decode
 
 """
 
@@ -327,6 +328,7 @@ def extract_text_file(inpath, outpath="out.txt", encoding = 'utf-8', tblpath="",
         data = fp.read()
         if tblpath!="" :
             tbl = load_tbl(tblpath, encoding=encoding) 
+        else: tbl = None
         if f_extract:
             addrs, texts = f_extract(data, tbl)
         else:
@@ -344,7 +346,11 @@ def extract_text_file(inpath, outpath="out.txt", encoding = 'utf-8', tblpath="",
             for i, (addr, text) in enumerate(zip(addrs, texts)):
                 size = len(text)
                 if tbl is  None:
-                    text = text.decode(encoding)
+                    try:
+                        text = text.decode(encoding)
+                    except UnicodeDecodeError as e:
+                        print("%s at %05d %06X"%(e, i, addr))
+                        continue
                 else: 
                     text = decodetbl(text, tbl)
                 text = text.replace('\n', r'[\n]')
@@ -358,9 +364,9 @@ def extract_text_file(inpath, outpath="out.txt", encoding = 'utf-8', tblpath="",
                             break
                     if flag is False: continue
 
-                fp2.write("○{num:04d}|{addr:06X}|{size:03X}○ {text}\n"
+                fp2.write("○{num:05d}|{addr:06X}|{size:03X}○ {text}\n"
                     .format(num=i, addr=addr, size=size, text=text ))
-                fp2.write("●{num:04d}|{addr:06X}|{size:03X}● {text}\n\n"
+                fp2.write("●{num:05d}|{addr:06X}|{size:03X}● {text}\n\n"
                     .format(num=i, addr=addr, size=size, text=text ))
                 print("at 0x%06X %d bytes extraced" % (addr, size))
             print("extracted text done! in " +  outpath)
@@ -396,7 +402,7 @@ def patch_text_file(textpath, insertpath, outpath="out.bin", encoding = 'utf-8',
         fp.write(data)
 
 def main():
-    parser = argparse.ArgumentParser(description="binary text tool v0.3 by devseed")
+    parser = argparse.ArgumentParser(description="binary text tool v0.3.1 by devseed")
     group = parser.add_mutually_exclusive_group()
     group.add_argument('-p', '--patch', type=str, help="patch the extracted text into inpath")
     group.add_argument('-m','--merge', type=str, help="merge the line with '●' in this file to the input file")

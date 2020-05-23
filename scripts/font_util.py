@@ -7,6 +7,13 @@ import codecs
 import numpy as np
 import cv2
 from PIL import ImageFont, ImageDraw, Image 
+"""
+Utils for extracting, building tile font, or generating font picture.
+And something about tbl.
+
+v0.1 initial version
+v0.1.5 add function save_tbl, fix px48->pt error
+"""
 
 def generate_gb2312_tbl(outpath=r""):
     tbl = []
@@ -68,6 +75,16 @@ def load_tbl(inpath, encoding='utf-8'):
                 tbl.append((charcode, c))
     print(inpath + " with " + str(len(tbl)) +" loaded!")
     return tbl
+
+def save_tbl(tbl, outpath="out.tbl", encoding='utf-8'):
+    with codecs.open(outpath, "w", encoding='utf-8') as fp:
+        for charcode, c in tbl:
+            if len(charcode) == 1:
+                d = struct.unpack('<B', charcode)[0]
+            elif len(charcode) == 2:
+                d = struct.unpack('>H', charcode)[0]
+            fp.writelines("{:X}={:s}\n".format(d, c))
+        print("tbl with " + str(len(tbl)) + " saved!")
 
 def tilefont2bgra(data, char_height, char_width, bpp, n_row=64, n_char=0, f_decode=None):
     def f_decode_default(data, bpp, idx):
@@ -173,7 +190,7 @@ def build_picturefont(ttfpath, tblpath, char_width, char_height, n_row, outpath=
     img = np.zeros((height, width, 4), dtype=np.uint8)
     print("to build picture %dX%d with %d charactors..."%(width, height, n))
     
-    ptpxmap = {8:6, 9:7, 16:12, 18:13.5, 24:18, 32:24, 36:48}
+    ptpxmap = {8:6, 9:7, 16:12, 18:13.5, 24:18, 32:24, 48:36}
     font = ImageFont.truetype(ttfpath, ptpxmap[char_height])
     imgpil = Image.fromarray(img)
     draw = ImageDraw.Draw(imgpil)

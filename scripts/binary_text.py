@@ -13,6 +13,7 @@ v0.1 initial version with utf-8 support
 v0.2 added tbl and decodetbl, encodetbl, check with tbl
 v0.3 added extractsjis, extract by tbl or arbitary extract implement, patch using tbl
 v0.3.1 added punctuation cjk, added try in decode
+v0.3.2 fixed patched error when short than origin 
 
 """
 
@@ -223,10 +224,10 @@ def patch_text(data, addrs, sizes, texts, encoding = 'utf-8', tbl=None):
             buf = encodetbl(text, tbl)
         else:
             buf = text.encode(encoding)
-        if len(buf) <= size : 
-            size = len(buf)
+        if len(buf) <= size :
+            buf = buf + (size-len(buf)) * b'\0'
         else: 
-            print("at 0x%06X, %d bytes is lager than %d bytes!"%(addr, size, len(buf)))
+            print("at 0x%06X, %d bytes is lager than %d bytes!"%(addr, len(buf)， size))
         data[addr:addr+size] = buf[0:size]
         print("at 0x%06X, %d bytes replaced!"%(addr, size))
     return data

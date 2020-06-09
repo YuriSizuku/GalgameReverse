@@ -227,7 +227,7 @@ def patch_text(data, addrs, sizes, texts, encoding = 'utf-8', tbl=None):
         if len(buf) <= size :
             buf = buf + (size-len(buf)) * b'\0'
         else: 
-            print("at 0x%06X, %d bytes is lager than %d bytes!"%(addr, len(buf)， size))
+            print("at 0x%06X, %d bytes is lager than %d bytes!"%(addr, len(buf), size))
         data[addr:addr+size] = buf[0:size]
         print("at 0x%06X, %d bytes replaced!"%(addr, size))
     return data
@@ -406,7 +406,7 @@ def main():
     parser = argparse.ArgumentParser(description="binary text tool v0.3.1 by devseed")
     group = parser.add_mutually_exclusive_group()
     group.add_argument('-p', '--patch', type=str, help="patch the extracted text into inpath")
-    group.add_argument('-m','--merge', type=str, help="merge the line with '●' in this file to the input file")
+    group.add_argument('-m','--merge', type=str, help="merge the line with '●' in this file to the inpath file")
     group.add_argument('-c', '--check', action="store_true", help="check if the text is valid")
     parser.add_argument('-o', '--outpath', type=str, default=r".\out")
     parser.add_argument('-e', '--encoding', type=str, default='utf-8')

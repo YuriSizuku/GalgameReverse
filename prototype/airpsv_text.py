@@ -6,6 +6,10 @@ import codecs
 import argparse
 import binary_text as bintext
 
+"""
+v0.3 fixed opcode length
+"""
+
 def extract_text(data, min_len=2):
     addrs = []
     texts = []
@@ -60,7 +64,8 @@ def patch_text(data, addrs, sizes, texts, tbl):
             print(hex(addr), text, " error!") 
             continue
         if len(buf) >= length:
-            data[addr+offset_inc-1] = len(buf)
+            data[addr+offset_inc-1] = len(buf) # 02 00 [length]
+            data[addr+offset_inc-4] = data[addr+offset_inc-4] + len(buf) - length # F0 00 [length]
             data[addr+offset_inc:addr+offset_inc+length] = buf
             offset_inc += len(buf) - length
             if len(buf) > length:
@@ -71,7 +76,7 @@ def patch_text(data, addrs, sizes, texts, tbl):
                         item['addr_new'] = item['addr'] + offset_inc
         else:
             data[addr+offset_inc:addr+offset_inc+len(buf)] = buf
-            data[addr+offset_inc+len(buf):addr+offset_inc+length] = (length-len(buf)) * b'\x00'
+            data[addr+offset_inc+len(buf):addr+offset_inc+length] = (length-len(buf)) * b'\x20'
     
     # rebuild jump pointer
     for item in jump_table:

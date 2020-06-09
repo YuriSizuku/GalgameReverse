@@ -14,6 +14,7 @@ v0.2 added tbl and decodetbl, encodetbl, check with tbl
 v0.3 added extractsjis, extract by tbl or arbitary extract implement, patch using tbl
 v0.3.1 added punctuation cjk, added try in decode
 v0.3.2 fixed patched error when short than origin 
+v0.3.3 change the merge function with matching "●(.*)●[ ](.*)"
 
 """
 
@@ -293,17 +294,15 @@ def merge_text(inpath1, inpath2, outpath):
                 sizes1.append(int(m.group(3), 16))
                 texts1.append(m.group(4))
 
-    addrs2, sizes2, texts2 = [], [], []
+    texts2 = []
     with codecs.open(inpath2, 'r', 'utf-8') as fp:
         lines_text = fp.readlines()
-        re_line = re.compile(r"●(\d*)\|(.*)\|(.*)●[ ](.*)")
+        re_line = re.compile(r"●(.*)●[ ](.*)")
         for line in lines_text:
             line = line.strip("\n")
             m = re_line.match(line)
             if m is not None:
-                addrs2.append(int(m.group(2), 16))
-                sizes2.append(int(m.group(3), 16))
-                texts2.append(m.group(4))
+                texts2.append(m.group(2))
     
     with codecs.open(outpath, "w",'utf-8') as fp:
         for i in range(len(addrs1)):

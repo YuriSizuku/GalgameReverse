@@ -13,6 +13,7 @@ And something about tbl.
 
 v0.1 initial version
 v0.1.5 add function save_tbl, fix px48->pt error
+v0.1.6 add gray2tilefont, tilefont2gray
 """
 
 def generate_gb2312_tbl(outpath=r""):
@@ -160,6 +161,65 @@ def bgra2tilefont(bgra, char_height, char_width, bpp, n_row=64, n_char=0, f_enco
                 idx_x = (i%n_row)*char_width + x
                 idx =  (i*char_height*char_width + y * char_height + x)*bpp/8
                 f_encode(data, bgra, bpp, idx, idx_x, idx_y)
+
+    return data
+
+def tilefont2gray(data, char_height, char_width, bpp=8, n_row=64, n_char=0, f_decode=None):
+    def f_decode_default(data, bpp, idx):
+        start = int(idx)
+        d = 0
+        if bpp==8:
+            d = struct.unpack('<B', data[start:start+1])[0]
+        else:
+            print("Invalid bpp value!")
+            return None
+        return d
+
+    n =  math.floor(len(data)*8/bpp/char_height/char_width)
+    if n_char!=0 and n_char < n: n = n_char
+    width = char_width * n_row
+    height = char_height * math.ceil(n/n_row)
+    gray = np.zeros([height, width], dtype='uint8')
+    if f_decode is None: f_decode = f_decode_default
+    print("%dX%d %dbpp %d tile chars -> %dX%d image"
+          %(char_width, char_height, bpp, n, width, height))
+
+    for i in range(n):
+        for y in range(char_height):
+            for x in range(char_width):
+                idx_y = (i//n_row)*char_height + y
+                idx_x = (i%n_row)*char_width + x
+                idx = (i*char_height*char_width + y * char_height + x)*bpp/8
+                gray[idx_y][idx_x]=f_decode(data, bpp, idx)
+
+    return gray
+
+def gray2tilefont(gray, char_height, char_width, bpp=8, n_row=64, n_char=0, f_encode=  None):
+    def f_encode_default(data, gray, bpp, idx, idx_x, idx_y):
+        start = int(idx)
+        if bpp==8:
+            d = gray[idx_y][idx_x]
+            struct.pack('<B', data[start:start+1], d)
+        else:
+            print("Invalid bpp value!")
+            return None
+
+    height, width, _ = gray.shape
+    n = (height/char_height) * (width/char_width) 
+    if n_char != 0 and n_char < n: n = n_char
+    size = math.ceil(n*bpp/8*char_height*char_width) 
+    data = bytearray(size)
+    if f_encode is None: f_encode=f_encode_default
+    print("%dX%d image -> %dX%d %dbpp %d tile chars, %d bytes"
+          %(width, height, char_width, char_height, bpp, n, size))
+
+    for i in range(n):
+        for y in range(char_height):
+            for x in range(char_width):
+                idx_y = (i//n_row)*char_height + y
+                idx_x = (i%n_row)*char_width + x
+                idx =  (i*char_height*char_width + y * char_height + x)*bpp/8
+                f_encode(data, gray, bpp, idx, idx_x, idx_y)
 
     return data
 

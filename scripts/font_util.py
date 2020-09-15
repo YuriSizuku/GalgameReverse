@@ -14,6 +14,7 @@ And something about tbl.
 v0.1 initial version
 v0.1.5 add function save_tbl, fix px48->pt error
 v0.1.6 add gray2tilefont, tilefont2gray
+v0.1.7 slightly change some function
 """
 
 def generate_gb2312_tbl(outpath=r""):
@@ -135,7 +136,7 @@ def bgra2tilefont(bgra, char_height, char_width, bpp, n_row=64, n_char=0, f_enco
         start = int(idx)
         if bpp==4:
             d = round((r+b+g)/3*15/255)
-            if idx > start:
+            if idx <= start:
                 data[start] = (data[start] & 0b00001111) + (d<<4)
             else:
                 data[start] = (data[start] & 0b11110000) + d
@@ -238,12 +239,14 @@ def build_tilefont(inpath, char_height, char_width, bpp, outpath=r".\out.bin", n
         fp.write(data)
     print(outpath + " tile font built!")
 
-def build_picturefont(ttfpath, tblpath, char_width, char_height, n_row, outpath="", padding=(0,0,0,0)):
+def build_picturefont(ttfpath, tblpath, char_width, char_height, n_row=64, 
+        outpath="", *, padding=(0,0,0,0), pt=0, shift_x=0, shift_y=0):
     """
+    :param tblpath: tblpath or tbl list
     :param padding: (up, down, left, right)
     """
-
-    tbl = load_tbl(tblpath)
+    if type(tblpath) != str: tbl = tblpath
+    else: tbl = load_tbl(tblpath)
     n = len(tbl)
     width = n_row*char_width + padding[2] + padding[3]
     height = math.ceil(n/n_row)*char_height + padding[0] + padding[1]
@@ -251,14 +254,15 @@ def build_picturefont(ttfpath, tblpath, char_width, char_height, n_row, outpath=
     print("to build picture %dX%d with %d charactors..."%(width, height, n))
     
     ptpxmap = {8:6, 9:7, 16:12, 18:13.5, 24:18, 32:24, 48:36}
-    font = ImageFont.truetype(ttfpath, ptpxmap[char_height])
+    if pt==0: pt=ptpxmap[char_height]
+    font = ImageFont.truetype(ttfpath, pt)
     imgpil = Image.fromarray(img)
     draw = ImageDraw.Draw(imgpil)
 
     for i in range(n):
         c = tbl[i][1]
-        x = (i%n_row)*char_width + padding[2]
-        y = (i//n_row)*char_height + padding[0]
+        x = (i%n_row)*char_width + padding[2] + shift_x
+        y = (i//n_row)*char_height + padding[0] + shift_y
         draw.text([x,y], c, fill=(255,255,255,255), font=font)
 
     if outpath!="": imgpil.save(outpath)

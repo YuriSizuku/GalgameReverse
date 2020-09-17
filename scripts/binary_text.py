@@ -15,6 +15,7 @@ v0.3 added extractsjis, extract by tbl or arbitary extract implement, patch usin
 v0.3.1 added punctuation cjk, added try in decode
 v0.3.2 fixed patched error when short than origin 
 v0.3.3 change the merge function with matching "●(.*)●[ ](.*)"
+v0.4 add read_format_text, write_format_text, optimize the code structure
 
 """
 
@@ -45,6 +46,50 @@ def isText(data, encoding="utf-8"):
         return False
     else: return True
 
+def write_format_text(outpath, ftexts1, ftexts2, *, num_width=5, addr_width=6, size_width=3):
+    """
+    text dict is as {'addr':, 'size':, 'text':}
+    :param ftexts1[]: text dict array in '○' line, 
+    :param ftexts2[]: text dict array in '●' line
+    """
+    if num_width==0:
+        num_width = len(str(len(ftexts1)))
+    if addr_width==0:
+        d = max([t['addr'] for t in ftexts1])
+        addr_width = len(hex(d))-2
+    if size_width==0:
+        d = max([t['size'] for t in ftexts1])
+        size_width = len(hex(d))-2
+    with codecs.open(outpath, "w", 'utf-8') as fp:
+        fstr1 = "○{num:0"+ str(num_width) + "d}|{addr:0"+ str(addr_width) + "X}|{size:0"+ str(size_width) + "X}○ {text}\n"
+        fstr2 = fstr1.replace('○', '●')+"\n"
+        for i, (t1, t2) in enumerate(zip(ftexts1, ftexts2)):
+            fp.write(fstr1.format(num=i,addr=t1['addr'],size=t1['size'],text=t1['text']))
+            fp.write(fstr2.format(num=i,addr=t2['addr'],size=t2['size'],text=t2['text']))
+
+def read_format_text(inpath):
+    """
+    text dict is as {'addr':, 'size':, 'text':}
+    :return: ftexts1[]: text dict array in '○' line, 
+             ftexts2[]: text dict array in '●' line
+    """
+    ftexts1, ftexts2 = [], []
+    with codecs.open(inpath, 'r', 'utf-8') as fp:
+        lines_text = fp.readlines()
+        re_line1 = re.compile(r"○(\d*)\|(.*)\|(.*)○[ ](.*)")
+        re_line2 = re.compile(r"●(\d*)\|(.*)\|(.*)●[ ](.*)")
+        for line in lines_text:
+            line = line.strip("\n")
+            m = re_line1.match(line)
+            if m is not None:
+                ftexts1.append({'addr':int(m.group(2),16),
+                                'size':int(m.group(3),16),'text': m.group(4)})
+            m = re_line2.match(line)
+            if m is not None:
+                ftexts2.append({'addr':int(m.group(2),16),
+                                'size':int(m.group(3),16),'text': m.group(4)})
+    return ftexts1, ftexts2
+
 def load_tbl(inpath, encoding='utf-8'):
     """
     :param inpath:tbl file format "code(XXXX) = utf-8 charcode", the sequence is the same as the text
@@ -71,7 +116,7 @@ def load_tbl(inpath, encoding='utf-8'):
     print(inpath + " with " + str(len(tbl)) +" loaded!")
     return tbl
 
-def encodetbl(text, tbl):
+def encode_tbl(text, tbl):
     """
     encoding the text by tbl
     :param tbl: for example [(charcode, c),...], c is the str
@@ -90,7 +135,7 @@ def encodetbl(text, tbl):
             return None
     return data.getvalue()
 
-def decodetbl(data, tbl, maxlen=3):
+def decode_tbl(data, tbl, maxlen=3):
     """
      decoding the data by tbl
     :return: the decoded text in python string
@@ -115,7 +160,7 @@ def decodetbl(data, tbl, maxlen=3):
     return text.getvalue()
 
 def extract_text_utf8 (data, min_len=6):
-    addrs, texts = [], []
+    addrs, texts_data = [], []
     utf8_lead_byte_to_count = []
     for i in range(256):
         utf8_lead_byte_to_count.append(1 + (i >= 0xe0) + (i >= 0xf0) if 0xbf < i < 0xf5 else 0)
@@ -131,7 +176,7 @@ def extract_text_utf8 (data, min_len=6):
                 if start != -1:
                     if i - start >= min_len:
                         addrs.append(start)
-                        texts.append(data[start:i])
+                        texts_data.append(data[start:i])
                     start = -1
             i += 1
         else:  
@@ -143,13 +188,13 @@ def extract_text_utf8 (data, min_len=6):
                 if start != -1:
                     if i - start >= min_len:
                         addrs.append(start)
-                        texts.append(data[start:i])
+                        texts_data.append(data[start:i])
                     start = -1
                 i += 1
-    return addrs, texts
+    return addrs, texts_data
 
 def extract_text_sjis(data, min_len=4):
-    addrs, texts = [], []
+    addrs, texts_data = [], []
 
     i = 0
     start = -1
@@ -173,21 +218,21 @@ def extract_text_sjis(data, min_len=4):
             if start != -1:
                 if i - start >= min_len:
                     addrs.append(start)
-                    texts.append(data[start:i])
+                    texts_data.append(data[start:i])
                 start = -1
             i += 1
         else:
             if start == -1:
                 start = i
 
-    return addrs, texts
+    return addrs, texts_data
 
 def extract_text_tbl(data, tbl, min_len=4): 
     """
     :param tbl: the customized charcode mapping to encoding charcode
     :return: All the extracted text is in utf-8
     """
-    addrs, texts = [], []
+    addrs, texts_data = [], []
     i = 0
     start = -1 
     while i<len(data):
@@ -207,30 +252,35 @@ def extract_text_tbl(data, tbl, min_len=4):
                 if i-start >= min_len:
                     print("detected text in [{:X}:{:X}] through tbl".format(start, i))
                     addrs.append(start)
-                    texts.append(data[start:i])
+                    texts_data.append(data[start:i])
                 start = -1
             i+=1
         
-    return addrs, texts
+    return addrs, texts_data
 
-def patch_text(data, addrs, sizes, texts, encoding = 'utf-8', tbl=None):
+def patch_text(data, ftexts, encoding = 'utf-8', tbl=None, can_longer=False):
     """
     :param encoding: the encoding of the original binary file if not using tbl
     """
-    for _, (addr, text, size) in enumerate(zip(addrs, texts, sizes)):
-        data[addr:addr+size] = bytearray(size)
+    offset = 0
+    for _, ftext in enumerate(ftexts):
+        addr, size, text = ftext['addr'], ftext['size'], ftext['text'] 
+        data[addr+offset:addr+offset+size] = bytearray(size)
         text = text.replace(r'[\n]', '\n')
         text = text.replace(r'[\r]', '\r')
-        if tbl:
-            buf = encodetbl(text, tbl)
+       
+        if tbl: buf = encode_tbl(text, tbl)
+        else: buf = text.encode(encoding)
+        
+        if len(buf) <= size : buf = buf + (size-len(buf)) * b'\0'
+        else: print("at 0x%06X, %d bytes is lager than %d bytes!"%(addr, len(buf), size))
+        if not can_longer:
+            data[addr+offset:addr+offset+size] = buf[0:size]
         else:
-            buf = text.encode(encoding)
-        if len(buf) <= size :
-            buf = buf + (size-len(buf)) * b'\0'
-        else: 
-            print("at 0x%06X, %d bytes is lager than %d bytes!"%(addr, len(buf), size))
-        data[addr:addr+size] = buf[0:size]
-        print("at 0x%06X, %d bytes replaced!"%(addr, size))
+            data[addr+offset:addr+offset+size] = buf
+            offset += len(buf) - size
+        print("at 0x%06X, %d bytes replaced!"%(addr+offset, size))
+ 
     return data
         
 
@@ -240,41 +290,28 @@ def check_text(textpath, outpath="check.txt", encoding="utf-8", tblpath=""):
     :param encoding: the encoding of textpath
     :param tbl: the customized charcode mapping to encoding charcode, tbl must be in utf-8
     """
-    if tblpath!="":
-        tbl = load_tbl(tblpath)
+    if tblpath!="": tbl = load_tbl(tblpath)
+    else: tbl = None
 
-    idxs, addrs, sizes, texts = [], [], [], []
-    with codecs.open(textpath, 'r', 'utf-8') as fp:
-        lines_text = fp.readlines()
-        re_line1 = re.compile(r"○(\d*)\|(.*)\|(.*)○[ ](.*)")
-        re_line2 = re.compile(r"●(\d*)\|(.*)\|(.*)●[ ](.*)")
-        for _, line in enumerate(lines_text):
-            line = line.strip("\n")
-            m = re_line1.match(line)
-            if m is not None:
-                sizes.append(int(m.group(3), 16))
-            m = re_line2.match(line)
-            if m is not None:
-                idxs.append(int(m.group(1)))
-                addrs.append(int(m.group(2), 16))
-                texts.append(m.group(4))
+    _, ftexts = read_format_text(textpath)
 
     with codecs.open(outpath, 'w', 'utf-8') as fp:
-        for i in range(len(sizes)):
+        for i, ftext in enumerate(ftexts):
             err_str = ""
-            if tbl:
-                for j, c in enumerate(texts[i]):
-                    if encodetbl(c, tbl) is None:
+            addr, size, text = ftext['addr'], ftext['size'], ftext['text'] 
+            if tbl is not None:
+                for j, c in enumerate(text):
+                    if encode_tbl(c, tbl) is None:
                         err_str+= "{}({:d}), ".format(c, j)
                 if err_str!="":
-                    line = "{}  {:06X}  {}".format(idxs[i], addrs[i], err_str[:-2])
+                    line = "{}  {:06X}  {}".format(i, addr, err_str[:-2])
                     print(line)
                     fp.write(line+"\n")
 
             if  err_str=="":
-                text_len = len(encodetbl(texts[i], tbl)) if tbl else len(texts[i].encode(encoding))
-                if text_len > sizes[i]:
-                    line = "{}  {:06X}  {:d} > {:d}".format(idxs[i], addrs[i], text_len, sizes[i])
+                text_len = len(encode_tbl(text, tbl)) if tbl else len(text.encode(encoding))
+                if text_len > size:
+                    line = "{}  {:06X}  {:d} > {:d}".format(i, addr, text_len, size)
                     print(line)
                     fp.write(line+"\n")
 
@@ -282,40 +319,10 @@ def merge_text(inpath1, inpath2, outpath):
     """
     merge the '○' line in inpath2, '●' line in inpath2, to outpath
     """
-    addrs1, sizes1, texts1 = [], [], []
-    with codecs.open(inpath1, 'r', 'utf-8') as fp:
-        lines_text = fp.readlines()
-        re_line = re.compile(r"○(\d*)\|(.*)\|(.*)○[ ](.*)")
-        for line in lines_text:
-            line = line.strip("\n")
-            m = re_line.match(line)
-            if m is not None:
-                addrs1.append(int(m.group(2), 16))
-                sizes1.append(int(m.group(3), 16))
-                texts1.append(m.group(4))
-
-    texts2 = []
-    with codecs.open(inpath2, 'r', 'utf-8') as fp:
-        lines_text = fp.readlines()
-        re_line = re.compile(r"●(.*)●[ ](.*)")
-        for line in lines_text:
-            line = line.strip("\n")
-            m = re_line.match(line)
-            if m is not None:
-                texts2.append(m.group(2))
-    
-    with codecs.open(outpath, "w",'utf-8') as fp:
-        for i in range(len(addrs1)):
-            addr = addrs1[i]
-            size = sizes1[i]
-            text1 = texts1[i]
-            text2 = texts2[i]
-            fp.write("○{num:04d}|{addr:06X}|{size:03X}○ {text}\n"
-                .format(num=i, addr=addr, size=size, text=text1 ))
-            fp.write("●{num:04d}|{addr:06X}|{size:03X}● {text}\n\n"
-                .format(num=i, addr=addr, size=size, text=text2 ))
-            print("at 0x%06X %d bytes merged" % (addr, size))
-        print("merged text done! in " +  outpath)
+    ftexts1, _ = read_format_text(inpath1)
+    _, ftexts2 = read_format_text(inpath2)
+    write_format_text(inpath1, inpath2)
+    print("merged text done! in " +  outpath)
         
 
 def extract_text_file(inpath, outpath="out.txt", encoding = 'utf-8', tblpath="", min_len=6, has_cjk=True, f_extract=None):
@@ -326,67 +333,57 @@ def extract_text_file(inpath, outpath="out.txt", encoding = 'utf-8', tblpath="",
     """
     with open(inpath, "rb") as fp:
         data = fp.read()
+
+    if tblpath!="" :
+        tbl = load_tbl(tblpath, encoding=encoding) 
+    else: tbl = None
+    if f_extract:
+        addrs, texts_data = f_extract(data, tbl)
+    else:
         if tblpath!="" :
-            tbl = load_tbl(tblpath, encoding=encoding) 
-        else: tbl = None
-        if f_extract:
-            addrs, texts = f_extract(data, tbl)
-        else:
-            if tblpath!="" :
-                addrs, texts = extract_text_tbl(data, tbl, min_len=min_len)
-            elif encoding =="utf-8" :
-                addrs, texts = extract_text_utf8(data, min_len=min_len)
-            elif encoding == "sjis" or  encoding == "shift-jis":
-                addrs, texts = extract_text_sjis(data, min_len=min_len)
-            else: 
-                print("Invalid encoding type!")
-                return None
+            addrs, texts_data = extract_text_tbl(data, tbl, min_len=min_len)
+        elif encoding =="utf-8" :
+            addrs, texts_data = extract_text_utf8(data, min_len=min_len)
+        elif encoding == "sjis" or  encoding == "shift-jis":
+            addrs, texts_data = extract_text_sjis(data, min_len=min_len)
+        else: 
+            print("Invalid encoding type!")
+            return None
 
-        with codecs.open(outpath, "w", 'utf-8') as fp2:
-            for i, (addr, text) in enumerate(zip(addrs, texts)):
-                size = len(text)
-                if tbl is  None:
-                    try:
-                        text = text.decode(encoding)
-                    except UnicodeDecodeError as e:
-                        print("%s at %05d %06X"%(e, i, addr))
-                        continue
-                else: 
-                    text = decodetbl(text, tbl)
-                text = text.replace('\n', r'[\n]')
-                text = text.replace('\r', r'[\r]')
+    ftexts = []
+    for i, (addr, text_data) in enumerate(zip(addrs, texts_data)):
+        size = len(text_data)
+        if tbl is  None:
+            try:
+                text = text_data.decode(encoding)
+            except UnicodeDecodeError as e:
+                print("%s at %05d %06X"%(e, i, addr))
+                continue
+        else: 
+            text = decode_tbl(text_data, tbl)
+        text = text.replace('\n', r'[\n]')
+        text = text.replace('\r', r'[\r]')
 
-                if has_cjk:
-                    flag = False
-                    for c in text:
-                        if isCjk(c):
-                            flag = True
-                            break
-                    if flag is False: continue
+        if has_cjk:
+            flag = False
+            for c in text:
+                if isCjk(c):
+                    flag = True
+                    break
+            if flag is False: continue
+        
+        ftexts.append({'addr':addr, 'size':size, 'text':text})
+        print("at 0x%06X %d bytes extraced" % (addr, size))
 
-                fp2.write("○{num:05d}|{addr:06X}|{size:03X}○ {text}\n"
-                    .format(num=i, addr=addr, size=size, text=text ))
-                fp2.write("●{num:05d}|{addr:06X}|{size:03X}● {text}\n\n"
-                    .format(num=i, addr=addr, size=size, text=text ))
-                print("at 0x%06X %d bytes extraced" % (addr, size))
-            print("extracted text done! in " +  outpath)
+    write_format_text(outpath, ftexts, ftexts)
+    print("extracted text done! in " +  outpath)
             
-def patch_text_file(textpath, insertpath, outpath="out.bin", encoding = 'utf-8', tblpath="", f_encrypt=None, f_patch_text=None):
+def patch_text_file(textpath, insertpath, outpath="out.bin", encoding = 'utf-8', tblpath="", f_encrypt=None, f_patch_text=None, can_longer=False):
     """
     import the text in textpath to insertpath, make the imported file as outpath
     :param encoding: the encoding of the insertpath, or custom tbl's if not None
     """
-    addrs, sizes, texts = [], [], []
-    with codecs.open(textpath, 'r', 'utf-8') as fp:
-        lines_text = fp.readlines()
-        re_line = re.compile(r"●(\d*)\|(.*)\|(.*)●[ ](.*)")
-        for line in lines_text:
-            line = line.strip("\n")
-            m = re_line.match(line)
-            if m is not None:
-                addrs.append(int(m.group(2), 16))
-                sizes.append(int(m.group(3), 16))
-                texts.append(m.group(4))
+    _, ftexts2 = read_format_text(textpath)
 
     with open(insertpath, "rb") as fp:
         data = bytearray(fp.read())
@@ -394,9 +391,9 @@ def patch_text_file(textpath, insertpath, outpath="out.bin", encoding = 'utf-8',
             data = f_encrypt(data)
         tbl = None if tblpath=="" else load_tbl(tblpath, encoding=encoding)
         if f_patch_text:
-            data = f_patch_text(data, addrs, sizes, texts, tbl)
+            data = f_patch_text(data, ftexts2, tbl)
         else:
-            data = patch_text(data, addrs, sizes, texts, encoding=encoding, tbl=tbl)
+            data = patch_text(data, ftexts2, encoding=encoding, tbl=tbl, can_longer=can_longer)
     
     with open(outpath, "wb") as fp:
         fp.write(data)
@@ -406,16 +403,17 @@ def main():
     group = parser.add_mutually_exclusive_group()
     group.add_argument('-p', '--patch', type=str, help="patch the extracted text into inpath")
     group.add_argument('-m','--merge', type=str, help="merge the line with '●' in this file to the inpath file")
-    group.add_argument('-c', '--check', action="store_true", help="check if the text is valid")
+    group.add_argument('-c', '--check', action='store_true', help="check if the text is valid")
     parser.add_argument('-o', '--outpath', type=str, default=r".\out")
     parser.add_argument('-e', '--encoding', type=str, default='utf-8')
     parser.add_argument('--min_len', type=int, default=6)
     parser.add_argument('--tbl', type=str, default="", help="custom charcode table")
-    parser.add_argument('--has_cjk', action="store_true", help="extract the text with cjk only")
+    parser.add_argument('--has_cjk', action='store_true', help="extract the text with cjk only")
+    parser.add_argument('--can_longer', action='store_true', help="inserted text can be longer than the original")
     parser.add_argument('inpath', type=str)
     args = parser.parse_args()
     if args.patch:
-        patch_text_file(args.inpath, args.patch, args.outpath, encoding=args.encoding, tblpath=args.tbl)
+        patch_text_file(args.inpath, args.patch, args.outpath, encoding=args.encoding, tblpath=args.tbl, can_longer=args.can_longer)
     elif args.merge:
         merge_text(args.inpath, args.merge, args.outpath)
     elif args.check:

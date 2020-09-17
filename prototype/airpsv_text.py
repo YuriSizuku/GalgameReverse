@@ -1,4 +1,6 @@
  # -*- coding: utf-8 -*-
+import sys
+sys.path.append(r"..\scripts")
 import os
 import struct
 import re
@@ -59,7 +61,7 @@ def patch_text(data, addrs, sizes, texts, tbl):
     offset_inc = 0
     for _, (addr, text, _) in enumerate(zip(addrs, texts, sizes)):
         length = data[addr+offset_inc-1]
-        buf = bintext.encodetbl(text ,tbl)
+        buf = bintext.encode_tbl(text ,tbl)
         if buf==None:
             print(hex(addr), text, " error!") 
             continue
@@ -147,7 +149,7 @@ def main():
 
 def debug():
     pass
-
+    
 if __name__ == "__main__":
     main()
     #debug()

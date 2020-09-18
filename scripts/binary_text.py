@@ -321,7 +321,7 @@ def merge_text(inpath1, inpath2, outpath):
     """
     ftexts1, _ = read_format_text(inpath1)
     _, ftexts2 = read_format_text(inpath2)
-    write_format_text(inpath1, inpath2)
+    write_format_text(outpath, inpath1, inpath2)
     print("merged text done! in " +  outpath)
         
 

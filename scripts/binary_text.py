@@ -433,7 +433,7 @@ def main():
     elif args.check:
         check_text(args.inpath, args.outpath, encoding=args.encoding, tblpath=args.tbl)
     else:
-        extract_text_file(args.inpath, args.outpath, encoding=args.encoding, tblpath=args.tbl, has_cjk=args.has_cjk)
+        extract_text_file(args.inpath, args.outpath, encoding=args.encoding, tblpath=args.tbl, has_cjk=args.has_cjk, min_len=args.min_len)
 
 if __name__ == "__main__":
     main()

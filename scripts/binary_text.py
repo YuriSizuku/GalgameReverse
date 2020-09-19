@@ -218,6 +218,7 @@ def extract_text_sjis(data, min_len=4):
             if start == -1: start = i
             i+=1
         elif (c1 >= 0x81 and c1 <= 0x9f) or (c1 >= 0xe0 and c1 <= 0xef): # sjis
+            if i+2>len(data): break
             c2 = struct.unpack('<B', data[i+1:i+2])[0]
             if (c2 >= 0x40 and c2 <= 0x7e) or (c2 >= 0x80 and c2 <= 0xfc): 
                 if start == -1: start = i

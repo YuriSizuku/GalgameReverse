@@ -413,7 +413,7 @@ def patch_text_file(textpath, insertpath, outpath="out.bin", encoding = 'utf-8',
         fp.write(data)
 
 def main():
-    parser = argparse.ArgumentParser(description="binary text tool v0.3.1 by devseed")
+    parser = argparse.ArgumentParser(description="binary text tool v0.4.1 by devseed")
     group = parser.add_mutually_exclusive_group()
     group.add_argument('-p', '--patch', type=str, help="patch the extracted text into inpath")
     group.add_argument('-m','--merge', type=str, help="merge the line with '●' in this file to the inpath file")

@@ -15,6 +15,7 @@ v0.1 initial version
 v0.1.5 add function save_tbl, fix px48->pt error
 v0.1.6 add gray2tilefont, tilefont2gray
 v0.1.7 slightly change some function
+v0.1.8 add generate_sjis_tbl, merge tbl
 """
 
 def generate_gb2312_tbl(outpath=r""):
@@ -45,15 +46,52 @@ def generate_gb2312_tbl(outpath=r""):
             charcode = struct.pack('<BB', high, low)
             tbl.append((charcode, charcode.decode('gb2312')))
 
-    if outpath!="":
-        with codecs.open(outpath, "w", encoding='utf-8') as fp:
-            for charcode, c in tbl:
-                if len(charcode) == 1:
-                    d = struct.unpack('<B', charcode)[0]
-                elif len(charcode) == 2:
-                    d = struct.unpack('>H', charcode)[0]
-                fp.writelines("{:X}={:s}\n".format(d, c))
-    print("gb2312 with " + str(len(tbl)) + " generated!")
+    if outpath!="": save_tbl(tbl, outpath)
+    print("gb2312 tbl with " + str(len(tbl)) + " generated!")
+    return tbl
+
+def generate_sjis_tbl(outpath=r""):
+    tbl = []
+    for low in range(0x20, 0x7f): # asci
+        charcode = struct.pack('<B', low)
+        tbl.append((charcode, charcode.decode('sjis')))
+    
+    for high in range(0x81, 0xa0): # 0x81-0x9F
+        for low in range(0x40, 0xfd):
+            if low==0x7f: continue
+            charcode = struct.pack('<BB', high, low)
+            try:
+                c = charcode.decode('sjis')
+            except  UnicodeDecodeError:
+                c = '・'           
+            tbl.append((charcode, c))
+
+    for high in range(0xe0, 0xf0): # 0xE0-0xEF
+        for low in range(0x40, 0xfd):
+            if low==0x7f: continue
+            charcode = struct.pack('<BB', high, low)
+            try:
+                c = charcode.decode('sjis')
+            except  UnicodeDecodeError:
+                c = '・'           
+            tbl.append((charcode, c))
+
+    if outpath!="": save_tbl(tbl, outpath)
+    print("sjis tbl with " + str(len(tbl)) + " generated!")
+    return tbl
+
+def merge_tbl(tbl1, tbl2, outpath=r""):
+    """
+    merge the charcode in tbl1 and the char in tbl2
+    the return length is tbl1's
+    """
+    tbl = []
+    for i in range(len(tbl1)):
+        if i<len(tbl2): c= tbl2[i][1]
+        else: c='・'
+        tbl.append((tbl1[i][0], c))
+    if outpath!="": save_tbl(tbl, outpath)
+    print("tbl1 " + str(len(tbl1)) + ",  tbl2 "+ str(len(tbl2)) + " merged!")
     return tbl
 
 def load_tbl(inpath, encoding='utf-8'):

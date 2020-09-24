@@ -15,30 +15,31 @@ v0.1 initial version
 v0.1.5 add function save_tbl, fix px48->pt error
 v0.1.6 add gray2tilefont, tilefont2gray
 v0.1.7 slightly change some function
-v0.1.8 add generate_sjis_tbl, merge tbl
+v0.1.8 add generate_sjis_tbl, merge tbl, find_adding_char
 """
 
-def generate_gb2312_tbl(outpath=r""):
+def generate_gb2312_tbl(outpath=r"", only_kanji=False):
     tbl = []
-    for low in range(0x20, 0x7f): # asci
-        charcode = struct.pack('<B', low)
-        tbl.append((charcode, charcode.decode('gb2312')))
-    
-    for low in range(0xa1, 0xfe): # Punctuation
-        charcode = struct.pack('<BB', 0xa1, low)
-        tbl.append((charcode, charcode.decode('gb2312')))
-    
-    for low in range(0xa1, 0xfe): # fullwidth chractor
-        charcode = struct.pack('<BB', 0xa3, low)
-        tbl.append((charcode, charcode.decode('gb2312')))
+    if only_kanji is False:
+        for low in range(0x20, 0x7f): # asci
+            charcode = struct.pack('<B', low)
+            tbl.append((charcode, charcode.decode('gb2312')))
+        
+        for low in range(0xa1, 0xfe): # Punctuation
+            charcode = struct.pack('<BB', 0xa1, low)
+            tbl.append((charcode, charcode.decode('gb2312')))
+        
+        for low in range(0xa1, 0xfe): # fullwidth charactor
+            charcode = struct.pack('<BB', 0xa3, low)
+            tbl.append((charcode, charcode.decode('gb2312')))
 
-    for low in range(0xa1, 0xf4): # hirakana
-        charcode = struct.pack('<BB', 0xa4, low)
-        tbl.append((charcode, charcode.decode('gb2312')))
+        for low in range(0xa1, 0xf4): # hirakana
+            charcode = struct.pack('<BB', 0xa4, low)
+            tbl.append((charcode, charcode.decode('gb2312')))
 
-    for low in range(0xa1, 0xf7): # katakana 
-        charcode = struct.pack('<BB', 0xa5, low)
-        tbl.append((charcode, charcode.decode('gb2312')))
+        for low in range(0xa1, 0xf7): # katakana 
+            charcode = struct.pack('<BB', 0xa5, low)
+            tbl.append((charcode, charcode.decode('gb2312')))
 
     for high in range(0xb0, 0xf8): # Chinese charactor
         for low in range(0xa1, 0xff):
@@ -50,7 +51,7 @@ def generate_gb2312_tbl(outpath=r""):
     print("gb2312 tbl with " + str(len(tbl)) + " generated!")
     return tbl
 
-def generate_sjis_tbl(outpath=r""):
+def generate_sjis_tbl(outpath=r"", index_empty=None, fullsjis=True):
     tbl = []
     for low in range(0x20, 0x7f): # asci
         charcode = struct.pack('<B', low)
@@ -64,9 +65,13 @@ def generate_sjis_tbl(outpath=r""):
                 c = charcode.decode('sjis')
             except  UnicodeDecodeError:
                 c = '・'           
+                if index_empty!=None:
+                    index_empty.append(len(tbl))
             tbl.append((charcode, c))
-
-    for high in range(0xe0, 0xf0): # 0xE0-0xEF
+    
+    if fullsjis is True: end = 0xf0
+    else: end =  0xeb
+    for high in range(0xe0, end): # 0xE0-0xEF, sometimes 0xE0~-0xEA
         for low in range(0x40, 0xfd):
             if low==0x7f: continue
             charcode = struct.pack('<BB', high, low)
@@ -74,11 +79,34 @@ def generate_sjis_tbl(outpath=r""):
                 c = charcode.decode('sjis')
             except  UnicodeDecodeError:
                 c = '・'           
+                if index_empty!=None:
+                    index_empty.append(len(tbl))
             tbl.append((charcode, c))
 
     if outpath!="": save_tbl(tbl, outpath)
     print("sjis tbl with " + str(len(tbl)) + " generated!")
     return tbl
+
+def find_adding_char(tbl_base, tbl_adding, index_same=None):
+    """
+    :param index_same: list, the index of the same char
+    :return: list the index of the adding char
+    """
+    tbl_base_map = dict()
+    adding_char = set()
+    index_adding = []
+    for i, t in enumerate(tbl_base):
+        tbl_base_map.update({t[1]: i})
+    for i, t in enumerate(tbl_adding): 
+        if (t[1] not in tbl_base_map) and (t[1] not in adding_char):
+            adding_char.add(t[1])
+            index_adding.append(i)
+            continue
+        if index_same!=None and t[1] in tbl_base_map:
+            index_same.append(tbl_base_map[t[1]])
+            continue
+    print(str(len(index_adding)) + " adding chars!")
+    return index_adding
 
 def merge_tbl(tbl1, tbl2, outpath=r""):
     """

@@ -17,6 +17,7 @@ v0.3.2 fixed patched error when short than origin
 v0.3.3 change the merge function with matching "●(.*)●[ ](.*)"
 v0.4 add read_format_text, write_format_text, optimize the code structure
 v0.4.1 fixed merge_text in this optimized the code structure
+v0.4.2 remove useless callbacks, adjust default len, add arbitary encoding
 
 """
 
@@ -172,7 +173,7 @@ def decode_tbl(data, tbl, maxlen=3):
             return None
     return text.getvalue()
 
-def extract_text_utf8 (data, min_len=6):
+def extract_text_utf8 (data, min_len=3):
     addrs, texts_data = [], []
     utf8_lead_byte_to_count = []
     for i in range(256):
@@ -206,7 +207,7 @@ def extract_text_utf8 (data, min_len=6):
                 i += 1
     return addrs, texts_data
 
-def extract_text_sjis(data, min_len=4):
+def extract_text_sjis(data, min_len=2):
     addrs, texts_data = [], []
 
     i = 0
@@ -241,7 +242,7 @@ def extract_text_sjis(data, min_len=4):
 
     return addrs, texts_data
 
-def extract_text_tbl(data, tbl, min_len=4): 
+def extract_text_tbl(data, tbl, min_len=2): 
     """
     :param tbl: the customized charcode mapping to encoding charcode
     :return: All the extracted text is in utf-8
@@ -270,6 +271,39 @@ def extract_text_tbl(data, tbl, min_len=4):
                 start = -1
             i+=1
         
+    return addrs, texts_data
+
+def extract_multichar(data, encoding, min_len=2):
+    addrs, texts_data = [], []
+    i = 0
+    start = -1 
+    while i<len(data):
+        c1,  = struct.unpack('<B', data[i:i+1])
+        flag_find = False
+        if c1 < 0x20:
+            if start != -1:
+                if i-start >= min_len:
+                    print("detected text in [{:X}:{:X}] through {:s}".format(start, i, encoding))
+                    addrs.append(start)
+                    texts_data.append(data[start:i])
+                start = -1
+            i += 1
+        elif c1 >= 0x20 and c1 <= 0x7f:
+            if start == -1:  start = i
+            i += 1
+        else:
+            c = data[i:i+2]
+            if isText(c, encoding=encoding):
+                if start == -1: start = i
+                i += 2
+            else:
+                if start != -1:
+                    if i-start >= min_len:
+                        print("detected text in [{:X}:{:X}] through {:s}".format(start, i, encoding))
+                        addrs.append(start)
+                        texts_data.append(data[start:i])
+                    start = -1
+                i+=1
     return addrs, texts_data
 
 def patch_text(data, ftexts, encoding = 'utf-8', tbl=None, can_longer=False):
@@ -339,7 +373,7 @@ def merge_text(inpath1, inpath2, outpath):
     print("merged text done! in " +  outpath)
         
 
-def extract_text_file(inpath, outpath="out.txt", encoding = 'utf-8', tblpath="", min_len=6, has_cjk=True, f_extract=None):
+def extract_text_file(inpath, outpath="out.txt", encoding = 'utf-8', tblpath="", min_len=2, has_cjk=True, f_extract=None):
     """
     export all the text to txt file in utf-8
     :param encoding: the encoding to the inpath, if tbl is None
@@ -361,8 +395,7 @@ def extract_text_file(inpath, outpath="out.txt", encoding = 'utf-8', tblpath="",
         elif encoding == "sjis" or  encoding == "shift-jis":
             addrs, texts_data = extract_text_sjis(data, min_len=min_len)
         else: 
-            print("Invalid encoding type!")
-            return None
+            addrs, texts_data = extract_multichar(data, encoding=encoding, min_len=min_len)
 
     ftexts = []
     for i, (addr, text_data) in enumerate(zip(addrs, texts_data)):
@@ -392,7 +425,7 @@ def extract_text_file(inpath, outpath="out.txt", encoding = 'utf-8', tblpath="",
     write_format_text(outpath, ftexts, ftexts)
     print("extracted text done! in " +  outpath)
             
-def patch_text_file(textpath, insertpath, outpath="out.bin", encoding = 'utf-8', tblpath="", f_encrypt=None, f_patch_text=None, can_longer=False):
+def patch_text_file(textpath, insertpath, outpath="out.bin", encoding = 'utf-8', tblpath="", can_longer=False):
     """
     import the text in textpath to insertpath, make the imported file as outpath
     :param encoding: the encoding of the insertpath, or custom tbl's if not None
@@ -401,26 +434,21 @@ def patch_text_file(textpath, insertpath, outpath="out.bin", encoding = 'utf-8',
 
     with open(insertpath, "rb") as fp:
         data = bytearray(fp.read())
-        if f_encrypt: 
-            data = f_encrypt(data)
         tbl = None if tblpath=="" else load_tbl(tblpath, encoding=encoding)
-        if f_patch_text:
-            data = f_patch_text(data, ftexts2, tbl)
-        else:
-            data = patch_text(data, ftexts2, encoding=encoding, tbl=tbl, can_longer=can_longer)
+        data = patch_text(data, ftexts2, encoding=encoding, tbl=tbl, can_longer=can_longer)
     
     with open(outpath, "wb") as fp:
         fp.write(data)
 
 def main():
-    parser = argparse.ArgumentParser(description="binary text tool v0.4.1 by devseed")
+    parser = argparse.ArgumentParser(description="binary text tool v0.4.2 by devseed")
     group = parser.add_mutually_exclusive_group()
-    group.add_argument('-p', '--patch', type=str, help="patch this path by the inpath text")
+    group.add_argument('-p', '--patch', type=str, help="patch this path by the inpath text, this is origin script file")
     group.add_argument('-m','--merge', type=str, help="merge the line with '●' in this file to the inpath file")
     group.add_argument('-c', '--check', action='store_true', help="check if the text is valid")
     parser.add_argument('-o', '--outpath', type=str, default=r".\out")
     parser.add_argument('-e', '--encoding', type=str, default='utf-8')
-    parser.add_argument('--min_len', type=int, default=6)
+    parser.add_argument('--min_len', type=int, default=2)
     parser.add_argument('--tbl', type=str, default="", help="custom charcode table")
     parser.add_argument('--has_cjk', action='store_true', help="extract the text with cjk only")
     parser.add_argument('--can_longer', action='store_true', help="inserted text can be longer than the original")

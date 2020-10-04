@@ -17,7 +17,7 @@ v0.3.2 fixed patched error when short than origin
 v0.3.3 change the merge function with matching "●(.*)●[ ](.*)"
 v0.4 add read_format_text, write_format_text, optimize the code structure
 v0.4.1 fixed merge_text in this optimized the code structure
-v0.4.2 remove useless callbacks, adjust default len, add arbitary encoding
+v0.4.2 remove useless callbacks, adjust default len, add arbitary encoding, add jump_table rebuild
 
 """
 
@@ -306,9 +306,11 @@ def extract_multichar(data, encoding, min_len=2):
                 i+=1
     return addrs, texts_data
 
-def patch_text(data, ftexts, encoding = 'utf-8', tbl=None, can_longer=False):
+def patch_text(data, ftexts, encoding = 'utf-8', tbl=None, can_longer=False, jump_table=None):
     """
+    :param data: bytearray
     :param encoding: the encoding of the original binary file if not using tbl
+    :jump_table: a dict array with {'addr':, 'addr_new':, 'jumpto':, 'jumpto_new':} 
     """
     offset = 0
     for _, ftext in enumerate(ftexts):
@@ -320,6 +322,11 @@ def patch_text(data, ftexts, encoding = 'utf-8', tbl=None, can_longer=False):
         if tbl: buf = encode_tbl(text, tbl)
         else: buf = text.encode(encoding)
         
+        if jump_table is not None:
+            for t in jump_table:
+                if t['addr'] >= addr: t['addr_new'] = t['addr'] + offset
+                if t['jumpto'] >= addr:  t['jumpto_new'] = t['jumpto'] + offset
+
         if len(buf) <= size : buf = buf + (size-len(buf)) * b'\0'
         else: print("at 0x%06X, %d bytes is lager than %d bytes!"%(addr, len(buf), size))
         if not can_longer:

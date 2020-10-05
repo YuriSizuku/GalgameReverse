@@ -17,7 +17,8 @@ v0.3.2 fixed patched error when short than origin
 v0.3.3 change the merge function with matching "●(.*)●[ ](.*)"
 v0.4 add read_format_text, write_format_text, optimize the code structure
 v0.4.1 fixed merge_text in this optimized the code structure
-v0.4.2 remove useless callbacks, adjust default len, add arbitary encoding, add jump_table rebuild
+v0.4.2 remove useless callbacks, adjust default len, add arbitary encoding, add jump_table rebuild, 
+v0.4.3 change the structure, write_format_text, read_format_text added line_texts mode
 
 """
 
@@ -62,46 +63,72 @@ def write_format_text(outpath, ftexts1, ftexts2, *, num_width=5, addr_width=6, s
     if size_width==0:
         d = max([t['size'] for t in ftexts1])
         size_width = len(hex(d))-2
-    with codecs.open(outpath, "w", 'utf-8') as fp:
-        fstr1 = "○{num:0"+ str(num_width) + "d}|{addr:0"+ str(addr_width) + "X}|{size:0"+ str(size_width) + "X}○ {text}\n"
-        fstr2 = fstr1.replace('○', '●')+"\n"
-        for i, (t1, t2) in enumerate(zip(ftexts1, ftexts2)):
-            fp.write(fstr1.format(num=i,addr=t1['addr'],size=t1['size'],text=t1['text']))
-            fp.write(fstr2.format(num=i,addr=t2['addr'],size=t2['size'],text=t2['text']))
+
+    fstr1 = "○{num:0"+ str(num_width) + "d}|{addr:0"+ str(addr_width) + "X}|{size:0"+ str(size_width) + "X}○ {text}\n"
+    fstr2 = fstr1.replace('○', '●')
+    line_texts = []
+
+    length = 0
+    if ftexts1 == None: 
+        length = len(ftexts2)
+        fstr2 += '\n'
+    if ftexts2 == None: 
+        length = len(ftexts1)
+        fstr1 += '\n'
+    if ftexts1 != None and ftexts2 != None : 
+        length = min(len(ftexts1), len(ftexts2))
+        fstr2 += '\n'
+
+    for i in range(length):
+        if ftexts1 != None:
+            t1 = ftexts1[i]
+            line_texts.append(fstr1.format(num=i,addr=t1['addr'],size=t1['size'],text=t1['text']))
+        if ftexts2 != None:
+            t2 = ftexts2[i]
+            line_texts.append(fstr2.format(num=i,addr=t2['addr'],size=t2['size'],text=t2['text']))
+
+    if outpath != "":
+        with codecs.open(outpath, "w", 'utf-8') as fp:
+            fp.writelines(line_texts)
+    return line_texts 
 
 def read_format_text(inpath, only_text=False):
     """
     text dict is as {'addr':, 'size':, 'text':}
+    :param: inpath can be path, or lines_text[] 
     :return: ftexts1[]: text dict array in '○' line, 
              ftexts2[]: text dict array in '●' line
     """
     ftexts1, ftexts2 = [], []
-    with codecs.open(inpath, 'r', 'utf-8') as fp:
-        lines_text = fp.readlines()
-        if only_text == True: # This is used for merge_text
-            re_line1 = re.compile(r"^○(.+?)○[ ](.*)")
-            re_line2 = re.compile(r"^●(.+?)●[ ](.*)")
-            for line in lines_text:
-                line = line.strip("\n")
-                m = re_line1.match(line)
-                if m is not None:
-                    ftexts1.append({'addr':0,'size':0,'text': m.group(2)})
-                m = re_line2.match(line)
-                if m is not None:
-                    ftexts2.append({'addr':0,'size':0,'text': m.group(2)})
-        else:
-            re_line1 = re.compile(r"^○(\d*)\|(.*)\|(.*)○[ ](.*)")
-            re_line2 = re.compile(r"^●(\d*)\|(.*)\|(.*)●[ ](.*)")
-            for line in lines_text:
-                line = line.strip("\n")
-                m = re_line1.match(line)
-                if m is not None:
-                    ftexts1.append({'addr':int(m.group(2),16),
-                                    'size':int(m.group(3),16),'text': m.group(4)})
-                m = re_line2.match(line)
-                if m is not None:
-                    ftexts2.append({'addr':int(m.group(2),16),
-                                    'size':int(m.group(3),16),'text': m.group(4)})
+    if type(inpath) == str: 
+        with codecs.open(inpath, 'r', 'utf-8') as fp: 
+            lines_text = fp.readlines()
+    else: lines_text = inpath
+
+    if only_text == True: # This is used for merge_text
+        re_line1 = re.compile(r"^○(.+?)○[ ](.*)")
+        re_line2 = re.compile(r"^●(.+?)●[ ](.*)")
+        for line in lines_text:
+            line = line.strip("\n")
+            m = re_line1.match(line)
+            if m is not None:
+                ftexts1.append({'addr':0,'size':0,'text': m.group(2)})
+            m = re_line2.match(line)
+            if m is not None:
+                ftexts2.append({'addr':0,'size':0,'text': m.group(2)})
+    else:
+        re_line1 = re.compile(r"^○(\d*)\|(.*)\|(.*)○[ ](.*)")
+        re_line2 = re.compile(r"^●(\d*)\|(.*)\|(.*)●[ ](.*)")
+        for line in lines_text:
+            line = line.strip("\n")
+            m = re_line1.match(line)
+            if m is not None:
+                ftexts1.append({'addr':int(m.group(2),16),
+                                'size':int(m.group(3),16),'text': m.group(4)})
+            m = re_line2.match(line)
+            if m is not None:
+                ftexts2.append({'addr':int(m.group(2),16),
+                                'size':int(m.group(3),16),'text': m.group(4)})
     return ftexts1, ftexts2
 
 def load_tbl(inpath, encoding='utf-8'):

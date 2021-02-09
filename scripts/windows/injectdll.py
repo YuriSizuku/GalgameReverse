@@ -11,10 +11,12 @@ def injectdll(exepath, dllpath, outpath="out.exe"):
     print("the import dll in " + exepath)
     for imp in binary_exe.imports:
         print(imp.name)
+        
+    print(binary_dll.exported_functions)
 
     for exp_func in binary_dll.exported_functions:
-        dll_imp.add_entry(exp_func)
-        print(dllname + ", func "+ exp_func + " added!")
+        dll_imp.add_entry(exp_func.name)
+        print(dllname + ", func "+ exp_func.name + " added!")
 
     builder = lief.PE.Builder(binary_exe)
     builder.build_imports(True).patch_imports(True)
@@ -27,6 +29,6 @@ def main():
         return
     outpath = "out.exe" if len(sys.argv) < 4 else sys.argv[3]
     injectdll(sys.argv[1], sys.argv[2], outpath)
-
+    
 if __name__ == "__main__":
     main()

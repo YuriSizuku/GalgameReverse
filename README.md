@@ -9,6 +9,11 @@ With the list:
 * `listmagic.py`, list the files magic to analyze
 * `texture.py`, something about texture and picture convert
 
+> windows tools
+
+* `injectdll.py` static inject dll to a exe
+* `hook_util.cpp`, `hook_util.h` dynamic hook functions, such as iat hook, inline hook
+
 > Onscripter
 
 * `extract_nt3.c`,  nt3 script extract
@@ -26,3 +31,7 @@ With the list:
 
 * `prot_dat.py`, dat picture（RGBA8888, RGB888, delta encoding,color panel） decode and encode
 * `airpsv_text.py`, extract and import the text to psv air, can be longer than origin
+
+> gss
+
+* 月影の鎖 -錯乱パラノイア PSP, PSV see, my [pull request](https://github.com/morkt/GARbro/pull/435) in my forked GARBRO 

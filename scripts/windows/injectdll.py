@@ -2,7 +2,7 @@ import lief
 import sys
 import os
 
-def injectdll(exepath, dllpath, outpath="out.exe"):
+def injectdll(exepath, dllpath, outpath="out.exe"): # can not be ASLR
     binary_exe = lief.parse(exepath)
     binary_dll = lief.parse(dllpath)
     
@@ -11,12 +11,14 @@ def injectdll(exepath, dllpath, outpath="out.exe"):
     print("the import dll in " + exepath)
     for imp in binary_exe.imports:
         print(imp.name)
-        
-    print(binary_dll.exported_functions)
 
     for exp_func in binary_dll.exported_functions:
         dll_imp.add_entry(exp_func.name)
         print(dllname + ", func "+ exp_func.name + " added!")
+
+    # disable ASLR
+    exe_oph =  binary_exe.optional_header;
+    exe_oph.remove(lief.PE.DLL_CHARACTERISTICS.DYNAMIC_BASE)
 
     builder = lief.PE.Builder(binary_exe)
     builder.build_imports(True).patch_imports(True)

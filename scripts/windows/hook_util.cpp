@@ -58,6 +58,17 @@ HANDLE GetProcessByName(LPCWSTR exename)
     return NULL;     // Not found
 }
 
+HANDLE start_exe(LPCSTR exepath, LPSTR cmdstr)
+{
+    STARTUPINFOA si;
+    PROCESS_INFORMATION pi;
+    ZeroMemory(&pi, sizeof(pi));
+    ZeroMemory(&si, sizeof(si));
+    if (!CreateProcessA(exepath, cmdstr, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi))
+        return NULL;
+    return pi.hProcess;
+}
+
 BOOL inject_dll(HANDLE hProcess, LPCSTR dllname)
 {
     LPVOID param_addr = VirtualAllocEx(hProcess, 0, 0x100, MEM_COMMIT, PAGE_READWRITE);

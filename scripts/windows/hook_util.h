@@ -15,7 +15,7 @@ BOOL inject_dll(HANDLE hProcess, LPCSTR dllname);
 HANDLE start_exe(LPCSTR exepath, LPSTR cmdstr);
 
 // iat dynamiclly hook, replace the pfgNew with pfnOrg function in szDllname, 
-BOOL iat_hook(LPCSTR szDllName, PROC pfnOrg, PROC pfgNew); 
+BOOL iat_hook(LPCSTR targetDllName, PROC pfnOrg, PROC pfgNew);
 
 // using detour for inline hook, 
 // passing the array with NULL end as params, for example, use pfnOlds[n] for old function invoke
@@ -26,6 +26,6 @@ BOOL iat_hook(LPCSTR szDllName, PROC pfnOrg, PROC pfgNew);
 // PVOID pfnOlds[2] = { (PVOID)((ULONGLONG)hMod + rva), NULL }, pfnNews[2] = { test_hook, NULL };
 // inline_hooks(pfnOlds, pfnNews);
 // g_pfnAbout = (void(*)())(pfnOlds[0]); // use old function
-int inline_hooks(PVOID* pfnOlds, PVOID* pfnNews); 
-int inline_unhooks(PVOID* pfnOlds, PVOID* pfnNews);
+int inline_hooks(PVOID pfnOlds[], PVOID pfnNews[]); 
+int inline_unhooks(PVOID pfnOlds[], PVOID pfnNews[]);
 #endif 

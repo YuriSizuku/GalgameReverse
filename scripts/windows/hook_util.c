@@ -8,25 +8,25 @@
 #else
 #pragma comment(lib,"detours.lib")
 #endif
-int inline_hooks(PVOID *pfnOlds, PVOID *pfnNews)
+int inline_hooks(PVOID pfnOlds[], PVOID pfnNews[])
 {
     int i=0;
     DetourRestoreAfterWith();
     DetourTransactionBegin();
     DetourUpdateThread(GetCurrentThread());
-    for(i=0;*(pfnOlds+i)!=NULL;i++)
-        DetourAttach(pfnOlds + i, *(pfnNews + i));
+    for(i=0; pfnNews[i]!=NULL ;i++)
+        DetourAttach(&pfnOlds[i], pfnNews[i]);
     DetourTransactionCommit();
     return i;
 }
 
-int inline_unhooks(PVOID* pfnOlds, PVOID* pfnNews)
+int inline_unhooks(PVOID pfnOlds[], PVOID pfnNews[])
 {
     int i = 0;
     DetourTransactionBegin();
     DetourUpdateThread(GetCurrentThread());
-    for (i = 0; *(pfnOlds + i) != NULL; i++)
-        DetourDetach(pfnOlds + i, *(pfnNews + i));
+    for (i = 0; pfnNews[i] != NULL; i++)
+        DetourDetach(&pfnOlds[i], pfnNews[i]);
     DetourTransactionCommit();
     return i;
 }
@@ -64,7 +64,8 @@ HANDLE start_exe(LPCSTR exepath, LPSTR cmdstr)
     PROCESS_INFORMATION pi;
     ZeroMemory(&pi, sizeof(pi));
     ZeroMemory(&si, sizeof(si));
-    if (!CreateProcessA(exepath, cmdstr, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi))
+    if (!CreateProcessA(exepath, cmdstr, 
+        NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi))
         return NULL;
     return pi.hProcess;
 }
@@ -77,8 +78,9 @@ BOOL inject_dll(HANDLE hProcess, LPCSTR dllname)
     WriteProcessMemory(hProcess, param_addr, dllname, strlen(dllname)+1, &count);
 
     HMODULE kernel = GetModuleHandleA("Kernel32");
-    FARPROC funcLoadlibraryA = GetProcAddress(kernel, "LoadLibraryA");
-    HANDLE threadHandle = CreateRemoteThread(hProcess, NULL, NULL, (LPTHREAD_START_ROUTINE)funcLoadlibraryA, param_addr, NULL, NULL); //DLL_THREAD_ATTACH
+    FARPROC pfnLoadlibraryA = GetProcAddress(kernel, "LoadLibraryA");
+    HANDLE threadHandle = CreateRemoteThread(hProcess, NULL, NULL, 
+        (LPTHREAD_START_ROUTINE)pfnLoadlibraryA, param_addr, NULL, NULL); 
    
     if (threadHandle == NULL) return FALSE;
     WaitForSingleObject(threadHandle, -1);
@@ -87,42 +89,35 @@ BOOL inject_dll(HANDLE hProcess, LPCSTR dllname)
     return TRUE;
 }
 
-BOOL iat_hook(LPCSTR szDllName, PROC pfnOrg, PROC pfnNew)
-{
-    HMODULE hMod;
-    LPCSTR szLibName;
-    PIMAGE_IMPORT_DESCRIPTOR pImportDesc;
-    PIMAGE_THUNK_DATA pThunk;
-    DWORD dwOldProtect;
+BOOL iat_hook(LPCSTR targetDllName, PROC pfnOrg, PROC pfnNew)
+{;
 #ifdef _WIN64
-#define POINTER_TYPE ULONGLONG
+#define VA_TYPE ULONGLONG
 #else
-#define POINTER_TYPE DWORD
+#define VA_TYPE DWORD
 #endif
-    POINTER_TYPE dwRVA;
-    PBYTE pAddr;
-    hMod = GetModuleHandle(NULL);
-    pAddr = (PBYTE)hMod;
-    pAddr += *((DWORD*)&pAddr[0x3C]); // pAddr = VA to PE signature (IMAGE_NT_HEADERS)
+    DWORD dwOldProtect = 0;
+    VA_TYPE imageBase = GetModuleHandle(NULL);
+    LPBYTE pNtHeader = *(DWORD *)((LPBYTE)imageBase + 0x3c) + imageBase; 
 #ifdef _WIN64
-    dwRVA = *((DWORD*)&pAddr[0x90]); // dwRVA = RVA to IMAGE_IMPORT_DESCRIPTOR Table
+    VA_TYPE impDescriptorRva = *((DWORD*)&pNtHeader[0x90]);
 #else
-    dwRVA = *((DWORD*)&pAddr[0x80]); // dwRVA = RVA to IMAGE_IMPORT_DESCRIPTOR Table
+    VA_TYPE impDescriptorRva = *((DWORD*)&pNtHeader[0x80]); 
 #endif
-    pImportDesc = (PIMAGE_IMPORT_DESCRIPTOR)((POINTER_TYPE)hMod + dwRVA); //pImportDesc = VA to IMAGE_IMPORT_DESCRIPTOR Table
-    for (; pImportDesc->Name; pImportDesc++) // IMAGE_IMPORT_DESCRIPTOR[] 以空的IMAGE_IMPORT_DESCRIPTOR为结尾
+    PIMAGE_IMPORT_DESCRIPTOR pImpDescriptor = (PIMAGE_IMPORT_DESCRIPTOR)(imageBase + impDescriptorRva); 
+    for (; pImpDescriptor->Name; pImpDescriptor++) // find the dll IMPORT_DESCRIPTOR
     {
-        szLibName = (LPCSTR)((POINTER_TYPE)hMod + pImportDesc->Name);
-        if (!_stricmp(szLibName, szDllName))
+        LPCSTR pDllName = (LPCSTR)(imageBase + pImpDescriptor->Name);
+        if (!_stricmp(pDllName, targetDllName)) // ignore case
         {
-            pThunk = (PIMAGE_THUNK_DATA)((POINTER_TYPE)hMod + pImportDesc->FirstThunk);
-            for (; pThunk->u1.Function; pThunk++)
+            PIMAGE_THUNK_DATA pFirstThunk = (PIMAGE_THUNK_DATA)(imageBase + pImpDescriptor->FirstThunk);
+            for (; pFirstThunk->u1.Function; pFirstThunk++) // find the iat function va
             {
-                if (pThunk->u1.Function == (POINTER_TYPE)pfnOrg)
+                if (pFirstThunk->u1.Function == (VA_TYPE)pfnOrg)
                 {
-                    VirtualProtect((LPVOID)&pThunk->u1.Function, 4, PAGE_EXECUTE_READWRITE, &dwOldProtect);
-                    pThunk->u1.Function = (POINTER_TYPE)pfnNew;
-                    VirtualProtect((LPVOID)&pThunk->u1.Function, 4, dwOldProtect, &dwOldProtect);
+                    VirtualProtect((LPVOID)&pFirstThunk->u1.Function, 4, PAGE_EXECUTE_READWRITE, &dwOldProtect);
+                    pFirstThunk->u1.Function = (VA_TYPE)pfnNew;
+                    VirtualProtect((LPVOID)&pFirstThunk->u1.Function, 4, dwOldProtect, &dwOldProtect);
                     return TRUE;
                 }
             }

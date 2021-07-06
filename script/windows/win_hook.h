@@ -2,9 +2,9 @@
   windows dyamic hook util functions wrappers by devseed 
 */
 
-#ifndef _HOOK_UTIL_H
-#define _HOOK_UTIL_H
-#include<Windows.h>
+#ifndef _WIN_HOOK_H
+#define _WIN_HOOK_H
+#include <Windows.h>
 //get the process handle by exename
 HANDLE GetProcessByName(LPCWSTR exename); 
 
@@ -14,8 +14,11 @@ BOOL inject_dll(HANDLE hProcess, LPCSTR dllname);
 // start a exe by CreateProcess
 HANDLE start_exe(LPCSTR exepath, LPSTR cmdstr);
 
-// iat dynamiclly hook, replace the pfgNew with pfnOrg function in szDllname, 
+// iat dynamiclly hook, replace the pfgNew with pfnOrg function in targetDllName, 
+// iat_hook is for windows EXE, targetDllName is like "user32.dll", "kernel32.dll"
 BOOL iat_hook(LPCSTR targetDllName, PROC pfnOrg, PROC pfgNew);
+// iat_hook_module is for windows dll, moduleDllName is which dll to hook iat
+BOOL iat_hook_module(LPCSTR targetDllName, LPCSTR moduleDllName, PROC pfnOrg, PROC pfnNew);
 
 // using detour for inline hook, 
 // passing the array with NULL end as params, for example, use pfnOlds[n] for old function invoke

@@ -1,0 +1,4 @@
+LIBRARY redirect_ig
+DESCRIPTION "for redirect chspatch path"
+EXPORTS
+	dummy @1

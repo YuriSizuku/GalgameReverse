@@ -12,7 +12,7 @@ With the list:
 > windows tools
 
 * `injectdll.py` static inject dll to a exe
-* `hook_util.cpp`, `hook_util.h` dynamic hook functions, such as iat hook, inline hook
+* `win_hook.cpp`, `win_hook.h` dynamic hook functions, such as iat hook, inline hook
 
 > Onscripter
 
@@ -35,3 +35,8 @@ With the list:
 > gss
 
 * 月影の鎖 -錯乱パラノイア PSP, PSV see, my [pull request](https://github.com/morkt/GARbro/pull/435) in my forked GARBRO 
+
+> InnocentGray
+
+* `redirect_ig.c`, redirect the files to xxx_chs for separate chspatch
+

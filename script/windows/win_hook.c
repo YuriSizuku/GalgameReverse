@@ -1,13 +1,9 @@
-#include "hook_util.h"
-#include "tlhelp32.h"
-#define _DETOURS
+#include <Windows.h>
+#include <tlhelp32.h>
+#include "win_hook.h"
+
 #ifdef _DETOURS
 #include "detours.h"
-#ifdef _WIN64
-#pragma comment(lib,"detours_x64.lib")
-#else
-#pragma comment(lib,"detours.lib")
-#endif
 int inline_hooks(PVOID pfnOlds[], PVOID pfnNews[])
 {
     int i=0;
@@ -90,6 +86,11 @@ BOOL inject_dll(HANDLE hProcess, LPCSTR dllname)
 }
 
 BOOL iat_hook(LPCSTR targetDllName, PROC pfnOrg, PROC pfnNew)
+{
+    return iat_hook_module(targetDllName, NULL, pfnOrg, pfnNew);
+}
+
+BOOL iat_hook_module(LPCSTR targetDllName, LPCSTR moduleDllName, PROC pfnOrg, PROC pfnNew)
 {;
 #ifdef _WIN64
 #define VA_TYPE ULONGLONG
@@ -97,7 +98,7 @@ BOOL iat_hook(LPCSTR targetDllName, PROC pfnOrg, PROC pfnNew)
 #define VA_TYPE DWORD
 #endif
     DWORD dwOldProtect = 0;
-    VA_TYPE imageBase = GetModuleHandle(NULL);
+    VA_TYPE imageBase = GetModuleHandleA(moduleDllName);
     LPBYTE pNtHeader = *(DWORD *)((LPBYTE)imageBase + 0x3c) + imageBase; 
 #ifdef _WIN64
     VA_TYPE impDescriptorRva = *((DWORD*)&pNtHeader[0x90]);

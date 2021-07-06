@@ -1,1 +1,10 @@
 *.pyc
+__pycache__
+*.o
+*.obj
+*..iobj
+*.pdb
+*.ipdb
+*.exp
+*.iik
+.vs

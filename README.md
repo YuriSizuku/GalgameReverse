@@ -12,6 +12,8 @@ With the list:
 > windows tools
 
 * `injectdll.py` static inject dll to a exe
+* `hook_win_console.js` alloc a console for game
+* `hook_win_fileapi.js` view information for both CreateFile, ReadFile, WriteFile, fopen, fread, fwrite
 * `win_hook.cpp`, `win_hook.h` dynamic hook functions, such as iat hook, inline hook
 
 > Onscripter

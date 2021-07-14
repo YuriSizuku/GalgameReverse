@@ -1,22 +1,22 @@
 function hook_cfileapi(idx=0)
 {
-    var api = new ApiResolver("module");
-    var fopen = new NativeFunction(
+    const api = new ApiResolver("module");
+    const fopen = new NativeFunction(
         api.enumerateMatches('exports:*!fopen')[idx].address, 
         'pointer', ['pointer', 'pointer']);
-    var fclose = new NativeFunction(
+    const fclose = new NativeFunction(
         api.enumerateMatches('exports:*!fclose')[idx].address, 
         'int', ['pointer']);
-    var fseek = new NativeFunction( 
+    const fseek = new NativeFunction( 
         api.enumerateMatches('exports:*!fseek')[idx].address, 
         'int', ['pointer', 'size_t', 'int']);
-    var ftell = new NativeFunction( 
+    const ftell = new NativeFunction( 
         api.enumerateMatches('exports:*!ftell')[idx].address, 
         'size_t', ['pointer']);
-    var fread = new NativeFunction( 
+    const fread = new NativeFunction( 
         api.enumerateMatches('exports:*!fread')[idx].address,  
         'size_t', ['pointer', 'size_t', 'size_t', 'pointer']);
-    var fwrite = new NativeFunction( 
+    const fwrite = new NativeFunction( 
         api.enumerateMatches('exports:*!fwrite')[idx].address, 
         'size_t', ['pointer', 'size_t', 'size_t', 'pointer']);
 
@@ -99,32 +99,32 @@ function hook_cfileapi(idx=0)
 
 function hook_winfileapi()
 {
-    var api = new ApiResolver("module");
-    var CreateFileA = new NativeFunction(
+    const api = new ApiResolver("module");
+    const CreateFileA = new NativeFunction(
         api.enumerateMatches('exports:*!CreateFileA')[0].address, 'pointer', 
         ['pointer', 'uint32', 'uint32', 'pointer', 'uint32', 'uint32', 'uint32']);
-    var CreateFileW = new NativeFunction(
+    const CreateFileW = new NativeFunction(
         api.enumerateMatches('exports:*!CreateFileW')[0].address, 'pointer', 
         ['pointer', 'uint32', 'uint32', 'pointer', 'uint32', 'uint32', 'uint32']);
-    var CloseHandle = new NativeFunction(
+    const CloseHandle = new NativeFunction(
         api.enumerateMatches('exports:*!CloseHandle')[0].address, 'bool', 
         ['pointer']);
-    var SetFilePointer = new NativeFunction(
+    const SetFilePointer = new NativeFunction(
         api.enumerateMatches('exports:*!SetFilePointer')[0].address, 'uint32', 
         ['pointer', 'uint64', 'pointer', 'uint32']);
-    var SetFilePointerEx = new NativeFunction(
+    const SetFilePointerEx = new NativeFunction(
         api.enumerateMatches('exports:*!SetFilePointerEx')[0].address, 'bool', 
         ['pointer', 'uint64', 'pointer', 'uint32']);
-    var ReadFile = new NativeFunction(
+    const ReadFile = new NativeFunction(
         api.enumerateMatches('exports:*!ReadFile')[0].address, 'bool', 
         ['pointer', 'pointer', 'uint32', 'pointer', 'pointer']);
-    var ReadFileEx = new NativeFunction(
+    const ReadFileEx = new NativeFunction(
         api.enumerateMatches('exports:*!ReadFileEx')[0].address, 'bool', 
         ['pointer', 'pointer', 'uint32', 'pointer', 'pointer']);
-    var WriteFile = new NativeFunction(
+    const WriteFile = new NativeFunction(
         api.enumerateMatches('exports:*!WriteFile')[0].address, 'bool', 
         ['pointer', 'pointer', 'uint32', 'pointer', 'pointer']);
-    var WriteFileEx = new NativeFunction(
+    const WriteFileEx = new NativeFunction(
         api.enumerateMatches('exports:*!WriteFileEx')[0].address, 'bool', 
         ['pointer', 'pointer', 'uint32', 'pointer', 'pointer']);
 

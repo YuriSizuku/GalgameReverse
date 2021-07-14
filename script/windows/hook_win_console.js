@@ -1,14 +1,14 @@
 function hook_console()
 {
-    var api = new ApiResolver("module");
-    var __acrt_iob_func = new NativeFunction(
+    const api = new ApiResolver("module");
+    const __acrt_iob_func = new NativeFunction(
         api.enumerateMatches('exports:*!*acrt_iob_func')[0].address, 
         'pointer', ['uint']);
-    var stdout = __acrt_iob_func(1);
-    var freopen = new NativeFunction(
+    const stdout = __acrt_iob_func(1);
+    const freopen = new NativeFunction(
         api.enumerateMatches('exports:*!freopen')[0].address, 
         'pointer', ['pointer', 'pointer', 'pointer']);
-    var AllocConsole = new NativeFunction(
+    const AllocConsole = new NativeFunction(
         api.enumerateMatches('exports:*!AllocConsole')[0].address, 
         'int', []);
     

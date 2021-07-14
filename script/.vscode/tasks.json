@@ -1,0 +1,25 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "cppbuild",
+			"label": "build debug",
+			"command": "gcc",
+			"args": [
+				"-g",
+				"${file}", "-lregex", 
+				"-std=c99",
+				"-o",
+				"${workspaceFolder}/tmp/${fileBasenameNoExtension}.exe",
+				"-D_TEST",
+			],
+			"options": {
+				"cwd": ""
+			},
+			"problemMatcher": [
+				"$gcc"
+			],
+			"group": "build",
+		}
+	]
+}

@@ -10,5 +10,6 @@ __pycache__
 .vs
 /script/tmp/*
 /src/**/bin/*
+/src/**/build/*
 /src/**/release/*
 /src/**/debug/*

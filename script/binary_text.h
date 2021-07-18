@@ -26,17 +26,16 @@ typedef struct _FTEXTS
 }FTEXTS, *PFTEXTS;
 
 // util functions for converting encodings
-size_t utf8towchar(wchar_t* dst, char* src, size_t srclen);
-size_t sjistowchar(wchar_t* dst, char* src, size_t srclen);
-size_t gbktowchar(wchar_t* dst, char* src, size_t srclen);
-size_t wchartoutf8(char* dst, wchar_t* src, size_t srclen); // this might be not work
-size_t wchartosjis(char* dst, wchar_t* src, size_t srclen); 
-size_t wchartogb2312(char* dst, wchar_t* src, size_t srclen);
+size_t utf8towchar(wchar_t* dst, char* src, size_t maxdstlen);
+size_t sjistowchar(wchar_t* dst, char* src, size_t maxdstlen);
+size_t gbktowchar(wchar_t* dst, char* src, size_t maxdstlen);
+size_t wchartoutf8(char* dst, wchar_t* src, size_t maxdstlen); // this might be not work
+size_t wchartosjis(char* dst, wchar_t* src, size_t maxdstlen); 
+size_t wchartogb2312(char* dst, wchar_t* src, size_t maxdstlen);
 void printutf8(char* utf8str, size_t utf8strlen);
 
-// some internal functions for ftexts
+// count how many ftexts in a buf
 void count_ftexts(char*buf, size_t bufsize, int *pwhite_node_num, int *pblack_node_num);
-FTEXTS_NODE parse_ftexts_line(char* buf, size_t start, size_t end, regex_t* reg);
 
 // printf the inforemations of FTEXTS_NODE for debug
 void printf_ftexts_node(PFTEXTS_NODE pnode);

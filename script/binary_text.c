@@ -1,47 +1,48 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <locale.h>
+#ifndef NO_REGEX
 #include <regex.h>
+#endif
 #include <sys/stat.h>
 #include <io.h>
 #include <fcntl.h>
 #include "binary_text.h"
 
-
-size_t utf8towchar(wchar_t* dst, char* src, size_t srclen)
+size_t utf8towchar(wchar_t* dst, char* src, size_t maxdstlen)
 {
     setlocale(LC_ALL, ".utf-8");
-    return mbstowcs(dst, src, srclen);
+    return mbstowcs(dst, src, maxdstlen);
 }
 
-size_t sjistowchar(wchar_t* dst, char* src, size_t srclen)
+size_t sjistowchar(wchar_t* dst, char* src, size_t maxdstlen)
 {
     setlocale(LC_ALL, ".932");
-    return mbstowcs(dst, src, srclen);
+    return mbstowcs(dst, src, maxdstlen);
 }
 
-size_t gbktowchar(wchar_t* dst, char* src, size_t srclen)
+size_t gbktowchar(wchar_t* dst, char* src, size_t maxdstlen)
 {
     setlocale(LC_ALL, ".936");
-    return mbstowcs(dst, src, srclen);
+    return mbstowcs(dst, src, maxdstlen);
 }
 
-size_t wchartoutf8(char* dst, wchar_t* src, size_t srclen)
+size_t wchartoutf8(char* dst, wchar_t* src, size_t maxdstlen)
 {
     setlocale(LC_ALL, ".utf-8");
-    return wcstombs(dst, src, srclen*sizeof(wchar_t));
+    return wcstombs(dst, src, maxdstlen);
 }
 
-size_t wchartosjis(char* dst, wchar_t* src, size_t srclen)
+size_t wchartosjis(char* dst, wchar_t* src, size_t maxdstlen)
 {
     setlocale(LC_ALL, ".932");
-    return wcstombs(dst, src, srclen*sizeof(wchar_t));
+    return wcstombs(dst, src, maxdstlen);
 }
 
-size_t wchartogb2312(char* dst, wchar_t* src, size_t srclen)
+size_t wchartogb2312(char* dst, wchar_t* src, size_t maxdstlen)
 {
     setlocale(LC_ALL, ".936");
-    return wcstombs(dst, src, srclen*sizeof(wchar_t));
+    return wcstombs(dst, src, maxdstlen);
 }
 
 void printutf8(char* utf8str, size_t utf8strlen)
@@ -93,6 +94,7 @@ void count_ftexts(char*buf, size_t bufsize, int *pwhite_node_num, int *pblack_no
     }
 }
 
+#ifndef NO_REGEX
 FTEXTS_NODE parse_ftexts_line(char* buf, size_t start, size_t end, regex_t* reg)
 {
     char tmpbuf[2048];
@@ -121,6 +123,46 @@ FTEXTS_NODE parse_ftexts_line(char* buf, size_t start, size_t end, regex_t* reg)
     }
     return node;
 }
+#else
+FTEXTS_NODE parse_ftexts_line(char* buf, size_t start, size_t end)
+{
+    char tmpbuf[2048];
+    FTEXTS_NODE node = {0};
+    strncpy(tmpbuf, &buf[start], end-start);
+    size_t i=3;
+    size_t strstart=i;
+    
+    while(tmpbuf[i]!='|') 
+    {
+        if(i>end-start-3) return node;
+        i++;
+    }
+    tmpbuf[i++]=0;
+    node.num =atoi(tmpbuf+strstart);
+    strstart = i;
+    
+    while(tmpbuf[i]!='|') i++;
+    {
+        if(i>end-start-3) return node;
+        i++;
+    }
+    tmpbuf[i++]=0;
+    node.addr = strtol(tmpbuf+strstart, NULL, 16);
+    strstart = i;
+
+    while(tmpbuf[i]!='\xe2')
+    {
+        if(i>end-start-3) return node;
+        i++; 
+    }
+    tmpbuf[i]=0;
+    node.size = strtol(tmpbuf+strstart, NULL, 16);
+    node.textbuf = buf + start + i + 4; // a space is after black or white point
+    node.textbufsize = (size_t)(end - (start + i + 4));
+    //printf_ftexts_node(&node);
+    return node;
+}
+#endif
 
 void printf_ftexts_node(PFTEXTS_NODE pnode)
 {
@@ -144,10 +186,12 @@ PFTEXTS parse_ftexts(char* buf, size_t bufsize)
     // paser every node
     int white_idx=0, black_idx=0;
     FTEXTS_NODE tmpnode;
+
+#ifndef NO_REGEX
     regex_t  white_reg, black_reg;
-    
     regcomp(&white_reg, "\\xE2\\x97\\x8B(\\d*)\\|(.*)\\|(.*)\\xE2\\x97\\x8B[ ](.*)", REG_EXTENDED);
     regcomp(&black_reg, "\\xE2\\x97\\x8F(\\d*)\\|(.*)\\|(.*)\\xE2\\x97\\x8F[ ](.*)", REG_EXTENDED);
+#endif
     for(int i=0;i<bufsize-2;)
     {
         size_t start = i;
@@ -155,20 +199,30 @@ PFTEXTS parse_ftexts(char* buf, size_t bufsize)
 
         if(!strncmp("\xE2\x97\x8B", &buf[start], 3)) // white
         {
+#ifndef NO_REGEX
             tmpnode = parse_ftexts_line(buf, start, i, &white_reg);
+#else
+            tmpnode = parse_ftexts_line(buf, start, i);
+#endif
             if(tmpnode.textbufsize > 0) pftexts->white_nodes[white_idx++] = tmpnode;
         }
         else if (!strncmp("\xE2\x97\x8F", &buf[start], 3)) // blcak
         {
+#ifndef NO_REGEX
             tmpnode = parse_ftexts_line(buf, start, i, &black_reg);
+#else
+            tmpnode = parse_ftexts_line(buf, start, i);
+#endif
             if(tmpnode.textbufsize > 0) pftexts->black_nodes[black_idx++] = tmpnode;
         }
        i++;
     }
     qsort(pftexts->white_nodes, pftexts->white_node_num, sizeof(FTEXTS_NODE), compare_ftexts_node);
     qsort(pftexts->black_nodes, pftexts->black_node_num, sizeof(FTEXTS_NODE), compare_ftexts_node);
+#ifndef NO_REGEX
     regfree(&black_reg);
     regfree(&white_reg);
+#endif
     return pftexts;
 }
 
@@ -179,7 +233,7 @@ PFTEXTS load_ftexts_file(char* path)
     size_t bufsize = st.st_size;
     if(bufsize<3)
     {
-        printf("error(in %s, %s): file is too short", __FILE__, __LINE__);
+        printf("error(in %s, %d): file is too short", __FILE__, __LINE__);
         return 0;
     }
 
@@ -202,6 +256,7 @@ void free_ftexts(PFTEXTS pftexts)
 int search_ftexts_address(FTEXTS_NODE nodes[], int node_num, size_t addr)
 {
     int start=0, end=node_num-1;
+    if(nodes==NULL || end<0) return -1;
     while(end-start>1)
     {
         int cur = (start+end)/2;
@@ -214,7 +269,7 @@ int search_ftexts_address(FTEXTS_NODE nodes[], int node_num, size_t addr)
     else return -1;
 }
 
-#ifdef _TEST
+#ifdef _TEST_BINARY_TEXT
 int main(int argc, char **argv)
 {
     // test ftexts

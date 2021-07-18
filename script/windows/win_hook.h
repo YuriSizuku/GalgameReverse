@@ -14,6 +14,9 @@ BOOL inject_dll(HANDLE hProcess, LPCSTR dllname);
 // start a exe by CreateProcess
 HANDLE start_exe(LPCSTR exepath, LPSTR cmdstr);
 
+// alloc a console for the program
+void install_console();
+
 // iat dynamiclly hook, replace the pfgNew with pfnOrg function in targetDllName, 
 // iat_hook is for windows EXE, targetDllName is like "user32.dll", "kernel32.dll"
 BOOL iat_hook(LPCSTR targetDllName, PROC pfnOrg, PROC pfgNew);

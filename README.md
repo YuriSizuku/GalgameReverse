@@ -42,3 +42,9 @@ With the list:
 
 * `redirect_ig.c`, redirect the files to xxx_chs for separate chspatch
 
+> Majiro
+
+* `winterpolaris_hook.js` dump mjo and analyze majiro in winterpolaris game
+
+* `winterpolaris_hook.c`  Majirov3 dynamic hook chspatch framework code example
+

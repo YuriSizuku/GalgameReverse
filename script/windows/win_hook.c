@@ -1,5 +1,6 @@
 #include <Windows.h>
 #include <tlhelp32.h>
+#include <stdio.h>
 #include "win_hook.h"
 
 #ifdef _DETOURS
@@ -26,8 +27,8 @@ int inline_unhooks(PVOID pfnOlds[], PVOID pfnNews[])
     DetourTransactionCommit();
     return i;
 }
-
 #endif
+
 HANDLE GetProcessByName(LPCWSTR exename)
 {
     // Create toolhelp snapshot.
@@ -83,6 +84,12 @@ BOOL inject_dll(HANDLE hProcess, LPCSTR dllname)
     VirtualFreeEx(hProcess, param_addr, 0x100, MEM_COMMIT);
 
     return TRUE;
+}
+
+void install_console()
+{
+    AllocConsole();
+    freopen("CONOUT$", "w", stdout);    
 }
 
 BOOL iat_hook(LPCSTR targetDllName, PROC pfnOrg, PROC pfnNew)

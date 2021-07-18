@@ -11,7 +11,8 @@
 				"-std=c99",
 				"-o",
 				"${workspaceFolder}/tmp/${fileBasenameNoExtension}.exe",
-				"-D_TEST",
+				"-D_TEST_BINARY_TEXT",
+				"-DNO_REGEX"
 			],
 			"options": {
 				"cwd": ""

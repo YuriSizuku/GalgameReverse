@@ -6,6 +6,9 @@ __pycache__
 *.pdb
 *.ipdb
 *.exp
-*.iik
+*.ilk
 .vs
 /script/tmp/*
+/src/**/bin/*
+/src/**/release/*
+/src/**/debug/*

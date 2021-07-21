@@ -51,6 +51,7 @@ void load_mjo_ftexts(char* mjo_name)
 // serarch if already load the mjo decrypt texts, g_cur_mjo will move to the target mjo node
 void __stdcall search_mjo_ftexts(char* mjo_name)
 {
+    printf("%s\n", mjo_name);
     if(g_mjos==NULL)
     {
         printf("search_mjo_ftexts, creating MJO_NODE with %s...\n", mjo_name);
@@ -70,6 +71,11 @@ void __stdcall search_mjo_ftexts(char* mjo_name)
                 return;
             }
             g_cur_mjo = g_cur_mjo->next;
+        }
+        if(!strcmp(g_cur_mjo->mjo_name, mjo_name)) // last
+        {
+            printf("search_mjo_ftexts, %s is in the list at %lx\n", mjo_name, (unsigned long)g_cur_mjo);
+            return;
         }
         if(g_cur_mjo->text_index!=NULL) // add new node
         {
@@ -183,7 +189,7 @@ __declspec(naked) void showtext_hook() // replace text to chs, inline hook code
         add ecx, 0xdc350 
         mov ecx, dword ptr ds:[ecx] ;mjo struct
         push ecx ;because the function might change the register
-        push ecx ;mjo_name
+        push ecx ;mjo_name, actually this is the last load mjo_name, not current mjo_name
         call search_mjo_ftexts
         pop ecx ;restore ecx for mjo struct
         lea eax, [ecx+29h*4]

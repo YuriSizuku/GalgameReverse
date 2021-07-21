@@ -5,8 +5,6 @@
 #include <regex.h>
 #endif
 #include <sys/stat.h>
-#include <io.h>
-#include <fcntl.h>
 #include "binary_text.h"
 
 size_t utf8towchar(wchar_t* dst, char* src, size_t maxdstlen)
@@ -246,13 +244,6 @@ PFTEXTS load_ftexts_file(char* path)
     return pftexts;
 }
 
-void free_ftexts(PFTEXTS pftexts)
-{
-    free(pftexts->black_nodes);
-    free(pftexts->white_nodes);
-    free(pftexts);
-}
-
 int search_ftexts_address(FTEXTS_NODE nodes[], int node_num, size_t addr)
 {
     int start=0, end=node_num-1;
@@ -269,6 +260,113 @@ int search_ftexts_address(FTEXTS_NODE nodes[], int node_num, size_t addr)
     else return -1;
 }
 
+void free_ftexts(PFTEXTS pftexts)
+{
+    free(pftexts->black_nodes);
+    free(pftexts->white_nodes);
+    free(pftexts->rawbuf);
+    free(pftexts);
+}
+
+PFFILES_NODE search_ffile_path(PFFILES pffiles, char* path)
+{
+    if(!pffiles || !pffiles->pstart) return NULL;
+    PFFILES_NODE ptarget = pffiles->pstart;
+    while (ptarget)
+    {
+        if(!strcmp(ptarget->path, path)) return  ptarget;
+        ptarget = ptarget->next;
+    }
+    return NULL;
+}
+
+PFFILES_NODE moveto_ffile_path(PFFILES pffiles, char* path)
+{
+    PFFILES_NODE ptarget = search_ffile_path(pffiles, path);
+    if(!ptarget) pffiles->pcur = ptarget;
+    return ptarget;
+}
+
+int insert_ffile(PFFILES pffiles, PFFILES_NODE pinsert_node, PFFILES_NODE pffile_node)
+{
+    if(!pffile_node || !pffiles) return -1;
+    if(!pinsert_node) // insert at first
+    {
+        if(!pffiles->pstart) // if empty linked-list
+        {
+            pffiles->pstart = pffiles->pend = pffiles->pcur = pffile_node;
+        }
+        else
+        {
+            pffiles->pstart->previous = pffile_node;
+            pffile_node->previous = NULL;
+            pffile_node->next = pffiles->pstart;
+            pffiles->pstart = pffile_node;
+        }
+        return ++pffiles->count;
+    }
+    else
+    {
+        pffile_node->previous = pinsert_node;
+        pffile_node->next = pinsert_node->next;
+        pffile_node->previous->next = pffile_node;
+        if(!pffile_node->next) pffiles->pend = pffile_node;
+        return ++pffiles->count;
+    }
+}
+
+int append_ffile(PFFILES pffiles, PFFILES_NODE pffile_node)
+{
+    if(!pffiles) return -1;
+    return insert_ffile(pffiles, pffiles->pend, pffile_node);
+}
+
+int delete_ffile(PFFILES pffiles, PFFILES_NODE pffile_node)
+{
+    if(!pffiles) return -1;
+    if(pffiles->pcur == pffile_node) pffiles->pcur = NULL;
+    if(!pffile_node->previous) // delete first
+    {
+        pffiles->pstart = pffile_node->next;
+        if(pffiles->pstart) pffiles->pstart->previous = NULL;
+        free_ffiles_node(pffile_node);
+        return --pffiles->count;
+    }
+    else
+    {
+        pffile_node->previous->next = pffile_node->next;
+        if(!pffile_node->next) pffiles->pend = pffile_node->previous;
+        free_ffiles_node(pffile_node);
+        return --pffiles->count;
+    }
+}
+
+void free_ffiles_node(PFFILES_NODE pffile_node)
+{
+    if(!pffile_node) return;
+    free(pffile_node->path);
+    free_ftexts(pffile_node->pftexts);
+    FFILES_NODE_EXTRA_FREE
+    free(pffile_node);
+}
+
+void free_ffiles(PFFILES pffiles)
+{
+    if(!pffiles) return;
+    if(pffiles->pstart)
+    {
+        PFFILES_NODE pcur = pffiles->pstart;
+        while (pcur)
+        {
+            PFFILES_NODE ptmp = pcur;
+            pcur = pcur->next;
+            free_ffiles_node(ptmp);
+        }
+    }
+    FFILES_EXTRA_FREE
+    free(pffiles);
+}
+
 #ifdef _TEST_BINARY_TEXT
 int main(int argc, char **argv)
 {
@@ -280,8 +378,28 @@ int main(int argc, char **argv)
     int idx = search_ftexts_address(pftexts->white_nodes, pftexts->white_node_num, addr);
     printf("search at %x, return %d\n", addr, idx);
     printf_ftexts_node(&pftexts->white_nodes[idx]);
-    free(pftexts->rawbuf);
-    free_ftexts(pftexts);
+
+    // test ffiles
+    PFFILES pfiles = (PFFILES)malloc(sizeof(FFILES));
+    PFFILES_NODE pfile_node = (PFFILES_NODE)malloc(sizeof(FFILES_NODE));
+    PFFILES_NODE pfile_node2 = (PFFILES_NODE)malloc(sizeof(FFILES_NODE));
+    memset(pfiles, 0, sizeof(FFILES));
+    memset(pfile_node, 0, sizeof(FFILES_NODE));
+    memset(pfile_node2, 0, sizeof(FFILES_NODE));
+    char* path=(char*)malloc(strlen(argv[1]));
+    strcpy(path, argv[1]);
+    pfile_node->path = path;
+    pfile_node->pftexts = pftexts;
+    path =(char*)malloc(strlen(argv[2]));
+    strcpy(path, argv[2]);
+    pfile_node2->path = path;
+    pfile_node2->pftexts =  load_ftexts_file(argv[2]);
+    append_ffile(pfiles, pfile_node);
+    insert_ffile(pfiles, pfiles->pstart, pfile_node2);
+    delete_ffile(pfiles, pfiles->pstart);
+    PFFILES_NODE ptmp = search_ffile_path(pfiles, "a02.mjo.txt");
+    if(ptmp) printf("fuound ffile %x, %s\n", ptmp, ptmp->path);
+    free_ffiles(pfiles);
     
     // test converter
     wchar_t wcstr[100]=L"测试";

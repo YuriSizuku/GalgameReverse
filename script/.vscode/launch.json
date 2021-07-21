@@ -9,7 +9,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/tmp/binary_text.exe",
-            "args": ["a01.mjo.txt"],
+            "args": ["a01.mjo.txt", "a02.mjo.txt"],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}/tmp/",
             "environment": [],

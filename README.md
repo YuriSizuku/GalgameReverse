@@ -42,6 +42,10 @@ With the list:
 
 * `redirect_ig.c`, redirect the files to xxx_chs for separate chspatch
 
+> bruns
+
+* `bruns_decrypt.c` , to decrypt  `EENZ` file,  DustmaniaGrotesque tested 
+
 > Majiro
 
 * `winterpolaris_hook.js` dump mjo and analyze majiro in winterpolaris game

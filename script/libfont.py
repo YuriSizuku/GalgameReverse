@@ -20,6 +20,8 @@ v0.1.7 slightly change some function
 v0.1.8 add generate_sjis_tbl, merge tbl, find_adding_char
 v0.2 add extract_glphys from font image, 
      rebuild_tbl, merge two tbl with the same position of the same char
+v0.2.1 align_tbl, manualy align tbl for glphys 
+       by the adding offset(+-) at some position  
 """
 
 def generate_gb2312_tbl(outpath=r"", only_kanji=False):
@@ -111,6 +113,36 @@ def find_adding_char(tbl_base, tbl_adding, index_same=None):
             continue
     print("find_adding_char, " + str(len(index_adding)) + " adding chars!")
     return index_adding
+
+def align_tbl(tbl, gap_map = dict(), 
+        padding_item=(b'\xea\xa4', ''), outpath=""):
+    """
+    align_glphys_tbl, manualy align tbl for glphys 
+        by the adding offset(+-) in gap_map at some position  
+    """
+    tbl_aligned = []
+    skip = 0
+    for i, t in enumerate(tbl):
+        if skip > 0:
+            skip -= 1
+            continue
+
+        if i in gap_map:
+            n = gap_map[i]
+            if  n < 0:
+                skip = -n
+                skip -= 1
+                continue
+            elif n > 0:
+                tbl_aligned.append(t)
+                for j in range(n): # dup place holder
+                    tbl_aligned.append(padding_item) 
+        else:
+            tbl_aligned.append(t)
+    
+    if outpath!="": save_tbl(tbl_aligned, outpath)
+    return tbl_aligned
+
 
 def merge_tbl(tbl1, tbl2, outpath=r""):
     """
@@ -351,9 +383,9 @@ def extract_glphy(img, glphyw, glphyh, idx,
                  f_idx2coord=None, f_orc=None):
     """
     extract glphy in a image by idx
-    :params f_orc(img, glphy, idx, x, y) -> c, use some ocr methed to detect the content of glphy
+    :params f_orc: (img, glphy, idx, x, y) -> c, use some ocr methed to detect the content of glphy
             such as pyorc, image_to_string(image)
-    :return glphy, x, y, c
+    :return: glphy, x, y, c
     """
     def f_idx2coord_default(idx):
         line_idx = idx // line_count
@@ -363,29 +395,39 @@ def extract_glphy(img, glphyw, glphyh, idx,
         return x, y
 
     if f_idx2coord is None: f_idx2coord = f_idx2coord_default
-    
+
     font = img
     fontw = font.shape[0]
     line_count = fontw//glphyw
     x, y = f_idx2coord(idx)
     glphy = Image.fromarray(font[y:y+glphyh, x:x+glphyw, :])
     c = f_orc(img, glphy, idx, x, y) if f_orc else ''
-    print("glphy %d, at (%d, %d) %s"%(idx, x, y, c))
+    try:
+        print("glphy %d, at (%d, %d) %s"%(idx, x, y, c))
+    except UnicodeDecodeError as e:
+        print("glphy %d, at (%d, %d) %s"%(idx, x, y, ''))
     return glphy, x, y, c
 
-def extract_glphys(imgpath, glphyw, glphyh, outdir="", shifts=(0,0,0,0), 
-        idxs = [], f_idx2coord=None, f_orc=None):
+def extract_glphys(imgpath, glphyw, glphyh, outdir="", 
+        shifts=(0,0,0,0),  idxs = [], 
+        tbl=None, f_idx2coord=None, f_orc=None):
     """
     extract glyphys form a font picture, 
-    :params shifts, (left, right, top, bottom) to crop the image
-    :idxs, extract the glphy in these idxs
-    :f_idx2coord, function to convert  glphy idx to coordinate
+    :params shifts: (left, right, top, bottom) to crop the image
+    :params idxs: extract the glphy in these idxs
+    :f_idx2coord: function to convert  glphy idx to coordinate
+    :tbl: use tbl for name glphys, will ignore f_orc
+    :f_orc: (img, glphy, idx, x, y) -> c
     :return font, coords, chars
     """
 
+    if tbl is not None:  # using tbl for name glphy
+        f_orc = lambda  img, glphy, idx, x, y: \
+                tbl[idx][1] if idx<len(tbl) else ''
     font = np.array(Image.open(imgpath), np.uint8)
-    font = font[shifts[0]:font.shape[0]-shifts[1], shifts[2]:font.shape[1]-shifts[3], :]
-
+    font = font[shifts[0]:font.shape[0]-shifts[1], 
+                shifts[2]:font.shape[1]-shifts[3], :]
+    
     coords = []
     chars = []
     if idxs==[]:

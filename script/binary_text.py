@@ -7,6 +7,7 @@ import argparse
 from io import StringIO, BytesIO
 
 """
+binary_text.py, by devseed
 A binary text tool for text exporting and importing, checking 
 
 v0.1 initial version with utf-8 support

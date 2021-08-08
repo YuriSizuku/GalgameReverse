@@ -1,13 +1,20 @@
  # -*- coding: utf-8 -*-
 import os
-import struct
 import re
 import codecs
-from io import StringIO, BytesIO
-import binary_text
+import glob
+from io import StringIO
+if os.path.exists("binary_text.py"):
+    import binary_text
+else:
+    import zzbinary_text as binary_text
+    
 """
+libtext.py, by devseed
 Some functions about the text maniqulate, such as match text, text length, etc.
+
 v0.1 match_texts, write_format_multi, read_format_multi
+v0.2 count_glphy for building font
 """
 
 def lcs(s1, s2):
@@ -86,6 +93,34 @@ def match_texts(texts1, texts2, max_ratio=0.1, max_dist=-1, *,
             texts2_match[min_idx] = i
 
     return texts1_match, texts2_match 
+
+def count_text_glphy(text):
+    """
+    :param text, the text to count glphy
+    :param sort_order, 0, no sort, 1 order, -1 reverse order
+    """
+    glphy_map = dict()
+    for c in text:
+        if c in glphy_map: glphy_map[c] += 1
+        else: glphy_map[c] = 1
+    return glphy_map
+
+def count_ftexts_glphy(ftexts):
+    """
+    :return all_text, glphy_map from ftexts
+    """
+    all_text = StringIO()
+    for ftext in ftexts:
+        all_text.write(ftext['text'])
+    glphy_map = count_text_glphy(all_text.getvalue())
+    return all_text.getvalue(), glphy_map
+
+def count_ftextsdir_glphy(ftext_files):
+    ftexts = []
+    for file in ftext_files:
+        _, ftexts2 = binary_text.read_format_text(file, True)
+        ftexts.extend(ftexts2)
+    return count_ftexts_glphy(ftexts)
 
 def write_format_iter(ftexts1, ftexts2, filename, *, num_width=5, addr_width=6, size_width=3):
     """ 

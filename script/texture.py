@@ -6,7 +6,9 @@ import struct
 import os
 
 """
+texture.py, by devseed
 something about texture and picture convert
+
 v0.1 initial version with RGBA8888， RGB332 convert
 v0.1.1 added BGR mode
 """

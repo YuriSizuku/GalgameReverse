@@ -3,19 +3,23 @@ import os
 import math
 import re
 import struct
+import copy
 import codecs
 import numpy as np
-import cv2
+#import cv2
 from PIL import ImageFont, ImageDraw, Image 
+
 """
-Utils for extracting, building tile font, or generating font picture.
-And something about tbl.
+libfont.py, by devseed
+Utils for extracting, building tile font, or generating font picture, tbl
 
 v0.1 initial version
 v0.1.5 add function save_tbl, fix px48->pt error
 v0.1.6 add gray2tilefont, tilefont2gray
 v0.1.7 slightly change some function
 v0.1.8 add generate_sjis_tbl, merge tbl, find_adding_char
+v0.2 add extract_glphys from font image, 
+     rebuild_tbl, merge two tbl with the same position of the same char
 """
 
 def generate_gb2312_tbl(outpath=r"", only_kanji=False):
@@ -105,7 +109,7 @@ def find_adding_char(tbl_base, tbl_adding, index_same=None):
         if index_same!=None and t[1] in tbl_base_map:
             index_same.append(tbl_base_map[t[1]])
             continue
-    print(str(len(index_adding)) + " adding chars!")
+    print("find_adding_char, " + str(len(index_adding)) + " adding chars!")
     return index_adding
 
 def merge_tbl(tbl1, tbl2, outpath=r""):
@@ -122,7 +126,52 @@ def merge_tbl(tbl1, tbl2, outpath=r""):
     print("tbl1 " + str(len(tbl1)) + ",  tbl2 "+ str(len(tbl2)) + " merged!")
     return tbl
 
+def rebuild_tbl(tbl_base, tbl_new, outpath="", encoding="utf-8", *, 
+        start_idx=-1, order=-1, index_reserved={}):
+    """
+    merge two tbl with the same position of the same char
+    :params start_idx: the idx for rebuild replaced char start point
+    :params order: the order for search replaced char, -1 end to start
+    :params index_reserved: not cover this area after rebuild
+    """
+    def find_replaced_idx(start, end, step, index_reserved, index_same):
+        for i in range(start, end, order):
+            if (i not in index_reserved) and (i not in index_same):
+                yield  i
+
+    if len(tbl_new) > len(tbl_base):
+        print("rebuild_tbl error! tbl_new(%d) is longer that tbl_base(%d)", len(tbl_new), len(tbl_base))
+        return []
+
+    index_same = []
+    index_adding = find_adding_char(tbl_base, tbl_new, index_same)
+    tbl_rebuild = copy.deepcopy(tbl_base)
+    print("rebuild_tbl base_char=%d, adding_char=%d, same_char=%d" %
+           (len(tbl_base), len(index_adding), len(index_same)))
+   
+    if start_idx < 0: 
+        start_idx += len(tbl_base)
+        end_idx = 0
+    else:
+        end_idx = len(tbl_base)
+    gen_replaced_idx = find_replaced_idx(start_idx, end_idx, order, index_reserved, index_same)
+    for i in range(len(index_adding)):
+        c = tbl_new[index_adding[i]][1]
+        idx = next(gen_replaced_idx)
+        if idx is None:
+            print("rebuild_tbl error! can not find replaced space!")
+            return []
+        charcode = tbl_base[idx][0]
+        tbl_rebuild[idx] = (charcode, c)
+    
+    if outpath!="": save_tbl(tbl_rebuild, outpath, encoding=encoding)
+    return tbl_rebuild
+
 def load_tbl(inpath, encoding='utf-8'):
+    """
+    tbl struct: [charcode, char]
+    tbl file: charcode=char, such as 8081=亜
+    """
     tbl = []
     with codecs.open(inpath, 'r', encoding=encoding) as fp:
         re_line = re.compile(r'([0-9|A-F|a-f]*)=(\S|\s)$')
@@ -141,18 +190,17 @@ def load_tbl(inpath, encoding='utf-8'):
                 #print(m.group(1), m.group(2), d)
                 c = m.group(2)
                 tbl.append((charcode, c))
-    print(inpath + " with " + str(len(tbl)) +" loaded!")
+    print(inpath + " with " + str(len(tbl)) +" items loaded!")
     return tbl
 
 def save_tbl(tbl, outpath="out.tbl", encoding='utf-8'):
     with codecs.open(outpath, "w", encoding='utf-8') as fp:
         for charcode, c in tbl:
-            if len(charcode) == 1:
-                d = struct.unpack('<B', charcode)[0]
-            elif len(charcode) == 2:
-                d = struct.unpack('>H', charcode)[0]
-            fp.writelines("{:X}={:s}\n".format(d, c))
-        print("tbl with " + str(len(tbl)) + " saved!")
+            charcode_str = ""
+            for d in charcode:
+                charcode_str += f"{d:02X}"
+            fp.writelines("{:s}={:s}\n".format(charcode_str, c))
+        print("tbl with " + str(len(tbl)) + " items saved to " + outpath)
 
 def tilefont2bgra(data, char_height, char_width, bpp, n_row=64, n_char=0, f_decode=None):
     def f_decode_default(data, bpp, idx):
@@ -295,11 +343,75 @@ def extract_tilefont(inpath, char_height, char_width, bpp, outpath=r".\out.png",
         fp.seek(addr)
         data = fp.read()
         bgra = tilefont2bgra(data, char_height, char_width, bpp, n_row=n_row, n_char=n_char, f_decode=f_decode)
-        cv2.imwrite(outpath, bgra)
+        # cv2.imwrite(outpath, bgra)
+        Image.fromarray(bgra[:, :, [2,1,0,3]]).save(outpath)
         print(outpath + " extracted!")
 
+def extract_glphy(img, glphyw, glphyh, idx, 
+                 f_idx2coord=None, f_orc=None):
+    """
+    extract glphy in a image by idx
+    :params f_orc(img, glphy, idx, x, y) -> c, use some ocr methed to detect the content of glphy
+            such as pyorc, image_to_string(image)
+    :return glphy, x, y, c
+    """
+    def f_idx2coord_default(idx):
+        line_idx = idx // line_count
+        line_offset = idx % line_count
+        x = line_idx * glphyh
+        y = line_offset * glphyw  
+        return x, y
+
+    if f_idx2coord is None: f_idx2coord = f_idx2coord_default
+    
+    font = img
+    fontw = font.shape[0]
+    line_count = fontw//glphyw
+    x, y = f_idx2coord(idx)
+    glphy = Image.fromarray(font[y:y+glphyh, x:x+glphyw, :])
+    c = f_orc(img, glphy, idx, x, y) if f_orc else ''
+    print("glphy %d, at (%d, %d) %s"%(idx, x, y, c))
+    return glphy, x, y, c
+
+def extract_glphys(imgpath, glphyw, glphyh, outdir="", shifts=(0,0,0,0), 
+        idxs = [], f_idx2coord=None, f_orc=None):
+    """
+    extract glyphys form a font picture, 
+    :params shifts, (left, right, top, bottom) to crop the image
+    :idxs, extract the glphy in these idxs
+    :f_idx2coord, function to convert  glphy idx to coordinate
+    :return font, coords, chars
+    """
+
+    font = np.array(Image.open(imgpath), np.uint8)
+    font = font[shifts[0]:font.shape[0]-shifts[1], shifts[2]:font.shape[1]-shifts[3], :]
+
+    coords = []
+    chars = []
+    if idxs==[]:
+        fontw, fonth = font.shape[0], font.shape[1]
+        idxs = [x for x in range((fontw//glphyw)*(fonth//glphyh))]
+    for i, idx in enumerate(idxs):
+        glphy, x, y, c = extract_glphy(font, glphyw, glphyh, idx, f_idx2coord, f_orc)
+        coords.append((x,y))
+        chars.append(c)
+        if outdir!="":
+            if c=='':
+                filename = f"{idx:04d}_{x:04d}_{y:04d}.png"
+            else:
+                filename = f"{idx:04d}_{x:04d}_{y:04d}_{c:s}.png"
+            try:
+                glphy.save(os.path.join(outdir, filename))
+            except:
+                filename = f"{idx:04d}_{x:04d}_u{ord(c[0]):04X}.png"
+                glphy.save(os.path.join(outdir, filename))
+
+    return font, coords, chars
+
 def build_tilefont(inpath, char_height, char_width, bpp, outpath=r".\out.bin", n_row=64, n_char=0, f_encode=None):
-    bgra = cv2.imread(inpath, cv2.IMREAD_UNCHANGED)
+    # bgra = cv2.imread(inpath, cv2.IMREAD_UNCHANGED)
+    img = Image.open(inpath)
+    bgra = np.array(img, np.uint8)[:,:[2,1,0,3]]
     data = bgra2tilefont(bgra, char_height, char_width, bpp, n_row=n_row, n_char=n_char, f_encode=f_encode)
     with open(outpath, 'wb') as fp:
         fp.write(data)

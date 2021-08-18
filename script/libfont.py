@@ -22,9 +22,10 @@ v0.2 add extract_glphys from font image,
      rebuild_tbl, merge two tbl with the same position of the same char
 v0.2.1 align_tbl, manualy align tbl for glphys 
        by the adding offset(+-) at some position  
+v0.2.2 replace_char, to replace useless char to new char in tbl
 """
 
-def generate_gb2312_tbl(outpath=r"", only_kanji=False):
+def generate_gb2312_tbl(outpath=r"", only_kanji=False, replace_map={}):
     tbl = []
     if only_kanji is False:
         for low in range(0x20, 0x7f): # asci
@@ -53,6 +54,8 @@ def generate_gb2312_tbl(outpath=r"", only_kanji=False):
             charcode = struct.pack('<BB', high, low)
             tbl.append((charcode, charcode.decode('gb2312')))
 
+    if len(replace_map) > 0:
+        tbl = replace_char(tbl, replace_map)
     if outpath!="": save_tbl(tbl, outpath)
     print("gb2312 tbl with " + str(len(tbl)) + " generated!")
     return tbl
@@ -92,6 +95,19 @@ def generate_sjis_tbl(outpath=r"", index_empty=None, fullsjis=True):
     if outpath!="": save_tbl(tbl, outpath)
     print("sjis tbl with " + str(len(tbl)) + " generated!")
     return tbl
+
+def replace_char(tbl, replace_map): 
+    """
+    replace_char, to replace useless char to new char in tbl
+    """
+    tbl_replaced = []
+    for t in tbl:
+        charcode =t[0]
+        c = t[1]
+        if c in replace_map:
+            c = replace_map[c]
+        tbl_replaced.append((charcode, c))
+    return tbl_replaced
 
 def find_adding_char(tbl_base, tbl_adding, index_same=None):
     """
@@ -142,7 +158,6 @@ def align_tbl(tbl, gap_map = dict(),
     
     if outpath!="": save_tbl(tbl_aligned, outpath)
     return tbl_aligned
-
 
 def merge_tbl(tbl1, tbl2, outpath=r""):
     """

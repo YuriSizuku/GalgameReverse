@@ -1,5 +1,4 @@
  # -*- coding: utf-8 -*-
-import os
 import struct
 import re
 import codecs
@@ -20,6 +19,7 @@ v0.4 add read_format_text, write_format_text, optimize the code structure
 v0.4.1 fixed merge_text in this optimized the code structure
 v0.4.2 remove useless callbacks, adjust default len, add arbitary encoding, add jump_table rebuild, 
 v0.4.3 change the structure, write_format_text, read_format_text added line_texts mode
+v0.4.4 adding padding char if text shorter than origin
 
 """
 
@@ -50,7 +50,8 @@ def isText(data, encoding="utf-8"):
         return False
     else: return True
 
-def write_format_text(outpath, ftexts1, ftexts2, *, num_width=5, addr_width=6, size_width=3):
+def write_format_text(outpath, ftexts1, ftexts2, *, 
+    num_width=5, addr_width=6, size_width=3):
     """
     text dict is as {'addr':, 'size':, 'text':}
     :param ftexts1[]: text dict array in '○' line, 
@@ -334,12 +335,16 @@ def extract_multichar(data, encoding, min_len=2):
                 i+=1
     return addrs, texts_data
 
-def patch_text(data, ftexts, encoding = 'utf-8', tbl=None, can_longer=False, jump_table=None):
+def patch_text(data, ftexts, 
+    encoding = 'utf-8', padding='\0', tbl=None, can_longer=False, jump_table=None):
     """
     :param data: bytearray
     :param encoding: the encoding of the original binary file if not using tbl
     :jump_table: a dict array with {'addr':, 'addr_new':, 'jumpto':, 'jumpto_new':} 
     """
+
+    d = ord(padding)
+    padding_bytes = int.to_bytes(d//0xff + 1, 1, 'little', signed=False)
     offset = 0
     for _, ftext in enumerate(ftexts):
         addr, size, text = ftext['addr'], ftext['size'], ftext['text'] 
@@ -355,8 +360,12 @@ def patch_text(data, ftexts, encoding = 'utf-8', tbl=None, can_longer=False, jum
                 if t['addr'] >= addr: t['addr_new'] = t['addr'] + offset
                 if t['jumpto'] >= addr:  t['jumpto_new'] = t['jumpto'] + offset
 
-        if len(buf) <= size : buf = buf + (size-len(buf)) * b'\0'
-        else: print("at 0x%06X, %d bytes is lager than %d bytes!"%(addr, len(buf), size))
+        if len(buf) <= size : 
+            padding_len = len(padding_bytes)
+            buf = buf + (size-len(buf))//padding_len * padding_bytes
+        else: 
+            print("at 0x%06X, %d bytes is lager than %d bytes!"
+                %(addr, len(buf), size))
         if not can_longer:
             data[addr+offset:addr+offset+size] = buf[0:size]
         else:
@@ -408,7 +417,8 @@ def merge_text(inpath1, inpath2, outpath):
     print("merged text done! in " +  outpath)
         
 
-def extract_text_file(inpath, outpath="out.txt", encoding = 'utf-8', tblpath="", min_len=2, has_cjk=True, f_extract=None):
+def extract_text_file(inpath, outpath="out.txt", 
+    encoding = 'utf-8', tblpath="", min_len=2, has_cjk=True, f_extract=None):
     """
     export all the text to txt file in utf-8
     :param encoding: the encoding to the inpath, if tbl is None
@@ -460,7 +470,8 @@ def extract_text_file(inpath, outpath="out.txt", encoding = 'utf-8', tblpath="",
     write_format_text(outpath, ftexts, ftexts)
     print("extracted text done! in " +  outpath)
             
-def patch_text_file(textpath, insertpath, outpath="out.bin", encoding = 'utf-8', tblpath="", can_longer=False):
+def patch_text_file(textpath, insertpath, outpath="out.bin", 
+    encoding = 'utf-8',  padding="\0", tblpath="", can_longer=False):
     """
     import the text in textpath to insertpath, make the imported file as outpath
     :param encoding: the encoding of the insertpath, or custom tbl's if not None
@@ -470,7 +481,7 @@ def patch_text_file(textpath, insertpath, outpath="out.bin", encoding = 'utf-8',
     with open(insertpath, "rb") as fp:
         data = bytearray(fp.read())
         tbl = None if tblpath=="" else load_tbl(tblpath, encoding=encoding)
-        data = patch_text(data, ftexts2, encoding=encoding, tbl=tbl, can_longer=can_longer)
+        data = patch_text(data, ftexts2, encoding=encoding, padding=padding, tbl=tbl, can_longer=can_longer)
     
     with open(outpath, "wb") as fp:
         fp.write(data)
@@ -484,19 +495,25 @@ def main():
     parser.add_argument('-o', '--outpath', type=str, default=r".\out")
     parser.add_argument('-e', '--encoding', type=str, default='utf-8')
     parser.add_argument('--min_len', type=int, default=2)
+    parser.add_argument('--padding', type=str, default="\0", help="padding char if import text shorter than origin")
     parser.add_argument('--tbl', type=str, default="", help="custom charcode table")
     parser.add_argument('--has_cjk', action='store_true', help="extract the text with cjk only")
     parser.add_argument('--can_longer', action='store_true', help="inserted text can be longer than the original")
     parser.add_argument('inpath', type=str)
+    
     args = parser.parse_args()
     if args.patch:
-        patch_text_file(args.inpath, args.patch, args.outpath, encoding=args.encoding, tblpath=args.tbl, can_longer=args.can_longer)
+        patch_text_file(args.inpath, args.patch, args.outpath, 
+            encoding=args.encoding, padding=args.padding, 
+            tblpath=args.tbl, can_longer=args.can_longer)
     elif args.merge:
         merge_text(args.inpath, args.merge, args.outpath)
     elif args.check:
-        check_text(args.inpath, args.outpath, encoding=args.encoding, tblpath=args.tbl)
+        check_text(args.inpath, args.outpath, 
+            encoding=args.encoding, tblpath=args.tbl)
     else:
-        extract_text_file(args.inpath, args.outpath, encoding=args.encoding, tblpath=args.tbl, has_cjk=args.has_cjk, min_len=args.min_len)
+        extract_text_file(args.inpath, args.outpath, encoding=args.encoding, 
+            tblpath=args.tbl, has_cjk=args.has_cjk, min_len=args.min_len)
 
 if __name__ == "__main__":
     main()

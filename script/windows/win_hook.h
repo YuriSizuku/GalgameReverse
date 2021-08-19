@@ -1,5 +1,6 @@
 /*
-  windows dyamic hook util functions wrappers by devseed 
+  win_hook.h, by devseed, v0.2
+  windows dyamic hook util functions wrappers 
 */
 
 #ifndef _WIN_HOOK_H

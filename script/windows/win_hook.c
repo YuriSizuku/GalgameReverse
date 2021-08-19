@@ -1,3 +1,8 @@
+/*
+  win_hook.c, by devseed, v0.2
+  windows dyamic hook util functions wrappers 
+*/
+
 #include <Windows.h>
 #include <tlhelp32.h>
 #include <stdio.h>
@@ -43,7 +48,7 @@ HANDLE GetProcessByName(LPCWSTR exename)
     {
         do
         {
-            if (wcscmp(process.szExeFile, exename) == 0)
+            if (wcscmp((const wchar_t*)process.szExeFile, exename) == 0)
             {
                 pid = process.th32ProcessID;
                 break;
@@ -76,8 +81,8 @@ BOOL inject_dll(HANDLE hProcess, LPCSTR dllname)
 
     HMODULE kernel = GetModuleHandleA("Kernel32");
     FARPROC pfnLoadlibraryA = GetProcAddress(kernel, "LoadLibraryA");
-    HANDLE threadHandle = CreateRemoteThread(hProcess, NULL, NULL, 
-        (LPTHREAD_START_ROUTINE)pfnLoadlibraryA, param_addr, NULL, NULL); 
+    HANDLE threadHandle = CreateRemoteThread(hProcess, NULL, 0, 
+        (LPTHREAD_START_ROUTINE)pfnLoadlibraryA, param_addr, 0, NULL); 
    
     if (threadHandle == NULL) return FALSE;
     WaitForSingleObject(threadHandle, -1);
@@ -105,8 +110,8 @@ BOOL iat_hook_module(LPCSTR targetDllName, LPCSTR moduleDllName, PROC pfnOrg, PR
 #define VA_TYPE DWORD
 #endif
     DWORD dwOldProtect = 0;
-    VA_TYPE imageBase = GetModuleHandleA(moduleDllName);
-    LPBYTE pNtHeader = *(DWORD *)((LPBYTE)imageBase + 0x3c) + imageBase; 
+    VA_TYPE imageBase = (VA_TYPE)GetModuleHandleA(moduleDllName);
+    LPBYTE pNtHeader = (LPBYTE)(*(DWORD *)((LPBYTE)imageBase + 0x3c) + imageBase); 
 #ifdef _WIN64
     VA_TYPE impDescriptorRva = *((DWORD*)&pNtHeader[0x90]);
 #else

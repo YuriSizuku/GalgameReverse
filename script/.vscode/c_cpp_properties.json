@@ -3,7 +3,8 @@
         {
             "name": "Win32",
             "includePath": [
-                "${workspaceFolder}/**"
+                "${workspaceFolder}/**",
+                "${workspaceFolder}/windows/**"
             ],
             "defines": [
                 "_DEBUG",
@@ -16,7 +17,7 @@
             "compilerPath": "D:/AppExtend/msys2/mingw32/bin/gcc.exe",
             "cStandard": "c99",
             "cppStandard": "c++11",
-            "intelliSenseMode": "linux-gcc-x86",
+            "intelliSenseMode": "windows-gcc-x86",
             "compilerArgs": [
                 "-m32"
             ]

@@ -1,0 +1,1 @@
+clang krkr_patch.c ./../windows/win_hook.c -I./../windows/ -lUser32 -D _CRT_SECURE_NO_WARNINGS -target i686-pc-windows-msvc -shared -o ./build/krkr_patch.dll -Os

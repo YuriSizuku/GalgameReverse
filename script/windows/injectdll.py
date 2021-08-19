@@ -1,6 +1,6 @@
-import lief
 import sys
 import os
+import lief
 
 def injectdll(exepath, dllpath, outpath="out.exe"): # can not be ASLR
     binary_exe = lief.parse(exepath)

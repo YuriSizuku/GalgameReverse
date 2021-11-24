@@ -1,0 +1,1 @@
+clang -target i686-pc-windows-msvc ./tyrano_extractexe.c -o ./build/tyrano_extractexe.exe -D_CRT_SECURE_NO_WARNINGS

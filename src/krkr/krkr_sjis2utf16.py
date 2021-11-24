@@ -14,6 +14,7 @@ def sjis2utf16bom(inpath, outpath="./out.txt"):
         print(inpath, "is TJS file")
         return None
     
+    print(inpath, "is converting...")
     text = data_sjis.decode('sjis')
     data_utf16bom.write(codecs.BOM_UTF16_LE)
     data_utf16bom.write(text.encode('utf-16le'))

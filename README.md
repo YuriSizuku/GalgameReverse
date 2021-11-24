@@ -18,18 +18,28 @@ With the list:
 * `win_redirect.js`, redirect font, codepage, and paths in games
 * `win_hook.cpp`, `win_hook.h` dynamic hook functions, such as IAT hook, inline hook
 
-> KRKR tools
+> Majiro
+
+* `winterpolaris_hook.js` dump `mjo` and analyze `majiro` in `winterpolaris` game
+* `winterpolaris_hook.c`  Majirov3 dynamic hook CHSPATCH framework code example
+
+> Krkr
 
 * `krkr_patch.c`, make `krkr_patch.dll` for change locale and redirect CHSPATCH
-*  ` krkr_sjis2utf16bom` , batch convert `sjis` files to `utf-16le-bom` format
+* ` krkr_sjis2utf16bom` , batch convert `sjis` files to `utf-16le-bom` format
 
-> Onscriptor
+> Tyrano
 
-* `extract_nt3.c`,  nt3 script extract
+* `tyrano_extractexe.c` A tool to extract tyrano build-in exe files
+* `qbit_text.py` Extract and insert text for translate the game  `Q-bit_キグルミキノコ`
 
 > Artemis
 
 * `pf8tool.py`,  pf8 format archive pack and unpack
+
+> Onscriptor
+
+* `extract_nt3.c`,  nt3 script extract
 
 > Criware
 
@@ -52,10 +62,3 @@ With the list:
 > Bruns
 
 * `bruns_decrypt.c` , to decrypt  `EENZ` file,  `DustmaniaGrotesque` tested 
-
-> Majiro
-
-* `winterpolaris_hook.js` dump `mjo` and analyze `majiro` in `winterpolaris` game
-
-* `winterpolaris_hook.c`  Majirov3 dynamic hook CHSPATCH framework code example
-

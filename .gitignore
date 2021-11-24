@@ -9,6 +9,5 @@ __pycache__
 *.ilk
 .vs
 /script/tmp/*
-/src/**/build/*
 /src/**/release/*
 /src/**/debug/*

@@ -15,6 +15,7 @@ Some functions about the text maniqulate, such as match text, text length, etc.
 
 v0.1 match_texts, write_format_multi, read_format_multi
 v0.2 count_glphy for building font
+v0.2.1 fix read_format_multi bug
 """
 
 def lcs(s1, s2):
@@ -140,13 +141,13 @@ def write_format_iter(ftexts1, ftexts2, filename, *, num_width=5, addr_width=6, 
     lines_text.extend(line_texts)    
     return lines_text
 
-def write_format_multi(outpath, file_ftexts_map, *, num_width=5, addr_width=6, size_width=3):
+def write_format_multi(outpath, file_ftexts, *, num_width=5, addr_width=6, size_width=3):
     """
     write multi ftexts into one file, with the filename information
-    :param file_ftexts_map[]: {'filename':, 'ftexts1', 'ftexts2'}
+    :param file_ftexts[]: {'filename':, 'ftexts1', 'ftexts2'}
     """
     lines_text = []
-    for t in file_ftexts_map:
+    for t in file_ftexts:
         lines = write_format_iter(t['ftexts1'], t['ftexts2'], t['filename'], num_width=num_width, 
                                    addr_width=addr_width, size_width=size_width)
         lines_text.extend(lines)
@@ -159,7 +160,7 @@ def read_format_multi(inpath, only_text=False):
     """
     :param inpath: inpath can be path or lines_text
     """
-    file_ftexts_map = []
+    file_ftexts = []
     filename = "NULL"
     start = -1
     
@@ -176,10 +177,11 @@ def read_format_multi(inpath, only_text=False):
                 filename = m.group(2)
                 continue
             ftexts1, ftexts2 = binary_text.read_format_text(lines_text[start:i], only_text=False)
-            file_ftexts_map.append( {'filename' : filename, 'ftexts1' : ftexts1, 'ftexts2' : ftexts2})
+            file_ftexts.append( {'filename' : filename, 'ftexts1' : ftexts1, 'ftexts2' : ftexts2})
             filename = m.group(2)
             start = i
-        ftexts1, ftexts2 = binary_text.read_format_text(lines_text[start:len(lines_text)], only_text=False)
-        file_ftexts_map.append( {'filename' : filename, 'ftexts1' : ftexts1, 'ftexts2' : ftexts2})
+
+    ftexts1, ftexts2 = binary_text.read_format_text(lines_text[start:len(lines_text)], only_text=False)
+    file_ftexts.append( {'filename' : filename, 'ftexts1' : ftexts1, 'ftexts2' : ftexts2})
     
-    return file_ftexts_map
+    return file_ftexts

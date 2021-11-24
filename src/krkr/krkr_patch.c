@@ -22,6 +22,12 @@ int WINAPI MultiByteToWideChar_hook(
     return MultiByteToWideChar(932, dwFlags, lpMultiByteStr, cbMultiByte, lpWideCharStr, cchWideChar);
 }
 
+HFONT WINAPI CreateFontIndirectW_hook(LOGFONTW *lplf)
+{
+    lplf->lfCharSet = GB2312_CHARSET;
+    return CreateFontIndirectW(lplf);
+}
+
 HANDLE WINAPI CreateFileW_hook(
     LPCWSTR lpFileName,
     DWORD dwDesiredAccess,
@@ -72,6 +78,10 @@ void install_hooks()
         (PROC)MultiByteToWideChar_hook))
     {
         MessageBoxA(0, "MultiByteToWideChar hook error", "IAThook error", 0);
+    }
+    if(!iat_hook("Gdi32.dll", (PROC)CreateFontIndirectW, (PROC)CreateFontIndirectW_hook))
+    {
+        MessageBoxA(NULL, "CreateFontIndirectW iat hook failed!", "error", 0);
     }
     if(!iat_hook("kernel32.dll", 
         (PROC)CreateFileW, (PROC)CreateFileW_hook))

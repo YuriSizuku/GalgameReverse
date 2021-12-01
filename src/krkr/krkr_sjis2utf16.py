@@ -47,8 +47,12 @@ def main():
         for root, dirs, files in os.walk(inpath):
             for file in files:
                 src = os.path.join(root, file)
-                dst =  os.path.join(outpath, file)
-                data = sjis2utf16bom(src,dst)
+                _relpath = os.path.relpath(src, inpath)
+                dst =  os.path.join(outpath, _relpath)
+                dstdir = os.path.dirname(dst)
+
+                if not os.path.exists(dstdir): os.makedirs(dstdir)
+                data = sjis2utf16bom(src, dst)
                 if data!=None:
                     print("%s -> %s converted"%(src, dst))
     else: 

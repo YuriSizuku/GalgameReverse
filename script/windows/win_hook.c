@@ -1,5 +1,5 @@
 /*
-  win_hook.c, by devseed, v0.2
+  win_hook.c, by devseed, v0.2.1
   windows dyamic hook util functions wrappers 
 */
 
@@ -137,4 +137,17 @@ BOOL iat_hook_module(LPCSTR targetDllName, LPCSTR moduleDllName, PROC pfnOrg, PR
         }
     }
     return FALSE;
+}
+
+
+BOOL patch_memory(LPVOID addr, void* buf, size_t bufsize)
+{
+	DWORD oldprotect;
+    BOOL ret = VirtualProtect(addr, bufsize, PAGE_EXECUTE_READWRITE, &oldprotect);
+	if(ret)
+	{
+		CopyMemory(addr, buf, bufsize);
+        VirtualProtect(addr, bufsize, oldprotect, &oldprotect);
+	}
+    return ret;
 }

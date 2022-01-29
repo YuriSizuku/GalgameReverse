@@ -24,7 +24,7 @@ BOOL iat_hook(LPCSTR targetDllName, PROC pfnOrg, PROC pfgNew);
 // iat_hook_module is for windows dll, moduleDllName is which dll to hook iat
 BOOL iat_hook_module(LPCSTR targetDllName, LPCSTR moduleDllName, PROC pfnOrg, PROC pfnNew);
 
-BOOL patch_memory(LPVOID addr, void* buf, size_t bufsize)
+BOOL patch_memory(LPVOID addr, void* buf, size_t bufsize);
 
 // using detour for inline hook, 
 // passing the array with NULL end as params, for example, use pfnOlds[n] for old function invoke

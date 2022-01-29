@@ -11,7 +11,7 @@ void dummy()
 
 }
 
-void redirect_ig_filepathw(LPCWSTR org_filepath, LPWSTR redirect_filepath)
+void ig_redirect_filepathw(LPCWSTR org_filepath, LPWSTR redirect_filepath)
 {
     int start = wcslen(org_filepath);
     while (org_filepath[start] != L'/' && start > 0) { start--; }
@@ -147,7 +147,7 @@ DWORD WINAPI GetFileAttributesW_redirect(
 {
     wchar_t redirect_path[1024];
     wprintf(L"GetFileAttributesW %ls\n", lpFileName);
-    redirect_ig_filepathw(lpFileName, redirect_path);
+    ig_redirect_filepathw(lpFileName, redirect_path);
     return GetFileAttributesW(redirect_path);
 }
 
@@ -163,7 +163,7 @@ HANDLE WINAPI CreateFileW_redirect(
 {
     wchar_t redirect_path[1024];
     wprintf(L"CreateFileW %ls\n", lpFileName);
-    redirect_ig_filepathw(lpFileName, redirect_path);
+    ig_redirect_filepathw(lpFileName, redirect_path);
     return CreateFileW(redirect_path, dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
 }
 

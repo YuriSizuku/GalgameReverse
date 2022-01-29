@@ -1,1 +1,1 @@
-include redirect_ig.mk
+include ig_redirect.mk

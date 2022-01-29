@@ -1,1 +1,0 @@
-clang -target i686-pc-windows-msvc ./extract_nt3.c -o ./build/extract_nt3.exe -D_CRT_SECURE_NO_WARNINGS

@@ -3,16 +3,16 @@ UTILDIR := ./../../script/windows
 INCS = -I${UTILDIR}
 LIBS = -luser32
 CFLAGS = $(INCS) $(LIBS) -std=c99 -target i686-pc-windows-msvc -D_WIN32
-SRCS =  $(UTILDIR)/win_hook.c redirect_ig.c
-OBJS = win_hook.o redirect_ig.o
+SRCS =  $(UTILDIR)/win_hook.c ig_redirect.c
+OBJS = win_hook.o ig_redirect.o
 OBJS_DEBUG =  $(addprefix ./debug/,$(OBJS))
 OBJS_RELEASE = $(addprefix ./release/,$(OBJS))
 
 all: prepare debug release 
 
 prepare: 
-	if NOT [ -d "./debug" ]; then mkdir ./debug; fi
-	if NOT [ -d "./release" ]; then mkdir ./release; fi
+	if ! [ -d "./debug" ]; then mkdir ./debug; fi
+	if ! [ -d "./release" ]; then mkdir ./release; fi
 
 $(UTILDIR)/%.c: $(UTILDIR)/%.h
 
@@ -21,20 +21,20 @@ $(UTILDIR)/%.cpp: $(UTILDIR)/%.hpp
 ./debug/win_hook.o: $(UTILDIR)/win_hook.c
 	$(CC) -c $< $(CFLAGS) -o $@ -g -D_DEBUG
 
-./debug/redirect_ig.o: redirect_ig.c
+./debug/ig_redirect.o: ig_redirect.c
 	$(CC) -c $< $(CFLAGS) -o $@ -g -D_DEBUG
 
 ./release/win_hook.o: $(UTILDIR)/win_hook.c
 	$(CC) -c $< $(CFLAGS) -o $@ -Os
 
-./release/redirect_ig.o: redirect_ig.c
+./release/ig_redirect.o: ig_redirect.c
 	$(CC) -c $< $(CFLAGS) -o $@ -Os
 
 debug: $(OBJS_DEBUG)
-	$(CC) -shared  $^ $(CFLAGS) -o ./$@/redirect_ig.dll -Wl,"/DEF:redirect_ig.def" -g
+	$(CC) -shared  $^ $(CFLAGS) -o ./$@/ig_redirect.dll -Wl,"/DEF:ig_redirect.def" -g
 
 release: $(OBJS_RELEASE)
-	$(CC) -shared  $^ $(CFLAGS) -o ./$@/redirect_ig.dll -Wl,"/DEF:redirect_ig.def"
+	$(CC) -shared  $^ $(CFLAGS) -o ./$@/ig_redirect.dll -Wl,"/DEF:ig_redirect.def"
 
 clean:
 	rm -rf ./debug

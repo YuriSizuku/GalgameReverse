@@ -1,0 +1,1 @@
+clang -target i686-pc-windows-msvc ./ons_decryptnt3.c -o ./build/ons_decryptnt3.exe -D_CRT_SECURE_NO_WARNINGS

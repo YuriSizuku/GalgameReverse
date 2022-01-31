@@ -19,7 +19,8 @@ v0.4 add read_format_text, write_format_text, optimize the code structure
 v0.4.1 fixed merge_text in this optimized the code structure
 v0.4.2 remove useless callbacks, adjust default len, add arbitary encoding, add jump_table rebuild, 
 v0.4.3 change the structure, write_format_text, read_format_text added line_texts mode
-v0.4.4 adding padding char if text shorter than origin
+v0.4.4 adding padding char if text shorter than origin (in order with \x0d, \x0a, zeros will stop str), 
+v0.4.5 fix the padding problem
 
 """
 
@@ -344,7 +345,7 @@ def patch_text(data, ftexts,
     """
 
     d = ord(padding)
-    padding_bytes = int.to_bytes(d//0xff + 1, 1, 'little', signed=False)
+    padding_bytes = int.to_bytes(d, d//0xff + 1, 'little', signed=False)
     offset = 0
     for _, ftext in enumerate(ftexts):
         addr, size, text = ftext['addr'], ftext['size'], ftext['text'] 
@@ -487,7 +488,7 @@ def patch_text_file(textpath, insertpath, outpath="out.bin",
         fp.write(data)
 
 def main():
-    parser = argparse.ArgumentParser(description="binary text tool v0.4.2 by devseed")
+    parser = argparse.ArgumentParser(description="binary text tool v0.4.5 by devseed")
     group = parser.add_mutually_exclusive_group()
     group.add_argument('-p', '--patch', type=str, help="patch this path by the inpath text, this is origin script file")
     group.add_argument('-m','--merge', type=str, help="merge the line with '●' in this file to the inpath file")

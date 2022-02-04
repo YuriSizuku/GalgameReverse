@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "win_hook.h": "c",
+        "bintext.h": "c"
+    }
+}

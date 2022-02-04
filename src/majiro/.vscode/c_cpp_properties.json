@@ -4,18 +4,16 @@
             "name": "Win32",
             "includePath": [
                 "${workspaceFolder}/**",
-                "${workspaceFolder}/../../script/**",
-                "${workspaceFolder}/../../script/windows/**",
+                "${workspaceFolder}/../../util/include/**",
                 "${workspaceFolder}/../../thirdparty/include/**"
             ],
             "defines": [
                 "_DEBUG",
-                "_WIN32",
-                "_DETOURS",
-                "NO_REGEX"
+                "UNICODE",
+                "_UNICODE"
             ],
-            "windowsSdkVersion": "10.0.18362.0",
-            "compilerPath": "D:/AppExtend/LLVM/bin/clang.exe",
+            "windowsSdkVersion": "10.0.19041.0",
+            "compilerPath": "D:/AppExtend/EVAPORATE/msys2/mingw32/bin/gcc.exe",
             "cStandard": "c99",
             "cppStandard": "c++11",
             "intelliSenseMode": "windows-gcc-x86"

@@ -1,0 +1,1 @@
+include ig_redirect.mk

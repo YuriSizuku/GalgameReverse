@@ -1,0 +1,27 @@
+{
+    "configurations": [
+        {
+            "name": "Win32",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "${workspaceFolder}/windows/**"
+            ],
+            "defines": [
+                "_DEBUG",
+                "UNICODE",
+                "_UNICODE",
+                "_TEST_BINARY_TEXT",
+                "NO_REGEX"
+            ],
+            "windowsSdkVersion": "10.0.18362.0",
+            "compilerPath": "D:/AppExtend/msys2/mingw32/bin/gcc.exe",
+            "cStandard": "c99",
+            "cppStandard": "c++11",
+            "intelliSenseMode": "windows-gcc-x86",
+            "compilerArgs": [
+                "-m32"
+            ]
+        }
+    ],
+    "version": 4
+}

@@ -80,7 +80,7 @@ With the list:
 
 > cycrose
 
-* `baranoki_psp_zp.py`, ``baranoki_psp_pk``, support *.zp, *.pk file for `薔薇ノ木ニ薔薇ノ花咲ク) `
+* `baranoki_psp_zp.py`, ``baranoki_psp_pk``, support *.zp, *.pk file for `薔薇ノ木ニ薔薇ノ花咲ク`
 * `baranoki_psp_vmc.py`, `baranoki_psp_pktext.py`, text support
 * `baranoki_psp_fontfnt.py`, `baranoki_psp_fontp.py`, tile font support
 * `baranoki_psp_boot.py`, rebuild the boot for fixing size buffer

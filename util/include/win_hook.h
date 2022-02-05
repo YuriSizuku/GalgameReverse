@@ -6,35 +6,62 @@
 #ifndef _WIN_HOOK_H
 #define _WIN_HOOK_H
 #include <Windows.h>
-//get the process handle by exename
-HANDLE GetProcessByName(LPCWSTR exename); 
+// PE functions
+size_t get_overlay_offset(BYTE *pe);
 
-// dynamic inject a dll into a process
-BOOL inject_dll(HANDLE hProcess, LPCSTR dllname); 
-
-// start a exe by CreateProcess
+// loader functions
+/* 
+    start a exe by CreateProcess
+*/
 HANDLE start_exe(LPCSTR exepath, LPSTR cmdstr);
 
-// alloc a console for the program
+/*
+    get the process handle by exename
+*/
+HANDLE GetProcessByName(LPCWSTR exename); 
+
+/*
+    dynamic inject a dll into a process
+ */ 
+BOOL inject_dll(HANDLE hProcess, LPCSTR dllname); 
+
+/*
+    alloc a console for the program
+*/
 void install_console();
 
-// iat dynamiclly hook, replace the pfgNew with pfnOrg function in targetDllName, 
-// iat_hook is for windows EXE, targetDllName is like "user32.dll", "kernel32.dll"
-BOOL iat_hook(LPCSTR targetDllName, PROC pfnOrg, PROC pfgNew);
-// iat_hook_module is for windows dll, moduleDllName is which dll to hook iat
+
+// dynamic hook functions
+BOOL patch_memory(LPVOID addr, void* buf, 
+    size_t bufsize);
+
+/* 
+    iat_hook_module is for windows dll, 
+    moduleDllName is which dll to hook iat
+*/
 BOOL iat_hook_module(LPCSTR targetDllName, LPCSTR moduleDllName, PROC pfnOrg, PROC pfnNew);
 
-BOOL patch_memory(LPVOID addr, void* buf, size_t bufsize);
+/*
+    iat dynamiclly hook, 
+    replace the pfgNew with pfnOrg function 
+    in targetDllName, 
+    iat_hook is for windows EXE, 
+    targetDllName is like "user32.dll", "kernel32.dll"
+*/
+BOOL iat_hook(LPCSTR targetDllName, PROC pfnOrg, PROC pfgNew);
 
-// using detour for inline hook, 
-// passing the array with NULL end as params, for example, use pfnOlds[n] for old function invoke
-//
-// void(*g_pfnAbout)() = NULL;
-// ULONGLONG rva = 0x11D40;
-// HMODULE hMod = GetModuleHandleA(NULL);
-// PVOID pfnOlds[2] = { (PVOID)((ULONGLONG)hMod + rva), NULL }, pfnNews[2] = { test_hook, NULL };
-// inline_hooks(pfnOlds, pfnNews);
-// g_pfnAbout = (void(*)())(pfnOlds[0]); // use old function
+/*
+    using detour for inline hook, 
+    passing the array with NULL end as params, 
+    for example, use pfnOlds[n] for old function invoke
+
+    void(*g_pfnAbout)() = NULL;
+    ULONGLONG rva = 0x11D40;
+    HMODULE hMod = GetModuleHandleA(NULL);
+    PVOID pfnOlds[2] = { (PVOID)((ULONGLONG)hMod + rva), NULL }, pfnNews[2] = { test_hook, NULL };
+    inline_hooks(pfnOlds, pfnNews);
+    g_pfnAbout = (void(*)())(pfnOlds[0]);
+*/
 int inline_hooks(PVOID pfnOlds[], PVOID pfnNews[]); 
 int inline_unhooks(PVOID pfnOlds[], PVOID pfnNews[]);
 #endif 
@@ -48,32 +75,42 @@ int inline_unhooks(PVOID pfnOlds[], PVOID pfnNews[]);
 #include <Windows.h>
 #include <tlhelp32.h>
 #include <stdio.h>
-
-#ifdef USE_DETOURS
-#include "detours.h"
-int inline_hooks(PVOID pfnOlds[], PVOID pfnNews[])
+// PE functions
+size_t get_overlay_offset(BYTE *pe)
 {
-    int i=0;
-    DetourRestoreAfterWith();
-    DetourTransactionBegin();
-    DetourUpdateThread(GetCurrentThread());
-    for(i=0; pfnNews[i]!=NULL ;i++)
-        DetourAttach(&pfnOlds[i], pfnNews[i]);
-    DetourTransactionCommit();
-    return i;
+#ifdef _WIN64
+#define ADDR_TYPE DWORD
+#else
+#define ADDR_TYPE ULONGLONG
+#endif    
+    PIMAGE_DOS_HEADER pDosHeader = (PIMAGE_DOS_HEADER)pe;
+    
+    PIMAGE_NT_HEADERS  pNtHeader = (PIMAGE_NT_HEADERS)
+        ((ADDR_TYPE)pe + pDosHeader->e_lfanew);
+    PIMAGE_FILE_HEADER pFileHeader = &pNtHeader->FileHeader;
+    PIMAGE_OPTIONAL_HEADER pOptHeader = &pNtHeader->OptionalHeader;
+    PIMAGE_DATA_DIRECTORY pDataDirectory = pOptHeader->DataDirectory;
+ 
+    PIMAGE_SECTION_HEADER pSectHeader = (PIMAGE_SECTION_HEADER)
+        ((ADDR_TYPE)pOptHeader + pFileHeader->SizeOfOptionalHeader);
+    WORD sectNum = pFileHeader->NumberOfSections;
+
+    return pSectHeader[sectNum-1].PointerToRawData + 
+           pSectHeader[sectNum-1].SizeOfRawData;
 }
 
-int inline_unhooks(PVOID pfnOlds[], PVOID pfnNews[])
+// loader functions
+HANDLE start_exe(LPCSTR exepath, LPSTR cmdstr)
 {
-    int i = 0;
-    DetourTransactionBegin();
-    DetourUpdateThread(GetCurrentThread());
-    for (i = 0; pfnNews[i] != NULL; i++)
-        DetourDetach(&pfnOlds[i], pfnNews[i]);
-    DetourTransactionCommit();
-    return i;
+    STARTUPINFOA si;
+    PROCESS_INFORMATION pi;
+    ZeroMemory(&pi, sizeof(pi));
+    ZeroMemory(&si, sizeof(si));
+    if (!CreateProcessA(exepath, cmdstr, 
+        NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi))
+        return NULL;
+    return pi.hProcess;
 }
-#endif
 
 HANDLE GetProcessByName(LPCWSTR exename)
 {
@@ -101,18 +138,6 @@ HANDLE GetProcessByName(LPCWSTR exename)
     return NULL;     // Not found
 }
 
-HANDLE start_exe(LPCSTR exepath, LPSTR cmdstr)
-{
-    STARTUPINFOA si;
-    PROCESS_INFORMATION pi;
-    ZeroMemory(&pi, sizeof(pi));
-    ZeroMemory(&si, sizeof(si));
-    if (!CreateProcessA(exepath, cmdstr, 
-        NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi))
-        return NULL;
-    return pi.hProcess;
-}
-
 BOOL inject_dll(HANDLE hProcess, LPCSTR dllname)
 {
     LPVOID param_addr = VirtualAllocEx(hProcess, 0, 0x100, MEM_COMMIT, PAGE_READWRITE);
@@ -138,13 +163,22 @@ void install_console()
     freopen("CONOUT$", "w", stdout);    
 }
 
-BOOL iat_hook(LPCSTR targetDllName, PROC pfnOrg, PROC pfnNew)
+// dynamic hook functions
+BOOL patch_memory(LPVOID addr, void* buf, size_t bufsize)
 {
-    return iat_hook_module(targetDllName, NULL, pfnOrg, pfnNew);
+	DWORD oldprotect;
+    BOOL ret = VirtualProtect(addr, bufsize, PAGE_EXECUTE_READWRITE, &oldprotect);
+	if(ret)
+	{
+		CopyMemory(addr, buf, bufsize);
+        VirtualProtect(addr, bufsize, oldprotect, &oldprotect);
+	}
+    return ret;
 }
 
-BOOL iat_hook_module(LPCSTR targetDllName, LPCSTR moduleDllName, PROC pfnOrg, PROC pfnNew)
-{;
+BOOL iat_hook_module(LPCSTR targetDllName, 
+    LPCSTR moduleDllName, PROC pfnOrg, PROC pfnNew)
+{
 #ifdef _WIN64
 #define VA_TYPE ULONGLONG
 #else
@@ -180,16 +214,34 @@ BOOL iat_hook_module(LPCSTR targetDllName, LPCSTR moduleDllName, PROC pfnOrg, PR
     return FALSE;
 }
 
-
-BOOL patch_memory(LPVOID addr, void* buf, size_t bufsize)
+BOOL iat_hook(LPCSTR targetDllName, PROC pfnOrg, PROC pfnNew)
 {
-	DWORD oldprotect;
-    BOOL ret = VirtualProtect(addr, bufsize, PAGE_EXECUTE_READWRITE, &oldprotect);
-	if(ret)
-	{
-		CopyMemory(addr, buf, bufsize);
-        VirtualProtect(addr, bufsize, oldprotect, &oldprotect);
-	}
-    return ret;
+    return iat_hook_module(targetDllName, NULL, pfnOrg, pfnNew);
 }
+
+#ifdef USE_DETOURS
+#include "detours.h"
+int inline_hooks(PVOID pfnOlds[], PVOID pfnNews[])
+{
+    int i=0;
+    DetourRestoreAfterWith();
+    DetourTransactionBegin();
+    DetourUpdateThread(GetCurrentThread());
+    for(i=0; pfnNews[i]!=NULL ;i++)
+        DetourAttach(&pfnOlds[i], pfnNews[i]);
+    DetourTransactionCommit();
+    return i;
+}
+
+int inline_unhooks(PVOID pfnOlds[], PVOID pfnNews[])
+{
+    int i = 0;
+    DetourTransactionBegin();
+    DetourUpdateThread(GetCurrentThread());
+    for (i = 0; pfnNews[i] != NULL; i++)
+        DetourDetach(&pfnOlds[i], pfnNews[i]);
+    DetourTransactionCommit();
+    return i;
+}
+#endif
 #endif

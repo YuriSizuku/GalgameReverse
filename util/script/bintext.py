@@ -21,9 +21,10 @@ v0.4.2 remove useless callbacks, adjust default len, add arbitary encoding, add 
 v0.4.3 change the structure, write_format_text, read_format_text added line_texts mode
 v0.4.4 adding padding char if text shorter than origin (in order with \x0d, \x0a, zeros will stop str), 
 v0.4.5 fix the padding problem, --padding bytes 32 00
-
+v0.5 add verify text, shift addr function
 """
 
+# lib functions
 def isCjk(c): 
     ranges = [
             {"from": ord(u"\u2000"), "to": ord(u"\u206f")},         # punctuation
@@ -179,7 +180,7 @@ def encode_tbl(text, tbl):
             return None
     return data.getvalue()
 
-def decode_tbl(data, tbl, maxlen=3):
+def decode_tbl(data, tbl, max_char_len=3):
     """
      decoding the data by tbl
     :return: the decoded text in python string
@@ -188,7 +189,7 @@ def decode_tbl(data, tbl, maxlen=3):
     i = 0
     while i<len(data):
         flag =False
-        for n in range(1, maxlen+1):
+        for n in range(1, max_char_len+1):
             buf = data[i:i+n]
             for j in range(len(tbl)):
                 if buf == tbl[j][0]:
@@ -199,7 +200,7 @@ def decode_tbl(data, tbl, maxlen=3):
         
         i+=n
         if flag is False:
-            print("Decodingtbl failed at "+str(1) +" "+ str(buf) )
+            print("Decodingtbl failed at " + str(1) + " "+ str(buf) )
             return None
     return text.getvalue()
 
@@ -373,17 +374,19 @@ def patch_text(data, ftexts,
  
     return data
         
-
-def check_text(textpath, outpath="check.txt", encoding="utf-8", tblpath=""):
+# cli functions
+def check_ftext_file(ftextpath, outpath="check.txt", 
+    encoding="utf-8", tblpath=""):
     """
     checking if the text length or mapping to customized charcode valid
     :param encoding: the encoding of textpath
-    :param tbl: the customized charcode mapping to encoding charcode, tbl must be in utf-8
+    :param tbl: the customized charcode mapping to encoding charcode, 
+    tbl must be in utf-8
     """
     if tblpath!="": tbl = load_tbl(tblpath)
     else: tbl = None
 
-    _, ftexts = read_format_text(textpath)
+    _, ftexts = read_format_text(ftextpath)
 
     with codecs.open(outpath, 'w', 'utf-8') as fp:
         for i, ftext in enumerate(ftexts):
@@ -405,24 +408,82 @@ def check_text(textpath, outpath="check.txt", encoding="utf-8", tblpath=""):
                     print(line)
                     fp.write(line+"\n")
 
-def merge_text(inpath1, inpath2, outpath):
+def verify_ftext_file(ftextpath, binpath, outpath="verify.txt", 
+    encoding="utf-8", tblpath=""):
+    """
+    verify if the text matching origin binfile
+    :param encoding: the encoding of textpath
+    :param tbl: the customized charcode mapping to encoding charcode, 
+                tbl must be in utf-8
+    """
+    if tblpath!="": tbl = load_tbl(tblpath)
+    else: tbl = None
+
+    ftexts, _ = read_format_text(ftextpath)
+    with open(binpath, 'rb') as fp:
+        data = fp.read()
+    
+    with codecs.open(outpath, 'w', 'utf-8') as fp:
+        for i, ftext in enumerate(ftexts):
+            err_str = ""
+            addr, size, text = ftext['addr'], ftext['size'], ftext['text'] 
+            _text = None
+            if tbl is not None:
+                _text = decode_tbl(data[addr: addr+size], tbl)
+            else: 
+                try:
+                    _text = data[addr: addr + size].decode(encoding)
+                except BaseException as e:
+                    print(e)
+            if _text!=text:
+                err_str=f"{i}, {addr:06X}, {size:02X} {text} != {_text}"
+                print(err_str)
+                fp.write(err_str+"\n")
+                    
+def merge_ftext_file(ftextpath1, ftextpath2, outpath):
     """
     merge the '○' line in inpath2, '●' line in inpath2, to outpath
     """
-    ftexts1, _ = read_format_text(inpath1)
-    _, ftexts2 = read_format_text(inpath2, only_text=True)
+    ftexts1, _ = read_format_text(ftextpath1)
+    _, ftexts2 = read_format_text(ftextpath2, only_text=True)
     write_format_text(outpath, ftexts1, ftexts2)
     print("merged text done! in " +  outpath)
         
+def shift_ftext_file(ftextpath, n, outpath):
+    """
+    shift all the addr by n
+    """
+    ftexts1, ftexts2 = read_format_text(ftextpath)
+    for ftext1, ftext2 in zip(ftexts1, ftexts2):
+        ftext1['addr'] += n
+        ftext2['addr'] += n
+    write_format_text(outpath, ftexts1, ftexts2)
+    print("shift text done! in " +  outpath)
+            
+def patch_ftext_file(ftextpath, binpath, outpath="out.bin", 
+    encoding = 'utf-8',  padding_bytes=b"\x00", tblpath="", can_longer=False):
+    """
+    import the text in textpath to insertpath, make the imported file as outpath
+    :param encoding: the encoding of the insertpath, or custom tbl's if not None
+    """
+    _, ftexts2 = read_format_text(ftextpath)
 
-def extract_text_file(inpath, outpath="out.txt", 
+    with open(binpath, "rb") as fp:
+        data = bytearray(fp.read())
+        tbl = None if tblpath=="" else load_tbl(tblpath, encoding=encoding)
+        data = patch_text(data, ftexts2, encoding=encoding, padding_bytes=padding_bytes, tbl=tbl, can_longer=can_longer)
+    
+    with open(outpath, "wb") as fp:
+        fp.write(data)
+
+def extract_ftext_file(binpath, outpath="out.txt", 
     encoding = 'utf-8', tblpath="", min_len=2, has_cjk=True, f_extract=None):
     """
     export all the text to txt file in utf-8
     :param encoding: the encoding to the inpath, if tbl is None
     :param tbl:cuntom carcode, if not none, encoding param is the custom's
     """
-    with open(inpath, "rb") as fp:
+    with open(binpath, "rb") as fp:
         data = fp.read()
 
     if tblpath!="" :
@@ -467,51 +528,70 @@ def extract_text_file(inpath, outpath="out.txt",
 
     write_format_text(outpath, ftexts, ftexts)
     print("extracted text done! in " +  outpath)
-            
-def patch_text_file(textpath, insertpath, outpath="out.bin", 
-    encoding = 'utf-8',  padding_bytes=b"\x00", tblpath="", can_longer=False):
-    """
-    import the text in textpath to insertpath, make the imported file as outpath
-    :param encoding: the encoding of the insertpath, or custom tbl's if not None
-    """
-    _, ftexts2 = read_format_text(textpath)
 
-    with open(insertpath, "rb") as fp:
-        data = bytearray(fp.read())
-        tbl = None if tblpath=="" else load_tbl(tblpath, encoding=encoding)
-        data = patch_text(data, ftexts2, encoding=encoding, padding_bytes=padding_bytes, tbl=tbl, can_longer=can_longer)
-    
-    with open(outpath, "wb") as fp:
-        fp.write(data)
+def debug():
+    pass
 
 def main():
     parser = argparse.ArgumentParser(description="binary text tool v0.4.5 by devseed")
-    group = parser.add_mutually_exclusive_group()
-    group.add_argument('-p', '--patch', type=str, help="patch this path by the inpath text, this is origin script file")
-    group.add_argument('-m','--merge', type=str, help="merge the line with '●' in this file to the inpath file")
-    group.add_argument('-c', '--check', action='store_true', help="check if the text is valid")
-    parser.add_argument('-o', '--outpath', type=str, default=r".\out")
-    parser.add_argument('-e', '--encoding', type=str, default='utf-8')
-    parser.add_argument('--min_len', type=int, default=2)
-    parser.add_argument('--padding_bytes', type=int, default=[0x20], nargs='+', help="padding char if import text shorter than origin")
-    parser.add_argument('--tbl', type=str, default="", help="custom charcode table")
-    parser.add_argument('--has_cjk', action='store_true', help="extract the text with cjk only")
-    parser.add_argument('--can_longer', action='store_true', help="inserted text can be longer than the original")
+    
+    # input and output
     parser.add_argument('inpath', type=str)
+    parser.add_argument('-o', '--outpath', type=str, 
+        default=r"./result.txt")
+    
+    # select method
+    method_group = parser.add_mutually_exclusive_group()
+    method_group.add_argument('-c', '--check', action='store_true', 
+        help="check if the translate text is valid")
+    method_group.add_argument('-v', '--verify', type=str, 
+        help="verify if the origin text the same as dump")
+    method_group.add_argument('-s', '--shift', type=int, 
+        help="shift the addr with n")
+    method_group.add_argument('-m','--merge', type=str,
+        help="merge the line with '●' in this file to the inpath file")
+    method_group.add_argument('-p', '--patch', type=str, 
+        help="patch this path by the inpath text, binpath")
+    
+    #  encoding method
+    enc_group = parser.add_mutually_exclusive_group()
+    enc_group.add_argument('-e', '--encoding', 
+        type=str, default='utf-8')
+    enc_group.add_argument('--tbl', type=str, default="", 
+        help="custom charcode table")
+   
+    # other configure
+    parser.add_argument('--min_len', type=int, default=2)
+    parser.add_argument('--padding_bytes', 
+        type=int, default=[0x20],nargs='+', 
+        help="padding char if import text shorter than origin")
+    parser.add_argument('--has_cjk', action='store_true', 
+        help="extract the text with cjk only")
+    parser.add_argument('--can_longer', action='store_true', 
+        help="inserted text can be longer than the original")
     
     args = parser.parse_args()
-    if args.patch:
-        patch_text_file(args.inpath, args.patch, args.outpath, 
-            encoding=args.encoding, padding_bytes=bytes(args.padding_bytes), 
-            tblpath=args.tbl, can_longer=args.can_longer)
-    elif args.merge:
-        merge_text(args.inpath, args.merge, args.outpath)
-    elif args.check:
-        check_text(args.inpath, args.outpath, 
+    if args.check:
+        check_ftext_file(args.inpath, args.outpath, 
             encoding=args.encoding, tblpath=args.tbl)
+    elif args.verify:
+        verify_ftext_file(args.inpath, args.verify, args.outpath,   
+            encoding=args.encoding, tblpath=args.tbl)
+    elif args.shift:
+        shift_ftext_file(args.inpath, args.shift, args.outpath)
+    elif args.merge:
+        merge_ftext_file(args.inpath, args.merge, args.outpath)
+    elif args.patch:
+        patch_ftext_file(args.inpath, args.patch, args.outpath, 
+            encoding=args.encoding, 
+            padding_bytes=bytes(args.padding_bytes), 
+            tblpath=args.tbl, can_longer=args.can_longer)
     else:
-        extract_text_file(args.inpath, args.outpath, encoding=args.encoding, 
-            tblpath=args.tbl, has_cjk=args.has_cjk, min_len=args.min_len)
+        extract_ftext_file(args.inpath, args.outpath, 
+            encoding=args.encoding, tblpath=args.tbl, 
+            has_cjk=args.has_cjk, min_len=args.min_len)
 
 if __name__ == "__main__":
+    debug()
     main()
+    pass

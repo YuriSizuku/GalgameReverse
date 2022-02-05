@@ -8,6 +8,7 @@ __pycache__
 *.exp
 *.ilk
 .vs
+.vscode
 /script/tmp/*
 /src/**/release/*
 /src/**/debug/*

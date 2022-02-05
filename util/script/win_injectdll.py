@@ -1,8 +1,20 @@
+"""
+    modify windows pe with dll injected for hooking
+    v0.2 developed by devseed
+
+    history
+    v0.1 injectdll by adding iat entry
+    v0.2 use codecave to dynamiclly LoadLibraryA,
+         to avoid windows defender assuming this as virus
+"""
 import sys
 import os
 import lief
+from keystone import Ks, KS_ARCH_X86, KS_MODE_32, KS_MODE_64
 
-def injectdll(exepath, dllpath, outpath="out.exe"): # can not be ASLR
+# This might be regared as virus by windows defender
+# can not be ASLR
+def injectdll_iat(exepath, dllpath, outpath="out.exe"): 
     binary_exe = lief.parse(exepath)
     binary_dll = lief.parse(dllpath)
     
@@ -17,7 +29,7 @@ def injectdll(exepath, dllpath, outpath="out.exe"): # can not be ASLR
         print(dllname + ", func "+ exp_func.name + " added!")
 
     # disable ASLR
-    exe_oph =  binary_exe.optional_header;
+    exe_oph =  binary_exe.optional_header
     exe_oph.remove(lief.PE.DLL_CHARACTERISTICS.DYNAMIC_BASE)
 
     builder = lief.PE.Builder(binary_exe)
@@ -25,12 +37,95 @@ def injectdll(exepath, dllpath, outpath="out.exe"): # can not be ASLR
     builder.build()
     builder.write(outpath)
 
+# change the oep and use codecave for LoadLibrary dll
+# only support for x86 and x64 architecture, no arm support
+def injectdll_codecave(exepath, dllname, outpath="out.exe"):
+    # parsing pe
+    pe = lief.parse(exepath)
+    pe_oph = pe.optional_header
+    imgbase = pe_oph.imagebase
+    oeprva = pe_oph.addressof_entrypoint
+    section_code = pe.section_from_rva(oeprva)
+    impentry_LoadLibraryA = pe.get_import("KERNEL32.dll")\
+            .get_entry("LoadLibraryA")
+
+    # find position to code cave
+    dllname_bytes = dllname.encode() + b'\x00'
+    if pe_oph.magic == lief.PE.PE_TYPE.PE32_PLUS:
+        print(f"{exepath}: oep={imgbase+oeprva:016X}, "
+        f"code_section={imgbase+section_code.virtual_size:016X}, "
+        f"LoadLibraryA={imgbase+impentry_LoadLibraryA.iat_address:016X}")
+        max_len = len(dllname_bytes) + 0x60
+    elif pe_oph.magic == lief.PE.PE_TYPE.PE32:
+        print(f"{exepath}: oep={imgbase+oeprva:08X}, "
+        f"code_section={imgbase+section_code.virtual_size:08X}, "
+        f"LoadLibraryA={imgbase+impentry_LoadLibraryA.iat_address:08X}")
+        max_len = len(dllname_bytes) + 0x20
+    if section_code.sizeof_raw_data - section_code.virtual_size < max_len:
+        print("error! can not find space for codecave")
+        return 
+    else:
+        payload_rva = section_code.virtual_address + section_code.virtual_size
+
+    # make code cave code
+    if pe_oph.magic == lief.PE.PE_TYPE.PE32_PLUS:
+        infostr = f"inject asm at {imgbase+payload_rva:016X}:"
+        ks = Ks(KS_ARCH_X86, KS_MODE_64)
+        code_str = f"""
+            push rcx;
+            lea rcx, [dllname+1];
+            mov rax, 0x{imgbase:016X};
+            add rcx, rax;
+            mov rax, 0x{imgbase+impentry_LoadLibraryA.iat_address:016X};
+            call qword ptr ds:[rax];
+            pop rcx;
+            mov rax, 0x{imgbase+oeprva:016X};
+            jmp rax; 
+            dllname:
+            nop"""
+        print(infostr, code_str)
+        payload, _ = ks.asm(code_str, addr=payload_rva) # > 32bit error
+
+    elif pe_oph.magic == lief.PE.PE_TYPE.PE32:
+        infostr = f"try to inject asm at {imgbase+payload_rva:08X}:"
+        ks = Ks(KS_ARCH_X86, KS_MODE_32)
+        code_str = f"""
+            mov eax, dllname+1;
+            push eax;
+            call dword ptr ds:[0x{imgbase+impentry_LoadLibraryA.iat_address:08X}];
+            jmp 0x{imgbase+oeprva:08X};
+            dllname:
+            nop"""
+        print(infostr, code_str)
+        payload, _ = ks.asm(code_str, addr=imgbase+payload_rva)
+        
+    else:
+        print("error invalid pe magic!", pe_oph.magic)
+        return
+
+    payload = payload + list(dllname_bytes)
+    print("payload: ", [hex(x) for x in payload])
+
+    # inject code
+    section_code.virtual_size += len(payload)
+    section_code.content += payload
+    pe_oph.addressof_entrypoint = payload_rva
+    pe_oph.remove(lief.PE.DLL_CHARACTERISTICS.DYNAMIC_BASE)
+    builder = lief.PE.Builder(pe)
+    builder.build()
+    builder.write(outpath)
+
+def debug():
+    pass
+
 def main():
     if len(sys.argv) < 3:
         print("injectdll exepath dllpath [outpath]")
         return
     outpath = "out.exe" if len(sys.argv) < 4 else sys.argv[3]
-    injectdll(sys.argv[1], sys.argv[2], outpath)
+    injectdll_codecave(sys.argv[1], sys.argv[2], outpath)
     
 if __name__ == "__main__":
+    #debug()
     main()
+    pass

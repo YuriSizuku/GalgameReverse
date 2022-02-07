@@ -1,37 +1,70 @@
 /*
-  win_hook.h, by devseed, v0.2.1
+  win_hook.h, by devseed, v0.2.2
   windows dyamic hook util functions wrappers 
+
+  history:
+    v0.1 initial version
+    v0.2 add make this to single file
+    v0.2.2 add WIN_HOOK_STATIC, WIN_HOOK_SHARED macro
 */
 
 #ifndef _WIN_HOOK_H
 #define _WIN_HOOK_H
 #include <Windows.h>
+
+#ifndef WINHOOKDEF
+#ifdef WIN_HOOK_STATIC
+#define WINHOOKDEF static
+#else
+#define WINHOOKDEF extern
+#endif
+#endif
+
+#ifndef WIN_HOOK_SHARED
+#define WIN_HOOK_EXPORT
+#else
+#ifdef _WIN32
+#define WIN_HOOK_EXPORT __declspec(dllexport)
+#else
+#define WIN_HOOK_EXPORT __attribute__((visibility("default")))
+#endif
+#endif
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 // PE functions
+WINHOOKDEF WIN_HOOK_EXPORT 
 size_t get_overlay_offset(BYTE *pe);
 
 // loader functions
 /* 
     start a exe by CreateProcess
 */
+WINHOOKDEF WIN_HOOK_EXPORT 
 HANDLE start_exe(LPCSTR exepath, LPSTR cmdstr);
 
 /*
     get the process handle by exename
 */
+WINHOOKDEF WIN_HOOK_EXPORT 
 HANDLE GetProcessByName(LPCWSTR exename); 
 
 /*
     dynamic inject a dll into a process
  */ 
+WINHOOKDEF WIN_HOOK_EXPORT 
 BOOL inject_dll(HANDLE hProcess, LPCSTR dllname); 
 
 /*
     alloc a console for the program
 */
+WINHOOKDEF WIN_HOOK_EXPORT 
 void install_console();
 
 
 // dynamic hook functions
+WINHOOKDEF WIN_HOOK_EXPORT 
 BOOL patch_memory(LPVOID addr, void* buf, 
     size_t bufsize);
 
@@ -39,7 +72,9 @@ BOOL patch_memory(LPVOID addr, void* buf,
     iat_hook_module is for windows dll, 
     moduleDllName is which dll to hook iat
 */
-BOOL iat_hook_module(LPCSTR targetDllName, LPCSTR moduleDllName, PROC pfnOrg, PROC pfnNew);
+WINHOOKDEF WIN_HOOK_EXPORT 
+BOOL iat_hook_module(LPCSTR targetDllName, 
+    LPCSTR moduleDllName, PROC pfnOrg, PROC pfnNew);
 
 /*
     iat dynamiclly hook, 
@@ -48,7 +83,9 @@ BOOL iat_hook_module(LPCSTR targetDllName, LPCSTR moduleDllName, PROC pfnOrg, PR
     iat_hook is for windows EXE, 
     targetDllName is like "user32.dll", "kernel32.dll"
 */
-BOOL iat_hook(LPCSTR targetDllName, PROC pfnOrg, PROC pfgNew);
+WINHOOKDEF WIN_HOOK_EXPORT 
+BOOL iat_hook(LPCSTR targetDllName, 
+    PROC pfnOrg, PROC pfgNew);
 
 /*
     using detour for inline hook, 
@@ -62,9 +99,16 @@ BOOL iat_hook(LPCSTR targetDllName, PROC pfnOrg, PROC pfgNew);
     inline_hooks(pfnOlds, pfnNews);
     g_pfnAbout = (void(*)())(pfnOlds[0]);
 */
+WINHOOKDEF WIN_HOOK_EXPORT
 int inline_hooks(PVOID pfnOlds[], PVOID pfnNews[]); 
+
+WINHOOKDEF WIN_HOOK_EXPORT
 int inline_unhooks(PVOID pfnOlds[], PVOID pfnNews[]);
 #endif 
+
+#ifdef __cplusplus
+}
+#endif
 
 #ifdef WIN_HOOK_IMPLEMENTATION
 /*
@@ -76,6 +120,7 @@ int inline_unhooks(PVOID pfnOlds[], PVOID pfnNews[]);
 #include <tlhelp32.h>
 #include <stdio.h>
 // PE functions
+WINHOOKDEF WIN_HOOK_EXPORT 
 size_t get_overlay_offset(BYTE *pe)
 {
 #ifdef _WIN64
@@ -100,6 +145,7 @@ size_t get_overlay_offset(BYTE *pe)
 }
 
 // loader functions
+WINHOOKDEF WIN_HOOK_EXPORT 
 HANDLE start_exe(LPCSTR exepath, LPSTR cmdstr)
 {
     STARTUPINFOA si;
@@ -112,6 +158,7 @@ HANDLE start_exe(LPCSTR exepath, LPSTR cmdstr)
     return pi.hProcess;
 }
 
+WINHOOKDEF WIN_HOOK_EXPORT 
 HANDLE GetProcessByName(LPCWSTR exename)
 {
     // Create toolhelp snapshot.
@@ -138,6 +185,7 @@ HANDLE GetProcessByName(LPCWSTR exename)
     return NULL;     // Not found
 }
 
+WINHOOKDEF WIN_HOOK_EXPORT
 BOOL inject_dll(HANDLE hProcess, LPCSTR dllname)
 {
     LPVOID param_addr = VirtualAllocEx(hProcess, 0, 0x100, MEM_COMMIT, PAGE_READWRITE);
@@ -157,6 +205,7 @@ BOOL inject_dll(HANDLE hProcess, LPCSTR dllname)
     return TRUE;
 }
 
+WINHOOKDEF WIN_HOOK_EXPORT 
 void install_console()
 {
     AllocConsole();
@@ -164,6 +213,7 @@ void install_console()
 }
 
 // dynamic hook functions
+WINHOOKDEF WIN_HOOK_EXPORT 
 BOOL patch_memory(LPVOID addr, void* buf, size_t bufsize)
 {
 	DWORD oldprotect;
@@ -176,6 +226,7 @@ BOOL patch_memory(LPVOID addr, void* buf, size_t bufsize)
     return ret;
 }
 
+WINHOOKDEF WIN_HOOK_EXPORT 
 BOOL iat_hook_module(LPCSTR targetDllName, 
     LPCSTR moduleDllName, PROC pfnOrg, PROC pfnNew)
 {
@@ -214,13 +265,15 @@ BOOL iat_hook_module(LPCSTR targetDllName,
     return FALSE;
 }
 
+WINHOOKDEF WIN_HOOK_EXPORT 
 BOOL iat_hook(LPCSTR targetDllName, PROC pfnOrg, PROC pfnNew)
 {
     return iat_hook_module(targetDllName, NULL, pfnOrg, pfnNew);
 }
 
-#ifdef USE_DETOURS
+#ifdef WIN_HOOK_DETOURS
 #include "detours.h"
+WINHOOKDEF WIN_HOOK_EXPORT 
 int inline_hooks(PVOID pfnOlds[], PVOID pfnNews[])
 {
     int i=0;
@@ -233,6 +286,7 @@ int inline_hooks(PVOID pfnOlds[], PVOID pfnNews[])
     return i;
 }
 
+WINHOOKDEF WIN_HOOK_EXPORT
 int inline_unhooks(PVOID pfnOlds[], PVOID pfnNews[])
 {
     int i = 0;

@@ -1,15 +1,41 @@
 /*
-    binary_text.h, by devseed
-    Some functions of binary_text.py written by C 
+    bintext.h, 
+    Some functions of bintext.py written by C 
     to support embelled game reading this universal binary text format 
-    v0.1
+    v0.2 developed by devseed
+
+    history 
+    v0.1 initial version
+    v0.2 change to single file, and add BINTEXTDEF BINTEXTDEF_EXPORT
 */
 #ifndef _BINTEXT_H
 #define _BINTEXT_H
 #include <stdint.h>
 
+#ifndef BINTEXTDEF
+#ifdef BINTEXT_STATIC
+#define BINTEXTDEF static
+#else
+#define BINTEXTDEF extern
+#endif
+#endif
+
+#ifndef BINTEXTDEF_SHARED
+#define BINTEXTDEF_EXPORT
+#else
+#ifdef _WIN32
+#define BINTEXTDEF_EXPORT __declspec(dllexport)
+#else
+#define BINTEXTDEF_EXPORT __attribute__((visibility("default")))
+#endif
+#endif
+
 #ifndef FTEXTS_NODE_EXTRA
 #define FTEXTS_NODE_EXTRA
+#endif
+
+#ifdef __cplusplus
+extern "C" {
 #endif
 typedef struct _FTEXTS_NODE
 {
@@ -69,85 +95,135 @@ typedef struct _FFILES
 }FFILES, *PFFILES;
 
 // util functions for converting encodings
+BINTEXTDEF BINTEXTDEF_EXPORT
 size_t utf8towchar(wchar_t* dst, char* src, size_t maxdstlen);
+
+BINTEXTDEF BINTEXTDEF_EXPORT
 size_t sjistowchar(wchar_t* dst, char* src, size_t maxdstlen);
+
+BINTEXTDEF BINTEXTDEF_EXPORT
 size_t gbktowchar(wchar_t* dst, char* src, size_t maxdstlen);
+
+BINTEXTDEF BINTEXTDEF_EXPORT
 size_t wchartoutf8(char* dst, wchar_t* src, size_t maxdstlen); // this might be not work
+
+BINTEXTDEF BINTEXTDEF_EXPORT
 size_t wchartosjis(char* dst, wchar_t* src, size_t maxdstlen); 
+
+BINTEXTDEF BINTEXTDEF_EXPORT
 size_t wchartogb2312(char* dst, wchar_t* src, size_t maxdstlen);
+
+BINTEXTDEF BINTEXTDEF_EXPORT
 void printutf8(char* utf8str, size_t utf8strlen);
 
 // functions for ftexts
 // count how many ftexts in a buf
-void count_ftexts(char*buf, size_t bufsize, int *pwhite_node_num, int *pblack_node_num);
+BINTEXTDEF BINTEXTDEF_EXPORT
+void count_ftexts(char*buf, size_t bufsize, 
+    int *pwhite_node_num, int *pblack_node_num);
+
 // printf the inforemations of FTEXTS_NODE for debug
+BINTEXTDEF BINTEXTDEF_EXPORT
 void printf_ftexts_node(PFTEXTS_NODE pnode);
+
 // parse the ftexts into FTEXTS_NODE, use format_text_num first to alloc memories of nodes
+BINTEXTDEF BINTEXTDEF_EXPORT
 PFTEXTS parse_ftexts(char* buf, size_t bufsize); 
+
 // read ftext file and alloc memory of FTEXTS_NODEs
+BINTEXTDEF BINTEXTDEF_EXPORT
 PFTEXTS load_ftexts_file(char* path);
+
 // search the addr exactly in nodes, rerurns the index of nod, if not find return -1
+BINTEXTDEF BINTEXTDEF_EXPORT
 int search_ftexts_address(FTEXTS_NODE nodes[], int node_num, size_t addr); 
 // free each elements of ftexts, without rawbuf
+BINTEXTDEF BINTEXTDEF_EXPORT
 void free_ftexts(PFTEXTS pftexts);
 
 // functions for ftexts files linked-list
+BINTEXTDEF BINTEXTDEF_EXPORT
 PFFILES_NODE search_ffile_path(PFFILES pffiles, char* path);
+
 // after search_ffile, move pcur to the found node
+BINTEXTDEF BINTEXTDEF_EXPORT
 PFFILES_NODE moveto_ffile_path(PFFILES pffiles, char* path);
+
 // insert after pffile_node, if NULL, insert at first, return the count of PFFILES_NODE
-int insert_ffile(PFFILES pffiles, PFFILES_NODE pinsert_node, PFFILES_NODE pffile_node); 
+BINTEXTDEF BINTEXTDEF_EXPORT
+int insert_ffile(PFFILES pffiles, PFFILES_NODE pinsert_node, 
+    PFFILES_NODE pffile_node); 
+
+BINTEXTDEF BINTEXTDEF_EXPORT
 int append_ffile(PFFILES pffiles, PFFILES_NODE pffile_node); 
+
+BINTEXTDEF BINTEXTDEF_EXPORT
 int delete_ffile(PFFILES pffiles, PFFILES_NODE pffile_node);
+
+BINTEXTDEF BINTEXTDEF_EXPORT
 void free_ffiles_node(PFFILES_NODE pffile_node);
+
+BINTEXTDEF BINTEXTDEF_EXPORT
 void free_ffiles(PFFILES pffiles);
+
+#ifdef __cplusplus
+}
+#endif
+
 #endif
 
 #ifdef BINTEXT_IMPLEMENTATION
 #include <stdio.h>
 #include <stdlib.h>
 #include <locale.h>
-#ifndef NO_REGEX
+#ifndef BINTEXT_NOREGEX
 #include <regex.h>
 #endif
 #include <sys/stat.h>
 
+BINTEXTDEF BINTEXTDEF_EXPORT
 size_t utf8towchar(wchar_t* dst, char* src, size_t maxdstlen)
 {
     setlocale(LC_ALL, ".utf-8");
     return mbstowcs(dst, src, maxdstlen);
 }
 
+BINTEXTDEF BINTEXTDEF_EXPORT
 size_t sjistowchar(wchar_t* dst, char* src, size_t maxdstlen)
 {
     setlocale(LC_ALL, ".932");
     return mbstowcs(dst, src, maxdstlen);
 }
 
+BINTEXTDEF BINTEXTDEF_EXPORT
 size_t gbktowchar(wchar_t* dst, char* src, size_t maxdstlen)
 {
     setlocale(LC_ALL, ".936");
     return mbstowcs(dst, src, maxdstlen);
 }
 
+BINTEXTDEF BINTEXTDEF_EXPORT
 size_t wchartoutf8(char* dst, wchar_t* src, size_t maxdstlen)
 {
     setlocale(LC_ALL, ".utf-8");
     return wcstombs(dst, src, maxdstlen);
 }
 
+BINTEXTDEF BINTEXTDEF_EXPORT
 size_t wchartosjis(char* dst, wchar_t* src, size_t maxdstlen)
 {
     setlocale(LC_ALL, ".932");
     return wcstombs(dst, src, maxdstlen);
 }
 
+BINTEXTDEF BINTEXTDEF_EXPORT
 size_t wchartogb2312(char* dst, wchar_t* src, size_t maxdstlen)
 {
     setlocale(LC_ALL, ".936");
     return wcstombs(dst, src, maxdstlen);
 }
 
+BINTEXTDEF BINTEXTDEF_EXPORT
 void printutf8(char* utf8str, size_t utf8strlen)
 {
     wchar_t *tmpwcstr = (wchar_t *)malloc(utf8strlen * 2 * sizeof(wchar_t));
@@ -156,11 +232,13 @@ void printutf8(char* utf8str, size_t utf8strlen)
     free(tmpwcstr);
 }
 
+BINTEXTDEF BINTEXTDEF_EXPORT
 int compare_ftexts_node(const void* p1, const void* p2)
 {
     return ((PFTEXTS_NODE)p1)->addr - ((PFTEXTS_NODE)p2)->addr;
 }
 
+BINTEXTDEF BINTEXTDEF_EXPORT
 void count_ftexts(char*buf, size_t bufsize, int *pwhite_node_num, int *pblack_node_num)
 {
     int flag_newline = 1;
@@ -197,7 +275,8 @@ void count_ftexts(char*buf, size_t bufsize, int *pwhite_node_num, int *pblack_no
     }
 }
 
-#ifndef NO_REGEX
+#ifndef BINTEXT_NOREGEX
+BINTEXTDEF BINTEXTDEF_EXPORT
 FTEXTS_NODE parse_ftexts_line(char* buf, size_t start, size_t end, regex_t* reg)
 {
     char tmpbuf[2048];
@@ -227,6 +306,7 @@ FTEXTS_NODE parse_ftexts_line(char* buf, size_t start, size_t end, regex_t* reg)
     return node;
 }
 #else
+BINTEXTDEF BINTEXTDEF_EXPORT
 FTEXTS_NODE parse_ftexts_line(char* buf, size_t start, size_t end)
 {
     char tmpbuf[2048];
@@ -267,6 +347,7 @@ FTEXTS_NODE parse_ftexts_line(char* buf, size_t start, size_t end)
 }
 #endif
 
+BINTEXTDEF BINTEXTDEF_EXPORT
 void printf_ftexts_node(PFTEXTS_NODE pnode)
 {
     printf("num=%d, addr=%x, size=%x, textbufsize=%x, ", 
@@ -274,6 +355,7 @@ void printf_ftexts_node(PFTEXTS_NODE pnode)
     printutf8(pnode->textbuf, pnode->textbufsize);
 }
 
+BINTEXTDEF BINTEXTDEF_EXPORT
 PFTEXTS parse_ftexts(char* buf, size_t bufsize)
 {
     PFTEXTS pftexts = malloc(sizeof(FTEXTS));
@@ -290,7 +372,7 @@ PFTEXTS parse_ftexts(char* buf, size_t bufsize)
     int white_idx=0, black_idx=0;
     FTEXTS_NODE tmpnode;
 
-#ifndef NO_REGEX
+#ifndef BINTEXT_NOREGEX
     regex_t  white_reg, black_reg;
     regcomp(&white_reg, "\\xE2\\x97\\x8B(\\d*)\\|(.*)\\|(.*)\\xE2\\x97\\x8B[ ](.*)", REG_EXTENDED);
     regcomp(&black_reg, "\\xE2\\x97\\x8F(\\d*)\\|(.*)\\|(.*)\\xE2\\x97\\x8F[ ](.*)", REG_EXTENDED);
@@ -302,7 +384,7 @@ PFTEXTS parse_ftexts(char* buf, size_t bufsize)
 
         if(!strncmp("\xE2\x97\x8B", &buf[start], 3)) // white
         {
-#ifndef NO_REGEX
+#ifndef BINTEXT_NOREGEX
             tmpnode = parse_ftexts_line(buf, start, i, &white_reg);
 #else
             tmpnode = parse_ftexts_line(buf, start, i);
@@ -311,7 +393,7 @@ PFTEXTS parse_ftexts(char* buf, size_t bufsize)
         }
         else if (!strncmp("\xE2\x97\x8F", &buf[start], 3)) // blcak
         {
-#ifndef NO_REGEX
+#ifndef BINTEXT_NOREGEX
             tmpnode = parse_ftexts_line(buf, start, i, &black_reg);
 #else
             tmpnode = parse_ftexts_line(buf, start, i);
@@ -322,13 +404,14 @@ PFTEXTS parse_ftexts(char* buf, size_t bufsize)
     }
     qsort(pftexts->white_nodes, pftexts->white_node_num, sizeof(FTEXTS_NODE), compare_ftexts_node);
     qsort(pftexts->black_nodes, pftexts->black_node_num, sizeof(FTEXTS_NODE), compare_ftexts_node);
-#ifndef NO_REGEX
+#ifndef BINTEXT_NOREGEX
     regfree(&black_reg);
     regfree(&white_reg);
 #endif
     return pftexts;
 }
 
+BINTEXTDEF BINTEXTDEF_EXPORT
 PFTEXTS load_ftexts_file(char* path)
 {
     struct stat st;
@@ -349,6 +432,7 @@ PFTEXTS load_ftexts_file(char* path)
     return pftexts;
 }
 
+BINTEXTDEF BINTEXTDEF_EXPORT
 int search_ftexts_address(FTEXTS_NODE nodes[], int node_num, size_t addr)
 {
     int start=0, end=node_num-1;
@@ -365,6 +449,7 @@ int search_ftexts_address(FTEXTS_NODE nodes[], int node_num, size_t addr)
     else return -1;
 }
 
+BINTEXTDEF BINTEXTDEF_EXPORT
 void free_ftexts(PFTEXTS pftexts)
 {
     free(pftexts->black_nodes);
@@ -373,6 +458,7 @@ void free_ftexts(PFTEXTS pftexts)
     free(pftexts);
 }
 
+BINTEXTDEF BINTEXTDEF_EXPORT
 PFFILES_NODE search_ffile_path(PFFILES pffiles, char* path)
 {
     if(!pffiles || !pffiles->pstart) return NULL;
@@ -385,6 +471,7 @@ PFFILES_NODE search_ffile_path(PFFILES pffiles, char* path)
     return NULL;
 }
 
+BINTEXTDEF BINTEXTDEF_EXPORT
 PFFILES_NODE moveto_ffile_path(PFFILES pffiles, char* path)
 {
     PFFILES_NODE ptarget = search_ffile_path(pffiles, path);
@@ -392,6 +479,7 @@ PFFILES_NODE moveto_ffile_path(PFFILES pffiles, char* path)
     return ptarget;
 }
 
+BINTEXTDEF BINTEXTDEF_EXPORT
 int insert_ffile(PFFILES pffiles, PFFILES_NODE pinsert_node, PFFILES_NODE pffile_node)
 {
     if(!pffile_node || !pffiles) return -1;
@@ -420,12 +508,14 @@ int insert_ffile(PFFILES pffiles, PFFILES_NODE pinsert_node, PFFILES_NODE pffile
     }
 }
 
+BINTEXTDEF BINTEXTDEF_EXPORT
 int append_ffile(PFFILES pffiles, PFFILES_NODE pffile_node)
 {
     if(!pffiles) return -1;
     return insert_ffile(pffiles, pffiles->pend, pffile_node);
 }
 
+BINTEXTDEF BINTEXTDEF_EXPORT
 int delete_ffile(PFFILES pffiles, PFFILES_NODE pffile_node)
 {
     if(!pffiles) return -1;
@@ -446,6 +536,7 @@ int delete_ffile(PFFILES pffiles, PFFILES_NODE pffile_node)
     }
 }
 
+BINTEXTDEF BINTEXTDEF_EXPORT
 void free_ffiles_node(PFFILES_NODE pffile_node)
 {
     if(!pffile_node) return;
@@ -455,6 +546,7 @@ void free_ffiles_node(PFFILES_NODE pffile_node)
     free(pffile_node);
 }
 
+BINTEXTDEF BINTEXTDEF_EXPORT
 void free_ffiles(PFFILES pffiles)
 {
     if(!pffiles) return;

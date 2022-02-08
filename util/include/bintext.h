@@ -96,75 +96,75 @@ typedef struct _FFILES
 
 // util functions for converting encodings
 BINTEXTDEF BINTEXTDEF_EXPORT
-size_t utf8towchar(wchar_t* dst, char* src, size_t maxdstlen);
+size_t bintext_utf8towchar(wchar_t* dst, char* src, size_t maxdstlen);
 
 BINTEXTDEF BINTEXTDEF_EXPORT
-size_t sjistowchar(wchar_t* dst, char* src, size_t maxdstlen);
+size_t bintext_sjistowchar(wchar_t* dst, char* src, size_t maxdstlen);
 
 BINTEXTDEF BINTEXTDEF_EXPORT
-size_t gbktowchar(wchar_t* dst, char* src, size_t maxdstlen);
+size_t bintext_gbktowchar(wchar_t* dst, char* src, size_t maxdstlen);
 
 BINTEXTDEF BINTEXTDEF_EXPORT
-size_t wchartoutf8(char* dst, wchar_t* src, size_t maxdstlen); // this might be not work
+size_t bintext_wchartoutf8(char* dst, wchar_t* src, size_t maxdstlen); // this might be not work
 
 BINTEXTDEF BINTEXTDEF_EXPORT
-size_t wchartosjis(char* dst, wchar_t* src, size_t maxdstlen); 
+size_t bintext_wchartosjis(char* dst, wchar_t* src, size_t maxdstlen); 
 
 BINTEXTDEF BINTEXTDEF_EXPORT
-size_t wchartogb2312(char* dst, wchar_t* src, size_t maxdstlen);
+size_t bintext_wchartogb2312(char* dst, wchar_t* src, size_t maxdstlen);
 
 BINTEXTDEF BINTEXTDEF_EXPORT
-void printutf8(char* utf8str, size_t utf8strlen);
+void bintext_printutf8(char* utf8str, size_t utf8strlen);
 
 // functions for ftexts
 // count how many ftexts in a buf
 BINTEXTDEF BINTEXTDEF_EXPORT
-void count_ftexts(char*buf, size_t bufsize, 
+void bintext_count_ftexts(char*buf, size_t bufsize, 
     int *pwhite_node_num, int *pblack_node_num);
 
 // printf the inforemations of FTEXTS_NODE for debug
 BINTEXTDEF BINTEXTDEF_EXPORT
-void printf_ftexts_node(PFTEXTS_NODE pnode);
+void bintext_print_ftextnode(PFTEXTS_NODE pnode);
 
 // parse the ftexts into FTEXTS_NODE, use format_text_num first to alloc memories of nodes
 BINTEXTDEF BINTEXTDEF_EXPORT
-PFTEXTS parse_ftexts(char* buf, size_t bufsize); 
+PFTEXTS bintext_parse_ftexts(char* buf, size_t bufsize); 
 
 // read ftext file and alloc memory of FTEXTS_NODEs
 BINTEXTDEF BINTEXTDEF_EXPORT
-PFTEXTS load_ftexts_file(char* path);
+PFTEXTS bintext_load_ftextsfile(char* path);
 
 // search the addr exactly in nodes, rerurns the index of nod, if not find return -1
 BINTEXTDEF BINTEXTDEF_EXPORT
-int search_ftexts_address(FTEXTS_NODE nodes[], int node_num, size_t addr); 
+int bintext_search_ftextsaddr(FTEXTS_NODE nodes[], int node_num, size_t addr); 
 // free each elements of ftexts, without rawbuf
 BINTEXTDEF BINTEXTDEF_EXPORT
-void free_ftexts(PFTEXTS pftexts);
+void bintext_free_ftexts(PFTEXTS pftexts);
 
 // functions for ftexts files linked-list
 BINTEXTDEF BINTEXTDEF_EXPORT
-PFFILES_NODE search_ffile_path(PFFILES pffiles, char* path);
+PFFILES_NODE bintext_search_ffile(PFFILES pffiles, char* path);
 
 // after search_ffile, move pcur to the found node
 BINTEXTDEF BINTEXTDEF_EXPORT
-PFFILES_NODE moveto_ffile_path(PFFILES pffiles, char* path);
+PFFILES_NODE bintext_moveto_ffilepath(PFFILES pffiles, char* path);
 
 // insert after pffile_node, if NULL, insert at first, return the count of PFFILES_NODE
 BINTEXTDEF BINTEXTDEF_EXPORT
-int insert_ffile(PFFILES pffiles, PFFILES_NODE pinsert_node, 
-    PFFILES_NODE pffile_node); 
+int bintext_insert_ffilenode(PFFILES pffiles, 
+    PFFILES_NODE pinsert_node,  PFFILES_NODE pffile_node); 
 
 BINTEXTDEF BINTEXTDEF_EXPORT
-int append_ffile(PFFILES pffiles, PFFILES_NODE pffile_node); 
+int bintext_append_ffilenode(PFFILES pffiles, PFFILES_NODE pffile_node); 
 
 BINTEXTDEF BINTEXTDEF_EXPORT
-int delete_ffile(PFFILES pffiles, PFFILES_NODE pffile_node);
+int bintext_delete_ffilenode(PFFILES pffiles, PFFILES_NODE pffile_node);
 
 BINTEXTDEF BINTEXTDEF_EXPORT
-void free_ffiles_node(PFFILES_NODE pffile_node);
+void bintext_free_ffilenode(PFFILES_NODE pffile_node);
 
 BINTEXTDEF BINTEXTDEF_EXPORT
-void free_ffiles(PFFILES pffiles);
+void bintext_free_ffiles(PFFILES pffiles);
 
 #ifdef __cplusplus
 }
@@ -182,52 +182,52 @@ void free_ffiles(PFFILES pffiles);
 #include <sys/stat.h>
 
 BINTEXTDEF BINTEXTDEF_EXPORT
-size_t utf8towchar(wchar_t* dst, char* src, size_t maxdstlen)
+size_t bintext_utf8towchar(wchar_t* dst, char* src, size_t maxdstlen)
 {
     setlocale(LC_ALL, ".utf-8");
     return mbstowcs(dst, src, maxdstlen);
 }
 
 BINTEXTDEF BINTEXTDEF_EXPORT
-size_t sjistowchar(wchar_t* dst, char* src, size_t maxdstlen)
+size_t bintext_sjistowchar(wchar_t* dst, char* src, size_t maxdstlen)
 {
     setlocale(LC_ALL, ".932");
     return mbstowcs(dst, src, maxdstlen);
 }
 
 BINTEXTDEF BINTEXTDEF_EXPORT
-size_t gbktowchar(wchar_t* dst, char* src, size_t maxdstlen)
+size_t bintext_gbktowchar(wchar_t* dst, char* src, size_t maxdstlen)
 {
     setlocale(LC_ALL, ".936");
     return mbstowcs(dst, src, maxdstlen);
 }
 
 BINTEXTDEF BINTEXTDEF_EXPORT
-size_t wchartoutf8(char* dst, wchar_t* src, size_t maxdstlen)
+size_t bintext_wchartoutf8(char* dst, wchar_t* src, size_t maxdstlen)
 {
     setlocale(LC_ALL, ".utf-8");
     return wcstombs(dst, src, maxdstlen);
 }
 
 BINTEXTDEF BINTEXTDEF_EXPORT
-size_t wchartosjis(char* dst, wchar_t* src, size_t maxdstlen)
+size_t bintext_wchartosjis(char* dst, wchar_t* src, size_t maxdstlen)
 {
     setlocale(LC_ALL, ".932");
     return wcstombs(dst, src, maxdstlen);
 }
 
 BINTEXTDEF BINTEXTDEF_EXPORT
-size_t wchartogb2312(char* dst, wchar_t* src, size_t maxdstlen)
+size_t bintext_wchartogb2312(char* dst, wchar_t* src, size_t maxdstlen)
 {
     setlocale(LC_ALL, ".936");
     return wcstombs(dst, src, maxdstlen);
 }
 
 BINTEXTDEF BINTEXTDEF_EXPORT
-void printutf8(char* utf8str, size_t utf8strlen)
+void bintext_printutf8(char* utf8str, size_t utf8strlen)
 {
     wchar_t *tmpwcstr = (wchar_t *)malloc(utf8strlen * 2 * sizeof(wchar_t));
-    utf8towchar(tmpwcstr, utf8str, utf8strlen);
+    bintext_utf8towchar(tmpwcstr, utf8str, utf8strlen);
     wprintf(L"%ls\n", tmpwcstr);
     free(tmpwcstr);
 }
@@ -239,7 +239,7 @@ int compare_ftexts_node(const void* p1, const void* p2)
 }
 
 BINTEXTDEF BINTEXTDEF_EXPORT
-void count_ftexts(char*buf, size_t bufsize, int *pwhite_node_num, int *pblack_node_num)
+void bintext_count_ftexts(char*buf, size_t bufsize, int *pwhite_node_num, int *pblack_node_num)
 {
     int flag_newline = 1;
     for(int i=0;i<bufsize-2;)
@@ -296,7 +296,7 @@ FTEXTS_NODE parse_ftexts_line(char* buf, size_t start, size_t end, regex_t* reg)
         node.size = strtol(tmpbuf+m[3].rm_so, NULL, 16);
         node.textbuf = buf + start + m[4].rm_so;
         node.textbufsize = (size_t)(m[4].rm_eo - m[4].rm_so);
-        //printf_ftexts_node(&node);
+        //bintext_print_ftextnode(&node);
     }
     else
     {
@@ -342,21 +342,21 @@ FTEXTS_NODE parse_ftexts_line(char* buf, size_t start, size_t end)
     node.size = strtol(tmpbuf+strstart, NULL, 16);
     node.textbuf = buf + start + i + 4; // a space is after black or white point
     node.textbufsize = (size_t)(end - (start + i + 4));
-    //printf_ftexts_node(&node);
+    //bintext_print_ftextnode(&node);
     return node;
 }
 #endif
 
 BINTEXTDEF BINTEXTDEF_EXPORT
-void printf_ftexts_node(PFTEXTS_NODE pnode)
+void bintext_print_ftextnode(PFTEXTS_NODE pnode)
 {
     printf("num=%d, addr=%x, size=%x, textbufsize=%x, ", 
             pnode->num, pnode->addr, pnode->size, pnode->textbufsize);
-    printutf8(pnode->textbuf, pnode->textbufsize);
+    bintext_printutf8(pnode->textbuf, pnode->textbufsize);
 }
 
 BINTEXTDEF BINTEXTDEF_EXPORT
-PFTEXTS parse_ftexts(char* buf, size_t bufsize)
+PFTEXTS bintext_parse_ftexts(char* buf, size_t bufsize)
 {
     PFTEXTS pftexts = malloc(sizeof(FTEXTS));
     memset(pftexts, 0, sizeof(FTEXTS));
@@ -364,7 +364,7 @@ PFTEXTS parse_ftexts(char* buf, size_t bufsize)
     pftexts->rawbufsize = bufsize;
 
     // count node number, and alloc memory
-    count_ftexts(buf, bufsize, &pftexts->white_node_num, &pftexts->black_node_num);
+    bintext_count_ftexts(buf, bufsize, &pftexts->white_node_num, &pftexts->black_node_num);
     pftexts->black_nodes = calloc(pftexts->black_node_num, sizeof(FTEXTS_NODE));
     pftexts->white_nodes = calloc(pftexts->white_node_num, sizeof(FTEXTS_NODE));
 
@@ -412,7 +412,7 @@ PFTEXTS parse_ftexts(char* buf, size_t bufsize)
 }
 
 BINTEXTDEF BINTEXTDEF_EXPORT
-PFTEXTS load_ftexts_file(char* path)
+PFTEXTS bintext_load_ftextsfile(char* path)
 {
     struct stat st;
     stat(path, &st);
@@ -428,12 +428,12 @@ PFTEXTS load_ftexts_file(char* path)
     fread(buf, 1, bufsize, fp);
     fclose(fp);
 
-    PFTEXTS pftexts = parse_ftexts(buf, bufsize);
+    PFTEXTS pftexts = bintext_parse_ftexts(buf, bufsize);
     return pftexts;
 }
 
 BINTEXTDEF BINTEXTDEF_EXPORT
-int search_ftexts_address(FTEXTS_NODE nodes[], int node_num, size_t addr)
+int bintext_search_ftextsaddr(FTEXTS_NODE nodes[], int node_num, size_t addr)
 {
     int start=0, end=node_num-1;
     if(nodes==NULL || end<0) return -1;
@@ -450,7 +450,7 @@ int search_ftexts_address(FTEXTS_NODE nodes[], int node_num, size_t addr)
 }
 
 BINTEXTDEF BINTEXTDEF_EXPORT
-void free_ftexts(PFTEXTS pftexts)
+void bintext_free_ftexts(PFTEXTS pftexts)
 {
     free(pftexts->black_nodes);
     free(pftexts->white_nodes);
@@ -459,7 +459,7 @@ void free_ftexts(PFTEXTS pftexts)
 }
 
 BINTEXTDEF BINTEXTDEF_EXPORT
-PFFILES_NODE search_ffile_path(PFFILES pffiles, char* path)
+PFFILES_NODE bintext_search_ffile(PFFILES pffiles, char* path)
 {
     if(!pffiles || !pffiles->pstart) return NULL;
     PFFILES_NODE ptarget = pffiles->pstart;
@@ -472,15 +472,15 @@ PFFILES_NODE search_ffile_path(PFFILES pffiles, char* path)
 }
 
 BINTEXTDEF BINTEXTDEF_EXPORT
-PFFILES_NODE moveto_ffile_path(PFFILES pffiles, char* path)
+PFFILES_NODE bintext_moveto_ffilepath(PFFILES pffiles, char* path)
 {
-    PFFILES_NODE ptarget = search_ffile_path(pffiles, path);
+    PFFILES_NODE ptarget = bintext_search_ffile(pffiles, path);
     if(!ptarget) pffiles->pcur = ptarget;
     return ptarget;
 }
 
 BINTEXTDEF BINTEXTDEF_EXPORT
-int insert_ffile(PFFILES pffiles, PFFILES_NODE pinsert_node, PFFILES_NODE pffile_node)
+int bintext_insert_ffilenode(PFFILES pffiles, PFFILES_NODE pinsert_node, PFFILES_NODE pffile_node)
 {
     if(!pffile_node || !pffiles) return -1;
     if(!pinsert_node) // insert at first
@@ -509,14 +509,14 @@ int insert_ffile(PFFILES pffiles, PFFILES_NODE pinsert_node, PFFILES_NODE pffile
 }
 
 BINTEXTDEF BINTEXTDEF_EXPORT
-int append_ffile(PFFILES pffiles, PFFILES_NODE pffile_node)
+int bintext_append_ffilenode(PFFILES pffiles, PFFILES_NODE pffile_node)
 {
     if(!pffiles) return -1;
-    return insert_ffile(pffiles, pffiles->pend, pffile_node);
+    return bintext_insert_ffilenode(pffiles, pffiles->pend, pffile_node);
 }
 
 BINTEXTDEF BINTEXTDEF_EXPORT
-int delete_ffile(PFFILES pffiles, PFFILES_NODE pffile_node)
+int bintext_delete_ffilenode(PFFILES pffiles, PFFILES_NODE pffile_node)
 {
     if(!pffiles) return -1;
     if(pffiles->pcur == pffile_node) pffiles->pcur = NULL;
@@ -524,30 +524,30 @@ int delete_ffile(PFFILES pffiles, PFFILES_NODE pffile_node)
     {
         pffiles->pstart = pffile_node->next;
         if(pffiles->pstart) pffiles->pstart->previous = NULL;
-        free_ffiles_node(pffile_node);
+        bintext_free_ffilenode(pffile_node);
         return --pffiles->count;
     }
     else
     {
         pffile_node->previous->next = pffile_node->next;
         if(!pffile_node->next) pffiles->pend = pffile_node->previous;
-        free_ffiles_node(pffile_node);
+        bintext_free_ffilenode(pffile_node);
         return --pffiles->count;
     }
 }
 
 BINTEXTDEF BINTEXTDEF_EXPORT
-void free_ffiles_node(PFFILES_NODE pffile_node)
+void bintext_free_ffilenode(PFFILES_NODE pffile_node)
 {
     if(!pffile_node) return;
     free(pffile_node->path);
-    free_ftexts(pffile_node->pftexts);
+    bintext_free_ftexts(pffile_node->pftexts);
     FFILES_NODE_EXTRA_FREE
     free(pffile_node);
 }
 
 BINTEXTDEF BINTEXTDEF_EXPORT
-void free_ffiles(PFFILES pffiles)
+void bintext_free_ffiles(PFFILES pffiles)
 {
     if(!pffiles) return;
     if(pffiles->pstart)
@@ -557,55 +557,10 @@ void free_ffiles(PFFILES pffiles)
         {
             PFFILES_NODE ptmp = pcur;
             pcur = pcur->next;
-            free_ffiles_node(ptmp);
+            bintext_free_ffilenode(ptmp);
         }
     }
     FFILES_EXTRA_FREE
     free(pffiles);
 }
-
-#ifdef _TEST_BINARY_TEXT
-int main(int argc, char **argv)
-{
-    // test ftexts
-    PFTEXTS pftexts = load_ftexts_file(argv[1]);
-    printf("pftexts rawbufsize=0x%x, white_node_num=%d, black_node_num=%d\n", 
-        pftexts->rawbufsize, pftexts->white_node_num, pftexts->black_node_num);
-    size_t addr = 0x81de;
-    int idx = search_ftexts_address(pftexts->white_nodes, pftexts->white_node_num, addr);
-    printf("search at %x, return %d\n", addr, idx);
-    printf_ftexts_node(&pftexts->white_nodes[idx]);
-
-    // test ffiles
-    PFFILES pfiles = (PFFILES)malloc(sizeof(FFILES));
-    PFFILES_NODE pfile_node = (PFFILES_NODE)malloc(sizeof(FFILES_NODE));
-    PFFILES_NODE pfile_node2 = (PFFILES_NODE)malloc(sizeof(FFILES_NODE));
-    memset(pfiles, 0, sizeof(FFILES));
-    memset(pfile_node, 0, sizeof(FFILES_NODE));
-    memset(pfile_node2, 0, sizeof(FFILES_NODE));
-    char* path=(char*)malloc(strlen(argv[1]));
-    strcpy(path, argv[1]);
-    pfile_node->path = path;
-    pfile_node->pftexts = pftexts;
-    path =(char*)malloc(strlen(argv[2]));
-    strcpy(path, argv[2]);
-    pfile_node2->path = path;
-    pfile_node2->pftexts =  load_ftexts_file(argv[2]);
-    append_ffile(pfiles, pfile_node);
-    insert_ffile(pfiles, pfiles->pstart, pfile_node2);
-    delete_ffile(pfiles, pfiles->pstart);
-    PFFILES_NODE ptmp = search_ffile_path(pfiles, "a02.mjo.txt");
-    if(ptmp) printf("fuound ffile %x, %s\n", ptmp, ptmp->path);
-    free_ffiles(pfiles);
-    
-    // test converter
-    wchar_t wcstr[100]=L"测试";
-    unsigned char mcstr[100] = {0};
-    size_t ret = wchartogb2312(mcstr, wcstr, wcslen(wcstr));
-    printf("%x %x -> %d %02x %02x %02x %02x\n", wcstr[0], wcstr[1], 
-        ret, mcstr[0], mcstr[1], mcstr[2], mcstr[3]);
-    printutf8("\xE2\x97\x8F\xE2\x97\x8B", 6); // ●○
-    return 0;
-}
-#endif
 #endif

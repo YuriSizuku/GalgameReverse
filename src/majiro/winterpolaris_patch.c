@@ -7,8 +7,8 @@
 #include<stdio.h>
 #define BINTEXT_IMPLEMENTATION
 #include "bintext.h"
-#define WIN_HOOK_IMPLEMENTATION
-#include "win_hook.h"
+#define WINHOOK_IMPLEMENTATION
+#include "winhook.h"
 
 typedef struct _MJO_NODE MJO_NODE, *PMJO_NODE;
 struct _MJO_NODE
@@ -41,7 +41,7 @@ void load_mjo_ftexts(char* mjo_name)
     {
         fclose(fp);
         printf("load_mjo_ftexts, %s found!\n", path);
-        g_cur_mjo->text_index = load_ftexts_file(path);
+        g_cur_mjo->text_index = bintext_load_ftextsfile(path);
         strcpy(g_cur_mjo->mjo_name, mjo_name);
     }
     else
@@ -103,7 +103,7 @@ void __stdcall find_mjo_chstext(size_t addr)
         printf("pnode is empty!\n");
         return;
     }
-    int idx = search_ftexts_address(pnode->black_nodes, pnode->black_node_num, addr);
+    int idx = bintext_search_ftextsaddr(pnode->black_nodes, pnode->black_node_num, addr);
     if(idx!=-1)
     {
         char* blackbuf = pnode->black_nodes[idx].textbuf;
@@ -116,7 +116,7 @@ void __stdcall find_mjo_chstext(size_t addr)
         if(idx >= pnode->white_node_num || 
             pnode->white_nodes[idx_white].addr!=pnode->black_nodes[idx_white].addr)
         {
-            idx_white = search_ftexts_address(pnode->black_nodes, pnode->black_node_num, addr);
+            idx_white = bintext_search_ftextsaddr(pnode->black_nodes, pnode->black_node_num, addr);
         }
         if(idx_white!=-1)
         {
@@ -135,8 +135,8 @@ void __stdcall find_mjo_chstext(size_t addr)
         }
 
         // convert utf8 ftexts to gb2312
-        size_t size = utf8towchar(wcharbuf, g_textbuf, blackbufsize);
-        size = wchartogb2312(g_textbuf, wcharbuf, blackbufsize);
+        size_t size = bintext_utf8towchar(wcharbuf, g_textbuf, blackbufsize);
+        size = bintext_wchartogb2312(g_textbuf, wcharbuf, blackbufsize);
         if(size>sizeof(g_textbuf)) size=0; //if size=-1 when error occured, for example '−' is not allowed
         g_textbuf[size] = '\0';
         printf("blackbufsize=%x, g_textbuf_size=%x,%s\n",  blackbufsize, size, g_textbuf);
@@ -256,12 +256,12 @@ __declspec(naked) void is_twobyte() // cdecl
 
 void install_font_hook()
 {
-    if(!iat_hook("Gdi32.dll", (PROC)CreateFontIndirectA, (PROC)CreateFontIndirectA_hook))
+    if(!winhook_iathook("Gdi32.dll", (PROC)CreateFontIndirectA, (PROC)CreateFontIndirectA_hook))
     {
         MessageBoxA(NULL, "CreateFontIndirectA iat hook failed!", "error", 0);
     }
 
-    if(!iat_hook("User32.dll", (PROC)CreateWindowExA, (PROC)CreateWindowExA_hook))
+    if(!winhook_iathook("User32.dll", (PROC)CreateWindowExA, (PROC)CreateWindowExA_hook))
     {
         MessageBoxA(NULL, "CreateWindowExA iat hook failed!", "error", 0);
     }
@@ -277,7 +277,7 @@ void install_text_hook()
     {
         printf("%d, %lx -> %lx\n", i, (unsigned long)pfnOlds[i], (unsigned long)pfnNews[i]); 
     }
-    inline_hooks(pfnOlds, pfnNews);
+    winhook_inlinehooks(pfnOlds, pfnNews);
     g_showtext = pfnOlds[0];
     printf("After inline hooks\n");
     for(int i=0;i<sizeof(pfnOlds)/sizeof(PVOID)-1;i++)
@@ -290,13 +290,57 @@ void install_hooks()
 {
     g_base = (void*)GetModuleHandleA(NULL);
 #ifdef _DEBUG
-    install_console();
+    winhook_installconsole();
     // MessageBoxA(NULL, "winterpolar_hook start", "install_hook", 0);
 #endif
     install_font_hook();
     install_text_hook();
 }
 
+#ifdef _TEST_BINARY_TEXT
+int main(int argc, char **argv)
+{
+    // test ftexts
+    PFTEXTS pftexts = bintext_load_ftextsfile(argv[1]);
+    printf("pftexts rawbufsize=0x%x, white_node_num=%d, black_node_num=%d\n", 
+        pftexts->rawbufsize, pftexts->white_node_num, pftexts->black_node_num);
+    size_t addr = 0x81de;
+    int idx = bintext_search_ftextsaddr(pftexts->white_nodes, pftexts->white_node_num, addr);
+    printf("search at %x, return %d\n", addr, idx);
+    bintext_print_ftextnode(&pftexts->white_nodes[idx]);
+
+    // test ffiles
+    PFFILES pfiles = (PFFILES)malloc(sizeof(FFILES));
+    PFFILES_NODE pfile_node = (PFFILES_NODE)malloc(sizeof(FFILES_NODE));
+    PFFILES_NODE pfile_node2 = (PFFILES_NODE)malloc(sizeof(FFILES_NODE));
+    memset(pfiles, 0, sizeof(FFILES));
+    memset(pfile_node, 0, sizeof(FFILES_NODE));
+    memset(pfile_node2, 0, sizeof(FFILES_NODE));
+    char* path=(char*)malloc(strlen(argv[1]));
+    strcpy(path, argv[1]);
+    pfile_node->path = path;
+    pfile_node->pftexts = pftexts;
+    path =(char*)malloc(strlen(argv[2]));
+    strcpy(path, argv[2]);
+    pfile_node2->path = path;
+    pfile_node2->pftexts =  bintext_load_ftextsfile(argv[2]);
+    bintext_append_ffilenode(pfiles, pfile_node);
+    bintext_insert_ffilenode(pfiles, pfiles->pstart, pfile_node2);
+    bintext_delete_ffilenode(pfiles, pfiles->pstart);
+    PFFILES_NODE ptmp = bintext_search_ffile(pfiles, "a02.mjo.txt");
+    if(ptmp) printf("fuound ffile %x, %s\n", ptmp, ptmp->path);
+    bintext_free_ffiles(pfiles);
+    
+    // test converter
+    wchar_t wcstr[100]=L"测试";
+    unsigned char mcstr[100] = {0};
+    size_t ret = bintext_wchartogb2312(mcstr, wcstr, wcslen(wcstr));
+    printf("%x %x -> %d %02x %02x %02x %02x\n", wcstr[0], wcstr[1], 
+        ret, mcstr[0], mcstr[1], mcstr[2], mcstr[3]);
+    bintext_printutf8("\xE2\x97\x8F\xE2\x97\x8B", 6); // ●○
+    return 0;
+}
+#else
 BOOL WINAPI DllMain(
     HINSTANCE hinstDLL,  // handle to DLL module
     DWORD fdwReason,     // reason for calling function
@@ -316,3 +360,4 @@ BOOL WINAPI DllMain(
     }
     return TRUE;
 }
+#endif

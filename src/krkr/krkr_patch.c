@@ -1,10 +1,53 @@
 /*
-    krkr_patch.c, by devseed, v0.1
-    compile this dll to change locate and redirect patch path
+    krkr_patch.c, 
+	compile this dll to change locate and redirect patch path
+	developed by devseed, v0.1
+
 */
 #include<windows.h>
 #include<stdio.h>
-#include "win_hook.h"
+
+BOOL iat_hook_module(LPCSTR targetDllName, LPCSTR moduleDllName, PROC pfnOrg, PROC pfnNew)
+{;
+#ifdef _WIN64
+#define VA_TYPE ULONGLONG
+#else
+#define VA_TYPE DWORD
+#endif
+    DWORD dwOldProtect = 0;
+    VA_TYPE imageBase = (VA_TYPE)GetModuleHandleA(moduleDllName);
+    LPBYTE pNtHeader = (LPBYTE)(*(DWORD *)((LPBYTE)imageBase + 0x3c) + imageBase); 
+#ifdef _WIN64
+    VA_TYPE impDescriptorRva = *((DWORD*)&pNtHeader[0x90]);
+#else
+    VA_TYPE impDescriptorRva = *((DWORD*)&pNtHeader[0x80]); 
+#endif
+    PIMAGE_IMPORT_DESCRIPTOR pImpDescriptor = (PIMAGE_IMPORT_DESCRIPTOR)(imageBase + impDescriptorRva); 
+    for (; pImpDescriptor->Name; pImpDescriptor++) // find the dll IMPORT_DESCRIPTOR
+    {
+        LPCSTR pDllName = (LPCSTR)(imageBase + pImpDescriptor->Name);
+        if (!_stricmp(pDllName, targetDllName)) // ignore case
+        {
+            PIMAGE_THUNK_DATA pFirstThunk = (PIMAGE_THUNK_DATA)(imageBase + pImpDescriptor->FirstThunk);
+            for (; pFirstThunk->u1.Function; pFirstThunk++) // find the iat function va
+            {
+                if (pFirstThunk->u1.Function == (VA_TYPE)pfnOrg)
+                {
+                    VirtualProtect((LPVOID)&pFirstThunk->u1.Function, 4, PAGE_EXECUTE_READWRITE, &dwOldProtect);
+                    pFirstThunk->u1.Function = (VA_TYPE)pfnNew;
+                    VirtualProtect((LPVOID)&pFirstThunk->u1.Function, 4, dwOldProtect, &dwOldProtect);
+                    return TRUE;
+                }
+            }
+        }
+    }
+    return FALSE;
+}
+
+BOOL iat_hook(LPCSTR targetDllName, PROC pfnOrg, PROC pfnNew)
+{
+    return iat_hook_module(targetDllName, NULL, pfnOrg, pfnNew);
+}
 
 __declspec(dllexport) void dummy()
 {

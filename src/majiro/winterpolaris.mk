@@ -6,7 +6,7 @@ BUILD_DIR:=./build
 INCS:=-I./../../util/include -I./../../thirdparty/include
 LIBDIRS:=-L./../../thirdparty/lib32 -L$(MINGW_DIR)/lib
 LIBS:=-ldetours -luser32 -lgdi32 # -lregex change the name libregex.dll.a to regex.lib, but it need correspond dll
-CFLAGS:=-target i686-pc-windows-msvc -D _CRT_SECURE_NO_DEPRECATE -DNO_REGEX -D_DEBUG -DUSE_DETOURS # -g
+CFLAGS:=-target i686-pc-windows-msvc -D _CRT_SECURE_NO_DEPRECATE -DBINTEXT_NOREGEX -D_DEBUG # -g
 
 all: prepare winterpolaris_patch
 

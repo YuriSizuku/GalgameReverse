@@ -105,10 +105,12 @@ BOOL winhook_iathook(LPCSTR targetDllName,
     g_pfnAbout = (void(*)())(pfnOlds[0]);
 */
 WINHOOKDEF WINHOOK_EXPORT
-int winhook_inlinehooks(PVOID pfnOlds[], PVOID pfnNews[]); 
+int winhook_inlinehooks(PVOID pfnOlds[], 
+    PVOID pfnNews[], size_t n); 
 
 WINHOOKDEF WINHOOK_EXPORT
-int winhook_inlineunhooks(PVOID pfnOlds[], PVOID pfnNews[]);
+int winhook_inlineunhooks(PVOID pfnOlds[], 
+    PVOID pfnNews[], size_t n);
 #endif 
 
 #ifdef __cplusplus
@@ -274,26 +276,32 @@ BOOL winhook_iathook(LPCSTR targetDllName, PROC pfnOrg, PROC pfnNew)
 #ifndef WINHOOK_NODETOURS
 #include "detours.h"
 WINHOOKDEF WINHOOK_EXPORT 
-int winhook_inlinehooks(PVOID pfnOlds[], PVOID pfnNews[])
+int winhook_inlinehooks(PVOID pfnOlds[], PVOID pfnNews[], size_t n)
 {
     int i=0;
     DetourRestoreAfterWith();
     DetourTransactionBegin();
     DetourUpdateThread(GetCurrentThread());
-    for(i=0; pfnNews[i]!=NULL ;i++)
+    for(i=0; i<n ;i++)
+    {
+        if(!pfnOlds[i]) continue;
         DetourAttach(&pfnOlds[i], pfnNews[i]);
+    }
     DetourTransactionCommit();
     return i;
 }
 
 WINHOOKDEF WINHOOK_EXPORT
-int winhook_inlineunhooks(PVOID pfnOlds[], PVOID pfnNews[])
+int winhook_inlineunhooks(PVOID pfnOlds[], PVOID pfnNews[], size_t n)
 {
     int i = 0;
     DetourTransactionBegin();
     DetourUpdateThread(GetCurrentThread());
-    for (i = 0; pfnNews[i] != NULL; i++)
+    for(i=0; i<n ;i++)
+    {
+        if(!pfnOlds[i]) continue;
         DetourDetach(&pfnOlds[i], pfnNews[i]);
+    }
     DetourTransactionCommit();
     return i;
 }

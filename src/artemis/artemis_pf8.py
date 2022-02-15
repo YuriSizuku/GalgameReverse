@@ -1,6 +1,6 @@
 """
     This is a pack and unpack tool for artemis .pf8 archive 
-    by devseed.
+    v0.2, developed by devseed.
 
     pf8 structure
     |magic 'pf8'
@@ -17,7 +17,6 @@
     |filesize_count_offset 4 //offset from faddr 0x7
 
 """
-
 import os
 import argparse
 import struct
@@ -25,7 +24,6 @@ import re
 import mmap
 import hashlib
 from io import BytesIO
-
 
 def makekeypf8(pf8):
     index_data = pf8['data'][0x7:0x7+pf8['index_size']]
@@ -144,7 +142,10 @@ def makepf8archive(basepath, filelist, unencrpted_filter):
             print("%s is encrypted at 0x%X, size %d"%(path, offset, size))
     return data
 
-def unpackpf8(inpath, outpath, unencrpted_filter=[r'\.mp4$', r'\.flv$']):
+def unpackpf8(inpath, outpath, 
+    unencrpted_filter=[r'\.mp4$', r'\.flv$'], 
+    pathlist=None):
+
     fp = os.open(inpath, os.O_BINARY | os.O_RDONLY) 
     data = mmap.mmap(fp, 0, access=mmap.ACCESS_READ)
     pf8 = parsepf8(data)
@@ -157,6 +158,9 @@ def unpackpf8(inpath, outpath, unencrpted_filter=[r'\.mp4$', r'\.flv$']):
         re_unencrpted.append(re.compile(t))
     for i in range(count):
         path = file_entrys[i]['name'].strip('\0')
+        if pathlist is not None and path not in pathlist:
+            print("skiped!", path)
+            continue
         offset = file_entrys[i]['offset']
         size = file_entrys[i]['size']
         encrypted = True
@@ -194,7 +198,18 @@ def packpf8(inpath, outpath, unencrpted_filter=[r'\.mp4$', r'\.flv$']):
         with open(outpath, 'wb') as fp:
             fp.write(data)
 
-if __name__ == "__main__":
+def test1(path1, path2):
+    with open(path1, 'rb') as fp:
+        data = fp.read()
+    pf8 = parsepf8(data)
+    pathlist = [x['name'].strip('\0') for x in pf8['file_entrys']]
+    unpackpf8(path2, "out", pathlist=pathlist)
+    print(pathlist)
+
+def debug():
+    test1("xxx_org.pfs", "xxx.pfs")
+
+def main():
     parser = argparse.ArgumentParser()
     group = parser.add_mutually_exclusive_group()
     group.add_argument('-u', "--unpack", type=str)
@@ -205,3 +220,8 @@ if __name__ == "__main__":
     if args.unpack: unpackpf8(args.unpack, args.outpath)
     elif args.pack: packpf8(args.pack, args.outpath)
     else: print("pf8tool argument error!")
+
+if __name__ == "__main__":
+    main()
+    # debug()
+    pass

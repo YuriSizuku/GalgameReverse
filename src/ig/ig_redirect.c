@@ -1,12 +1,14 @@
 ﻿#include <windows.h>
 #include <stdio.h>
 
-#include "win_hook.h"
+#define WINHOOK_IMPLEMENTATION
+#define WINHOOK_NODETOURS    
+#include "winhook.h"
 #ifndef _DEBUG
     
 #endif
 
-void dummy()
+void __declspec(dllexport) dummy()
 {
 
 }
@@ -70,8 +72,10 @@ HWND WINAPI CreateWindowExW_hook(
     LPVOID    lpParam
 )
 {
-    return CreateWindowExW(dwExStyle, lpClassName, L"天之少女【穗见学园汉化组】_v1.1",
-        dwStyle, X, Y, nWidth, nHeight, hWndParent, hMenu, hInstance, lpParam);
+    return CreateWindowExW(dwExStyle, lpClassName, 
+        L"天之少女【穗见学园汉化组】_v1.02（请勿录播直播）",
+        dwStyle, X, Y, nWidth, nHeight, 
+        hWndParent, hMenu, hInstance, lpParam);
 }
 
 HMODULE WINAPI LoadLibraryExW_redirect(
@@ -169,7 +173,7 @@ HANDLE WINAPI CreateFileW_redirect(
 
 void install_window_hook()
 {
-    if (!iat_hook("user32.dll",
+    if (!winhook_iathook("user32.dll",
         GetProcAddress(GetModuleHandleA("user32.dll"), "CreateWindowExW"),
         (PROC)CreateWindowExW_hook))
     {
@@ -181,26 +185,26 @@ void install_himorogi_hook()
 {
     LoadLibraryA("./Plugin/Himorogi.dll");
     
-    if (!iat_hook_module("kernel32.dll", "Himorogi.dll",
+    if (!winhook_iathookmodule("kernel32.dll", "Himorogi.dll",
         GetProcAddress(GetModuleHandleA("kernel32.dll"), "LoadLibraryExW"),
         (PROC)LoadLibraryExW_redirect))
     {
         MessageBoxA(NULL, "Himorogi.dll IAT LoadLibraryExW hook failed!", "ERROR", 0);
     }
-    if (!iat_hook_module("kernel32.dll", "Himorogi.dll",
+    if (!winhook_iathookmodule("kernel32.dll", "Himorogi.dll",
         GetProcAddress(GetModuleHandleA("kernel32.dll"), "CreateDirectoryW"),
         (PROC)CreateDirectoryW_redirect))
     {
         MessageBoxA(NULL, "Himorogi.dll IAT CreateDirectoryW  hook failed!", "ERROR", 0);
     }
-    if (!iat_hook_module("kernel32.dll", "Himorogi.dll",
+    if (!winhook_iathookmodule("kernel32.dll", "Himorogi.dll",
         GetProcAddress(GetModuleHandleA("kernel32.dll"), "GetFileAttributesW"),
         (PROC)GetFileAttributesW_redirect))
     {
         MessageBoxA(NULL, "Himorogi.dll IAT GetFileAttributesW  hook failed!", "ERROR", 0);
     }
 
-    if (!iat_hook_module("kernel32.dll", "Himorogi.dll",
+    if (!winhook_iathookmodule("kernel32.dll", "Himorogi.dll",
         GetProcAddress(GetModuleHandleA("kernel32.dll"), "CreateFileW"),
         (PROC)CreateFileW_redirect))
     {
@@ -209,7 +213,7 @@ void install_himorogi_hook()
 
 }
 
-void install_hook()
+void install_hooks()
 {
 #ifdef _DEBUG
     AllocConsole();
@@ -229,7 +233,7 @@ BOOL APIENTRY DllMain( HMODULE hModule,
     switch (ul_reason_for_call)
     {
     case DLL_PROCESS_ATTACH:
-        install_hook();
+        install_hooks();
         break;
     case DLL_THREAD_ATTACH:
     case DLL_THREAD_DETACH:

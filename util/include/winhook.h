@@ -34,14 +34,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-// PE functions
-
-/*
-    returns the overlay offset in a pe file
-*/
-WINHOOKDEF WINHOOK_EXPORT 
-size_t winhook_overlayoffset(BYTE *pe);
-
 // loader functions
 /* 
     start a exe by CreateProcess
@@ -70,8 +62,8 @@ void winhook_installconsole();
 
 // dynamic hook functions
 WINHOOKDEF WINHOOK_EXPORT 
-BOOL winhook_patchmemory(LPVOID addr, void* buf, 
-    size_t bufsize);
+BOOL winhook_patchmemory(LPVOID addr, 
+    void* buf, size_t bufsize);
 
 /* 
     winhook_iathookmodule is for windows dll, 
@@ -105,10 +97,12 @@ BOOL winhook_iathook(LPCSTR targetDllName,
     g_pfnAbout = (void(*)())(pfnOlds[0]);
 */
 WINHOOKDEF WINHOOK_EXPORT
-int winhook_inlinehooks(PVOID pfnOlds[], PVOID pfnNews[]); 
+int winhook_inlinehooks(PVOID pfnOlds[], 
+    PVOID pfnNews[], size_t n); 
 
 WINHOOKDEF WINHOOK_EXPORT
-int winhook_inlineunhooks(PVOID pfnOlds[], PVOID pfnNews[]);
+int winhook_inlineunhooks(PVOID pfnOlds[], 
+    PVOID pfnNews[], size_t n);
 #endif 
 
 #ifdef __cplusplus
@@ -119,31 +113,6 @@ int winhook_inlineunhooks(PVOID pfnOlds[], PVOID pfnNews[]);
 #include <Windows.h>
 #include <tlhelp32.h>
 #include <stdio.h>
-// PE functions
-WINHOOKDEF WINHOOK_EXPORT 
-size_t winhook_overlayoffset(BYTE *pe)
-{
-#ifdef _WIN64
-#define ADDR_TYPE DWORD
-#else
-#define ADDR_TYPE ULONGLONG
-#endif    
-    PIMAGE_DOS_HEADER pDosHeader = (PIMAGE_DOS_HEADER)pe;
-    
-    PIMAGE_NT_HEADERS  pNtHeader = (PIMAGE_NT_HEADERS)
-        ((ADDR_TYPE)pe + pDosHeader->e_lfanew);
-    PIMAGE_FILE_HEADER pFileHeader = &pNtHeader->FileHeader;
-    PIMAGE_OPTIONAL_HEADER pOptHeader = &pNtHeader->OptionalHeader;
-    PIMAGE_DATA_DIRECTORY pDataDirectory = pOptHeader->DataDirectory;
- 
-    PIMAGE_SECTION_HEADER pSectHeader = (PIMAGE_SECTION_HEADER)
-        ((ADDR_TYPE)pOptHeader + pFileHeader->SizeOfOptionalHeader);
-    WORD sectNum = pFileHeader->NumberOfSections;
-
-    return pSectHeader[sectNum-1].PointerToRawData + 
-           pSectHeader[sectNum-1].SizeOfRawData;
-}
-
 // loader functions
 WINHOOKDEF WINHOOK_EXPORT 
 HANDLE winhook_startexe(LPCSTR exepath, LPSTR cmdstr)
@@ -214,7 +183,8 @@ void winhook_installconsole()
 
 // dynamic hook functions
 WINHOOKDEF WINHOOK_EXPORT 
-BOOL winhook_patchmemory(LPVOID addr, void* buf, size_t bufsize)
+BOOL winhook_patchmemory(LPVOID addr, 
+    void* buf, size_t bufsize)
 {
 	DWORD oldprotect;
     BOOL ret = VirtualProtect(addr, bufsize, PAGE_EXECUTE_READWRITE, &oldprotect);
@@ -274,26 +244,32 @@ BOOL winhook_iathook(LPCSTR targetDllName, PROC pfnOrg, PROC pfnNew)
 #ifndef WINHOOK_NODETOURS
 #include "detours.h"
 WINHOOKDEF WINHOOK_EXPORT 
-int winhook_inlinehooks(PVOID pfnOlds[], PVOID pfnNews[])
+int winhook_inlinehooks(PVOID pfnOlds[], PVOID pfnNews[], size_t n)
 {
     int i=0;
     DetourRestoreAfterWith();
     DetourTransactionBegin();
     DetourUpdateThread(GetCurrentThread());
-    for(i=0; pfnNews[i]!=NULL ;i++)
+    for(i=0; i<n ;i++)
+    {
+        if(!pfnOlds[i]) continue;
         DetourAttach(&pfnOlds[i], pfnNews[i]);
+    }
     DetourTransactionCommit();
     return i;
 }
 
 WINHOOKDEF WINHOOK_EXPORT
-int winhook_inlineunhooks(PVOID pfnOlds[], PVOID pfnNews[])
+int winhook_inlineunhooks(PVOID pfnOlds[], PVOID pfnNews[], size_t n)
 {
     int i = 0;
     DetourTransactionBegin();
     DetourUpdateThread(GetCurrentThread());
-    for (i = 0; pfnNews[i] != NULL; i++)
+    for(i=0; i<n ;i++)
+    {
+        if(!pfnOlds[i]) continue;
         DetourDetach(&pfnOlds[i], pfnNews[i]);
+    }
     DetourTransactionCommit();
     return i;
 }

@@ -7,8 +7,10 @@
     v0.2 use codecave to dynamiclly LoadLibraryA,
          to avoid windows defender assuming this as virus
 """
+from ast import arg, parse
 import sys
 import os
+import argparse
 import lief
 from keystone import Ks, KS_ARCH_X86, KS_MODE_32, KS_MODE_64
 
@@ -90,9 +92,11 @@ def injectdll_codecave(exepath, dllname, outpath="out.exe"):
         infostr = f"try to inject asm at {imgbase+payload_rva:08X}:"
         ks = Ks(KS_ARCH_X86, KS_MODE_32)
         code_str = f"""
+            pushad;
             mov eax, dllname+1;
             push eax;
             call dword ptr ds:[0x{imgbase+impentry_LoadLibraryA.iat_address:08X}];
+            popad;
             jmp 0x{imgbase+oeprva:08X};
             dllname:
             nop"""
@@ -120,10 +124,21 @@ def debug():
 
 def main():
     if len(sys.argv) < 3:
-        print("injectdll exepath dllpath [outpath]")
+        print("injectdll exepath dllpath [-m|method iat|codecave(default)] [-o outpath]")
         return
-    outpath = "out.exe" if len(sys.argv) < 4 else sys.argv[3]
-    injectdll_codecave(sys.argv[1], sys.argv[2], outpath)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('exepath', type=str)
+    parser.add_argument('dllpath', type=str)
+    parser.add_argument('--method', '-m', default='codecave')
+    parser.add_argument('--outpath', '-o', default='out.exe')
+    args = parser.parse_args()
+    if args.method.lower() == 'codecave':
+        injectdll_codecave(args.exepath, args.dllpath, args.outpath)
+    elif args.method.lower() == 'iat':
+        injectdll_iat(args.exepath, args.dllpath, args.outpath)
+    else:
+        raise NotImplementedError()    
     
 if __name__ == "__main__":
     #debug()

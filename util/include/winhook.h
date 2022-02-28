@@ -200,33 +200,37 @@ WINHOOKDEF WINHOOK_EXPORT
 BOOL winhook_iathookmodule(LPCSTR targetDllName, 
     LPCSTR moduleDllName, PROC pfnOrg, PROC pfnNew)
 {
-#ifdef _WIN64
-#define VA_TYPE ULONGLONG
-#else
-#define VA_TYPE DWORD
-#endif
+    size_t imageBase = (size_t)GetModuleHandleA(moduleDllName);
+    PIMAGE_DOS_HEADER pDosHeader = (PIMAGE_DOS_HEADER)imageBase;
+    PIMAGE_NT_HEADERS  pNtHeader = (PIMAGE_NT_HEADERS)
+        ((void*)imageBase + pDosHeader->e_lfanew);
+    PIMAGE_FILE_HEADER pFileHeader = &pNtHeader->FileHeader;
+    PIMAGE_OPTIONAL_HEADER pOptHeader = &pNtHeader->OptionalHeader;
+    PIMAGE_DATA_DIRECTORY pDataDirectory = pOptHeader->DataDirectory;
+    PIMAGE_DATA_DIRECTORY pImpEntry =  
+        &pDataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT];
+    PIMAGE_IMPORT_DESCRIPTOR pImpDescriptor =  
+        (PIMAGE_IMPORT_DESCRIPTOR)(imageBase + pImpEntry->VirtualAddress);
+
     DWORD dwOldProtect = 0;
-    VA_TYPE imageBase = (VA_TYPE)GetModuleHandleA(moduleDllName);
-    LPBYTE pNtHeader = (LPBYTE)(*(DWORD *)((LPBYTE)imageBase + 0x3c) + imageBase); 
-#ifdef _WIN64
-    VA_TYPE impDescriptorRva = *((DWORD*)&pNtHeader[0x90]);
-#else
-    VA_TYPE impDescriptorRva = *((DWORD*)&pNtHeader[0x80]); 
-#endif
-    PIMAGE_IMPORT_DESCRIPTOR pImpDescriptor = (PIMAGE_IMPORT_DESCRIPTOR)(imageBase + impDescriptorRva); 
-    for (; pImpDescriptor->Name; pImpDescriptor++) // find the dll IMPORT_DESCRIPTOR
+    for (; pImpDescriptor->Name; pImpDescriptor++) 
     {
+        // find the dll IMPORT_DESCRIPTOR
         LPCSTR pDllName = (LPCSTR)(imageBase + pImpDescriptor->Name);
         if (!_stricmp(pDllName, targetDllName)) // ignore case
         {
-            PIMAGE_THUNK_DATA pFirstThunk = (PIMAGE_THUNK_DATA)(imageBase + pImpDescriptor->FirstThunk);
-            for (; pFirstThunk->u1.Function; pFirstThunk++) // find the iat function va
+            PIMAGE_THUNK_DATA pFirstThunk = (PIMAGE_THUNK_DATA)
+                (imageBase + pImpDescriptor->FirstThunk);
+            // find the iat function va
+            for (; pFirstThunk->u1.Function; pFirstThunk++) 
             {
-                if (pFirstThunk->u1.Function == (VA_TYPE)pfnOrg)
+                if (pFirstThunk->u1.Function == (size_t)pfnOrg)
                 {
-                    VirtualProtect((LPVOID)&pFirstThunk->u1.Function, 4, PAGE_EXECUTE_READWRITE, &dwOldProtect);
-                    pFirstThunk->u1.Function = (VA_TYPE)pfnNew;
-                    VirtualProtect((LPVOID)&pFirstThunk->u1.Function, 4, dwOldProtect, &dwOldProtect);
+                    VirtualProtect((LPVOID)&pFirstThunk->u1.Function,
+                        4, PAGE_EXECUTE_READWRITE, &dwOldProtect);
+                    pFirstThunk->u1.Function = (size_t)pfnNew;
+                    VirtualProtect((LPVOID)&pFirstThunk->u1.Function,
+                        4, dwOldProtect, &dwOldProtect);
                     return TRUE;
                 }
             }

@@ -8,6 +8,7 @@
 */
 #ifndef _WINPE_H
 #define _WINPE_H
+#include <stdint.h>
 #include <Windows.h>
 
 #ifndef WINPEDEF
@@ -36,6 +37,8 @@ typedef struct _RELOCOFFSET
 	WORD offset : 12;
 	WORD type	: 4;
 }RELOCOFFSET,*PRELOCOFFSET;
+
+typedef int bool_t;
 
 // PE functions
 /*
@@ -78,19 +81,14 @@ size_t winpe_memiat(void *mempe);
 WINHOOKDEF WINHOOK_EXPORT 
 size_t winpe_overlayoffset(const void *rawpe)
 {
-#ifdef _WIN64
-#define ADDR_TYPE DWORD
-#else
-#define ADDR_TYPE ULONGLONG
-#endif    
     PIMAGE_DOS_HEADER pDosHeader = (PIMAGE_DOS_HEADER)rawpe;
     PIMAGE_NT_HEADERS  pNtHeader = (PIMAGE_NT_HEADERS)
-        ((ADDR_TYPE)rawpe + pDosHeader->e_lfanew);
+        ((void*)rawpe + pDosHeader->e_lfanew);
     PIMAGE_FILE_HEADER pFileHeader = &pNtHeader->FileHeader;
     PIMAGE_OPTIONAL_HEADER pOptHeader = &pNtHeader->OptionalHeader;
     PIMAGE_DATA_DIRECTORY pDataDirectory = pOptHeader->DataDirectory;
     PIMAGE_SECTION_HEADER pSectHeader = (PIMAGE_SECTION_HEADER)
-        ((ADDR_TYPE)pOptHeader + pFileHeader->SizeOfOptionalHeader);
+        ((void*)pOptHeader + pFileHeader->SizeOfOptionalHeader);
     WORD sectNum = pFileHeader->NumberOfSections;
 
     return pSectHeader[sectNum-1].PointerToRawData + 

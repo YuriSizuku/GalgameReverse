@@ -1,14 +1,14 @@
 # GalgameReverse
 
-Some methods for extracting or importing in galgame,
+Some methods for extracting or importing in Galgame,
 
-as well as some methods for chs localization.
+as well as some methods for CHS localization.
 
 
 
 With the list:
 
-> my util scripts
+> UTIL scripts
 
 * `bintext.py`, for text exporting and importing, checking 
 * `libfont.py`, for extracting, building tile font, or generating font picture.
@@ -20,6 +20,7 @@ With the list:
 > windows tools
 
 * `win_injectdll.py` , staticly inject  `dll` to a `exe`
+* `win_injectmemdll.c`,  staticly inject `dll` into `exe` as a append section
 * `win_console.js`,  Allocate a console for game
 * `win_file.js` , view information for both `CreateFile`, `ReadFile`, `WriteFile`, `fopen`,`fread`, `fwrite`
 * `win_redirect.js`, redirect font, codepage, and paths in games

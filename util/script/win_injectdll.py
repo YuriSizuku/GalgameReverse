@@ -7,7 +7,7 @@
     v0.2 use codecave to dynamiclly LoadLibraryA,
          to avoid windows defender assuming this as virus
 """
-from ast import arg, parse
+
 import sys
 import os
 import argparse
@@ -20,15 +20,15 @@ def injectdll_iat(exepath, dllpath, outpath="out.exe"):
     binary_exe = lief.parse(exepath)
     binary_dll = lief.parse(dllpath)
     
-    dllname = os.path.basename(dllpath)
-    dll_imp = binary_exe.add_library(dllname)
+    dllpath = os.path.basename(dllpath)
+    dll_imp = binary_exe.add_library(dllpath)
     print("the import dll in " + exepath)
     for imp in binary_exe.imports:
         print(imp.name)
 
     for exp_func in binary_dll.exported_functions:
         dll_imp.add_entry(exp_func.name)
-        print(dllname + ", func "+ exp_func.name + " added!")
+        print(dllpath + ", func "+ exp_func.name + " added!")
 
     # disable ASLR
     exe_oph =  binary_exe.optional_header
@@ -41,7 +41,7 @@ def injectdll_iat(exepath, dllpath, outpath="out.exe"):
 
 # change the oep and use codecave for LoadLibrary dll
 # only support for x86 and x64 architecture, no arm support
-def injectdll_codecave(exepath, dllname, outpath="out.exe"):
+def injectdll_codecave(exepath, dllpath, outpath="out.exe"):
     # parsing pe
     pe = lief.parse(exepath)
     pe_oph = pe.optional_header
@@ -52,17 +52,17 @@ def injectdll_codecave(exepath, dllname, outpath="out.exe"):
             .get_entry("LoadLibraryA")
 
     # find position to code cave
-    dllname_bytes = dllname.encode() + b'\x00'
+    dllpath_bytes = dllpath.encode() + b'\x00'
     if pe_oph.magic == lief.PE.PE_TYPE.PE32_PLUS:
         print(f"{exepath}: oep={imgbase+oeprva:016X}, "
         f"code_section={imgbase+section_code.virtual_size:016X}, "
         f"LoadLibraryA={imgbase+impentry_LoadLibraryA.iat_address:016X}")
-        max_len = len(dllname_bytes) + 0x60
+        max_len = len(dllpath_bytes) + 0x60
     elif pe_oph.magic == lief.PE.PE_TYPE.PE32:
         print(f"{exepath}: oep={imgbase+oeprva:08X}, "
         f"code_section={imgbase+section_code.virtual_size:08X}, "
         f"LoadLibraryA={imgbase+impentry_LoadLibraryA.iat_address:08X}")
-        max_len = len(dllname_bytes) + 0x20
+        max_len = len(dllpath_bytes) + 0x20
     if section_code.sizeof_raw_data - section_code.virtual_size < max_len:
         print("error! can not find space for codecave")
         return 
@@ -75,7 +75,7 @@ def injectdll_codecave(exepath, dllname, outpath="out.exe"):
         ks = Ks(KS_ARCH_X86, KS_MODE_64)
         code_str = f"""
             push rcx;
-            lea rcx, [dllname+1];
+            lea rcx, [dllpath+1];
             mov rax, 0x{imgbase:016X};
             add rcx, rax;
             mov rax, 0x{imgbase+impentry_LoadLibraryA.iat_address:016X};
@@ -83,7 +83,7 @@ def injectdll_codecave(exepath, dllname, outpath="out.exe"):
             pop rcx;
             mov rax, 0x{imgbase+oeprva:016X};
             jmp rax; 
-            dllname:
+            dllpath:
             nop"""
         print(infostr, code_str)
         payload, _ = ks.asm(code_str, addr=payload_rva) # > 32bit error
@@ -93,12 +93,12 @@ def injectdll_codecave(exepath, dllname, outpath="out.exe"):
         ks = Ks(KS_ARCH_X86, KS_MODE_32)
         code_str = f"""
             pushad;
-            mov eax, dllname+1;
+            mov eax, dllpath+1;
             push eax;
             call dword ptr ds:[0x{imgbase+impentry_LoadLibraryA.iat_address:08X}];
             popad;
             jmp 0x{imgbase+oeprva:08X};
-            dllname:
+            dllpath:
             nop"""
         print(infostr, code_str)
         payload, _ = ks.asm(code_str, addr=imgbase+payload_rva)
@@ -107,7 +107,7 @@ def injectdll_codecave(exepath, dllname, outpath="out.exe"):
         print("error invalid pe magic!", pe_oph.magic)
         return
 
-    payload = payload + list(dllname_bytes)
+    payload = payload + list(dllpath_bytes)
     print("payload: ", [hex(x) for x in payload])
 
     # inject code

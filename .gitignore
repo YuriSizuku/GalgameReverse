@@ -12,3 +12,4 @@ __pycache__
 /script/tmp/*
 /src/**/release/*
 /src/**/debug/*
+/util/bin/**

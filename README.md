@@ -20,7 +20,6 @@ With the list:
 > windows tools
 
 * `win_injectdll.py` , staticly inject  `dll` to a `exe`
-* `win_injectmemdll.c`,  staticly inject `dll` into `exe` as a append section
 * `win_console.js`,  Allocate a console for game
 * `win_file.js` , view information for both `CreateFile`, `ReadFile`, `WriteFile`, `fopen`,`fread`, `fwrite`
 * `win_redirect.js`, redirect font, codepage, and paths in games

@@ -134,8 +134,8 @@ def xtx_font_build(inpath, outpath="rebuild.xtx"):
 
 def main():
     if len(os.sys.argv) <= 2:
-        print("xtxfont e xtxpath [pngpath]")
-        print("xtxfont d pngpath [xtxpath]")
+        print("xtxfont d xtxpath [pngpath]")
+        print("xtxfont e pngpath [xtxpath]")
         return 0
     
     if os.sys.argv[1].lower() == 'd':

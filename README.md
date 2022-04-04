@@ -78,6 +78,13 @@ util tools are moved to https://github.com/YuriSizuku/ReverseUtil
 
 * `bruns_decrypt.c` , to decrypt  `EENZ` file,  `解体挿入新書` tested  
 
+## LiveMaker
+
+> アイするキミの居場所
+
+* `aikimi_loader.c`, a loader to dynamic inject DLL to the game
+* `aikimi_patch.c`, patch the game dynamiclly to support `GBK` text
+
 ## prototype
 
 > air (psv)

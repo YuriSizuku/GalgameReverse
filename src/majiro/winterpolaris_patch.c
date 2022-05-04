@@ -270,14 +270,16 @@ void install_font_hook()
 void install_text_hook()
 {
     // inline hook for replace text
+	
     PVOID pfnOlds[3] = {g_base+0x42820, g_base+0x7EE00, NULL};
+	PVOID pfnTargets[3] = {pfnOlds[0], pfnOlds[1], NULL};
     PVOID pfnNews[3] = {showtext_hook, is_twobyte, NULL};
     printf("Before inline hooks\n");
     for(int i=0;i<sizeof(pfnOlds)/sizeof(PVOID)-1;i++)
     {
         printf("%d, %lx -> %lx\n", i, (unsigned long)pfnOlds[i], (unsigned long)pfnNews[i]); 
     }
-    winhook_inlinehooks(pfnOlds, pfnNews);
+    winhook_inlinehooks(pfnTargets, pfnNews, pfnOlds, sizeof(pfnOlds)/sizeof(PVOID));
     g_showtext = pfnOlds[0];
     printf("After inline hooks\n");
     for(int i=0;i<sizeof(pfnOlds)/sizeof(PVOID)-1;i++)

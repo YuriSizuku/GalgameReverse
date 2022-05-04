@@ -1,8 +1,8 @@
-﻿#include <windows.h>
+#include <windows.h>
 #include <stdio.h>
 
 #define WINHOOK_IMPLEMENTATION
-#define WINHOOK_NODETOURS    
+#define WINHOOK_NOINLINEHOOK    
 #include "winhook.h"
 #ifndef _DEBUG
     

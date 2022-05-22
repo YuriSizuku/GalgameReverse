@@ -1,6 +1,6 @@
 [submodule "util"]
 	path = util
-	url = git@github.com:YuriSizuku/ReverseUtil.git
+	url = https://github.com/YuriSizuku/ReverseUtil.git
 [submodule "thirdparty"]
 	path = thirdparty
-	url = git@github.com:YuriSizuku/ReverseThirdparty.git
+	url = https://github.com/YuriSizuku/ReverseThirdparty.git

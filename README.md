@@ -85,6 +85,13 @@ util tools are moved to https://github.com/YuriSizuku/ReverseUtil
 * `aikimi_loader.c`, a loader to dynamic inject DLL to the game
 * `aikimi_patch.c`, patch the game dynamiclly to support `GBK` text
 
+## nippon1
+
+> 夜廻3 (switch)
+
+* `ykcmp.py`, An implementation in python to parse ykcmp compression.  
+* `yomawari3_nltx.py`, deal with switch swizzle texture in nltx file.
+
 ## prototype
 
 > air (psv)
@@ -107,7 +114,6 @@ util tools are moved to https://github.com/YuriSizuku/ReverseUtil
 > 月影の鎖 -錯乱パラノイア(psp, psv)
 
 * `gss_arc.cs`, for `月影の鎖 -錯乱パラノイア` PSP, PSV see, my [pull request](https://github.com/morkt/GARbro/pull/435) in my forked GARBRO 
-
 
 ## if (idea factory)
 

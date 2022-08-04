@@ -19,22 +19,22 @@ PVOID g_pfnNews[] = {NULL};
 PVOID g_pfnOlds[] = {NULL};
 
 typedef HANDLE (WINAPI *PFN_CreateFileW)(
-    _In_ LPCWSTR lpFileName,
-    _In_ DWORD dwDesiredAccess,
-    _In_ DWORD dwShareMode,
-    _In_opt_ LPSECURITY_ATTRIBUTES lpSecurityAttributes,
-    _In_ DWORD dwCreationDisposition,
-    _In_ DWORD dwFlagsAndAttributes,
-    _In_opt_ HANDLE hTemplateFile);
+    IN LPCWSTR lpFileName,
+    IN DWORD dwDesiredAccess,
+    IN DWORD dwShareMode,
+    IN OPTIONAL LPSECURITY_ATTRIBUTES lpSecurityAttributes,
+    IN DWORD dwCreationDisposition,
+    IN DWORD dwFlagsAndAttributes,
+    IN OPTIONAL HANDLE hTemplateFile);
 
 HANDLE WINAPI CreateFileW_hook(
-    _In_ LPWSTR lpFileName,
-    _In_ DWORD dwDesiredAccess,
-    _In_ DWORD dwShareMode,
-    _In_opt_ LPSECURITY_ATTRIBUTES lpSecurityAttributes,
-    _In_ DWORD dwCreationDisposition,
-    _In_ DWORD dwFlagsAndAttributes,
-    _In_opt_ HANDLE hTemplateFile
+    IN LPWSTR lpFileName,
+    IN DWORD dwDesiredAccess,
+    IN DWORD dwShareMode,
+    IN OPTIONAL LPSECURITY_ATTRIBUTES lpSecurityAttributes,
+    IN DWORD dwCreationDisposition,
+    IN DWORD dwFlagsAndAttributes,
+    IN OPTIONAL HANDLE hTemplateFile
 )
 {
     static wchar_t tmppath[MAX_PATH];
@@ -60,12 +60,12 @@ HANDLE WINAPI CreateFileW_hook(
 }
 
 int WINAPI MultiByteToWideChar_hook(
-    _In_ UINT CodePage,
-    _In_ DWORD dwFlags,
-    _In_ LPCCH lpMultiByteStr,
-    _In_ int cbMultiByte,
-    _Out_ LPWSTR lpWideCharStr,
-    _In_ int cchWideChar
+    IN UINT CodePage,
+    IN DWORD dwFlags,
+    IN LPCCH lpMultiByteStr,
+    IN int cbMultiByte,
+    OUT LPWSTR lpWideCharStr,
+    IN int cchWideChar
 )
 {
     UINT cp = 936;
@@ -83,14 +83,14 @@ int WINAPI MultiByteToWideChar_hook(
 }
 
 int WINAPI WideCharToMultiByte_hook(
-    _In_ UINT CodePage,
-    _In_ DWORD dwFlags,
-    _In_ LPCWCH lpWideCharStr,
-    _In_ int cchWideChar,
-    _Out_ LPSTR lpMultiByteStr,
-    _In_ int cbMultiByte,
-    _In_opt_ LPCCH lpDefaultChar,
-    _Out_opt_ LPBOOL lpUsedDefaultChar
+    IN UINT CodePage,
+    IN DWORD dwFlags,
+    IN LPCWCH lpWideCharStr,
+    IN int cchWideChar,
+    OUT LPSTR lpMultiByteStr,
+    IN int cbMultiByte,
+    IN OPTIONAL LPCCH lpDefaultChar,
+    OUT OPTIONAL LPBOOL lpUsedDefaultChar
 )
 {
     int ret = WideCharToMultiByte(936, dwFlags, 
@@ -101,7 +101,7 @@ int WINAPI WideCharToMultiByte_hook(
     return ret;
 }
 
-HFONT WINAPI CreateFontIndirectW_hook(_In_ LOGFONTW *lplf)
+HFONT WINAPI CreateFontIndirectW_hook(IN LOGFONTW *lplf)
 {
     lplf->lfCharSet = GB2312_CHARSET;
     wcscpy(lplf->lfFaceName, L"simhei");

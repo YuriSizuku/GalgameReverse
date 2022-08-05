@@ -1,5 +1,5 @@
 """
-export or build arc for willplus advhd 
+export or build arc v2 for willplus advhd 
 tested in BlackishHouse (v1.6.2.1)
     v0.1, developed by devseed
 """
@@ -106,8 +106,8 @@ def debug():
 
 def main():
     if len(sys.argv) < 3:
-        print("advhd_arc e inpath [outdir]")
-        print("advhd_arc b indir  [outpath]")
+        print("advhd_arcv2 e inpath [outdir]")
+        print("advhd_arcv2 b indir  [outpath]")
         return
     if sys.argv[1].lower() == 'e':
         outpath = sys.argv[3] if len(sys.argv) > 3 else "./out"

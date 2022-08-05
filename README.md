@@ -59,7 +59,7 @@ util tools are moved to [ReverseUtil](https://github.com/YuriSizuku/ReverseUtil)
 > Blackish House
 
 * `advhd_patch.c`, gbk support and overide arc file  
-* `advhd_arc.py`, willplus advhd arc pack or unpack  
+* `advhd_arcv2.py`, willplus advhd arcv2 pack or unpack  
 * `advhd_ws2.py`, willplus advhd ws2 text export or import  
 * `advhd_pna.py`, willplus advhd ws2 pna export and import  
 
@@ -83,6 +83,13 @@ util tools are moved to [ReverseUtil](https://github.com/YuriSizuku/ReverseUtil)
 * `hibiki_text_ks.py`, export and import game text for ftext format
 * `hibiki_rename_picture.py`, rename all the picture name to crc32, to avoid sjis file name problem
 
+### livemaker
+
+> アイするキミの居場所
+
+* `aikimi_loader.c`, a loader to dynamic inject DLL to the game
+* `aikimi_patch.c`, patch the game dynamiclly to support `GBK` text
+
 ### bruns
 
 > 解体挿入新書
@@ -98,12 +105,11 @@ util tools are moved to [ReverseUtil](https://github.com/YuriSizuku/ReverseUtil)
 * `AmaNoMikoHime_SO4.py`, export or import text in so4 files
 * `AmaNoMikoHime_PT1.py`, parse PT1 image file rgb24 format
 
-### livemaker
+### exhibit
 
-> アイするキミの居場所
+> 空色の風琴
 
-* `aikimi_loader.c`, a loader to dynamic inject DLL to the game
-* `aikimi_patch.c`, patch the game dynamiclly to support `GBK` text
+* `sorairo_patch.c`, support for gbk enconding text in dll
 
 ## (3) Console galgame
 
@@ -129,6 +135,23 @@ util tools are moved to [ReverseUtil](https://github.com/YuriSizuku/ReverseUtil)
 * `air_psv_psbtext.py`, extract and import the text to PSV `air`, can be longer than origin  
 * `air_psv_4bppfnt.py`, for building the psv air 4bpp font  
 
+> Flowers (psv)
+
+* `flowers_psv_text.py`, map flowers pc translation text  
+* `flowers1-2_psv_pak.py`, `flowers3_psv_pak.py`, `flowers4_psv_pak.py` export or import *.pak  
+
+> Island (psv)
+
+* `island_psv_pak.py`, export or import *.pak
+
+### eldia
+
+> 神田アリスも推理スル (switch)
+
+* `kanda_rs4.py`, parse rs4 file for importing text  
+* `kanda_fontmap.c`, build the ConvertGb2312ToUtf16 arm64 binray code to support gb2312  
+* `kanda_fontmap.py`, make the fontmap to gb2312 and patch sjis char check  
+
 ### hobibox
 
 > Narcissus ナルキッソス～もしも明日があるなら (psp)
@@ -139,6 +162,12 @@ util tools are moved to [ReverseUtil](https://github.com/YuriSizuku/ReverseUtil)
 * `Narcissus_2bppfont.py`, parse font.bin and make 2bpp font  
 * `Narcissus_lbg.py`, extract and rebuild lbg texture  
 
+### gss (takuyo)
+
+> 月影の鎖 -錯乱パラノイア (psp, psv)
+
+* `gss_arc.cs`, for `月影の鎖 -錯乱パラノイア` PSP, PSV see, my [pull request](https://github.com/morkt/GARbro/pull/435) in my forked GARBRO  
+
 ### cycrose
 
 > 薔薇ノ木ニ薔薇ノ花咲ク (psp)
@@ -147,12 +176,6 @@ util tools are moved to [ReverseUtil](https://github.com/YuriSizuku/ReverseUtil)
 * `baranoki_psp_vmc.py`, `baranoki_psp_pktext.py`, text support  
 * `baranoki_psp_fontfnt.py`, `baranoki_psp_fontp.py`, tile font support  
 * `baranoki_psp_boot.py`, rebuild the boot for fixing size buffer  
-
-### gss (takuyo)
-
-> 月影の鎖 -錯乱パラノイア (psp, psv)
-
-* `gss_arc.cs`, for `月影の鎖 -錯乱パラノイア` PSP, PSV see, my [pull request](https://github.com/morkt/GARbro/pull/435) in my forked GARBRO  
 
 ### if (idea factory)
 

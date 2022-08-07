@@ -1,9 +1,14 @@
 /**
- *  for AdvHD.EXE chs 
- *  gbk support and overide arc file
- *  tested in BlackishHouse (v1.6.2.1)
- *      v0.1, developed by devseed
+ *  for AdvHD v1 and v2  
+ *  translation support and redirect arc file
+ *  tested in BlackishHouse (v1.6.2.1) and AyakashiGohan (v1.0.1.0)
+ *      v0.2.3, developed by devseed
  *  
+ * override/config.ini, codepage charset
+ * codepage=932
+ * charset=128
+ * font=simhei // font name encoding is by codepage
+ * _ismbclegal=rva
 */
 
 #include <stdio.h>
@@ -13,10 +18,29 @@
 #define WINHOOK_IMPLEMENTATION
 #include "winhook.h"
 
-#define OVERRIDE_DIR L"override"
-PVOID g_pfnTargets[] = {NULL};
-PVOID g_pfnNews[] = {NULL}; 
-PVOID g_pfnOlds[] = {NULL};
+#define CONFIG_PATH "override\\config.ini"
+#define REDIRECT_DIRA "override"
+#define REDIRECT_DIRW L"override"
+char g_font[MAX_PATH] = "simhei";
+int g_codepage = 936;
+int g_charset = GB2312_CHARSET;
+
+#if 1// advhd inline hooks
+PVOID g_pfnTargets[3] = {NULL};
+PVOID g_pfnNews[3] = {NULL}; 
+PVOID g_pfnOlds[3] = {NULL};
+#define CreateFileA_IDX 0
+#define CreateFileW_IDX 1
+#define _ismbclegal_IDX 2
+
+typedef HANDLE (WINAPI *PFN_CreateFileA)(
+    IN LPCSTR lpFileName,
+    IN DWORD dwDesiredAccess,
+    IN DWORD dwShareMode,
+    IN OPTIONAL LPSECURITY_ATTRIBUTES lpSecurityAttributes,
+    IN DWORD dwCreationDisposition,
+    IN DWORD dwFlagsAndAttributes,
+    IN OPTIONAL HANDLE hTemplateFile);
 
 typedef HANDLE (WINAPI *PFN_CreateFileW)(
     IN LPCWSTR lpFileName,
@@ -27,6 +51,39 @@ typedef HANDLE (WINAPI *PFN_CreateFileW)(
     IN DWORD dwFlagsAndAttributes,
     IN OPTIONAL HANDLE hTemplateFile);
 
+HANDLE WINAPI CreateFileA_hook(
+    IN LPSTR lpFileName,
+    IN DWORD dwDesiredAccess,
+    IN DWORD dwShareMode,
+    IN OPTIONAL LPSECURITY_ATTRIBUTES lpSecurityAttributes,
+    IN DWORD dwCreationDisposition,
+    IN DWORD dwFlagsAndAttributes,
+    IN OPTIONAL HANDLE hTemplateFile)
+{
+    static char tmppath[MAX_PATH];
+    
+    char *name = PathFindFileNameA(lpFileName);
+    if(name && (strstr(name, ".arc")||strstr(name, ".ARC")))
+    {
+        strncpy(tmppath, lpFileName, name - lpFileName);
+        tmppath[name - lpFileName] = 0;
+        strcat(tmppath, REDIRECT_DIRA "\\");
+        strcat(tmppath, name);
+        if(PathFileExistsA(tmppath))
+        {
+            printf("CreateFileA redirect %s -> %s\n", lpFileName, tmppath);
+            strcpy(lpFileName, tmppath);
+        }
+    }
+
+    PFN_CreateFileA pfnCreateFileA = 
+        (PFN_CreateFileA)g_pfnOlds[CreateFileA_IDX];
+    return pfnCreateFileA(lpFileName, dwDesiredAccess, dwShareMode, 
+        lpSecurityAttributes, dwCreationDisposition, 
+        dwFlagsAndAttributes, hTemplateFile);
+
+}
+
 HANDLE WINAPI CreateFileW_hook(
     IN LPWSTR lpFileName,
     IN DWORD dwDesiredAccess,
@@ -34,41 +91,111 @@ HANDLE WINAPI CreateFileW_hook(
     IN OPTIONAL LPSECURITY_ATTRIBUTES lpSecurityAttributes,
     IN DWORD dwCreationDisposition,
     IN DWORD dwFlagsAndAttributes,
-    IN OPTIONAL HANDLE hTemplateFile
-)
+    IN OPTIONAL HANDLE hTemplateFile)
 {
     static wchar_t tmppath[MAX_PATH];
     
     wchar_t *name = PathFindFileNameW(lpFileName);
-    if(name && wcsstr(name, L".arc"))
+    if(name && (wcsstr(name, L".arc")||wcsstr(name, L".ARC")))
     {
         wcsncpy(tmppath, lpFileName, name - lpFileName);
         tmppath[name - lpFileName] = 0;
-        wcscat(tmppath, OVERRIDE_DIR L"\\");
+        wcscat(tmppath, REDIRECT_DIRW L"\\");
         wcscat(tmppath, name);
         if(PathFileExistsW(tmppath))
         {
-            wprintf(L"CreateFileW redirect %ls->%ls\n", lpFileName, tmppath);
+            wprintf(L"CreateFileW redirect %ls -> %ls\n", lpFileName, tmppath);
             wcscpy(lpFileName, tmppath);
         }
     }
 
-    PFN_CreateFileW pfnCreateFileW = (PFN_CreateFileW)g_pfnOlds[0];
+    PFN_CreateFileW pfnCreateFileW = 
+        (PFN_CreateFileW)g_pfnOlds[CreateFileW_IDX];
     return pfnCreateFileW(lpFileName, dwDesiredAccess, dwShareMode, 
         lpSecurityAttributes, dwCreationDisposition, 
         dwFlagsAndAttributes, hTemplateFile);
 }
 
+int __cdecl _ismbclegal_hook(unsigned int c)
+{
+    int high = c>>8;
+    int low = c&0xff;
+    return (high >= 0x80) && (low >=0x40);
+}
+
+#endif
+
+#if 1 // advhd v1 iat hooks
+LONG WINAPI RegOpenKeyExA_hook(HKEY hKey, 
+    LPCSTR lpSubKey, DWORD ulOptions,
+    DWORD samDesired, PHKEY phkResult)
+{
+    
+    LONG status =  RegOpenKeyExA(
+        hKey, lpSubKey, ulOptions, 
+        samDesired, phkResult);
+    if(status==ERROR_FILE_NOT_FOUND)
+    {
+        status = RegCreateKeyA(hKey, lpSubKey, phkResult);
+        printf("RegOpenKeyExA %s\n create", lpSubKey);
+    }
+    return status;
+}
+
+LONG WINAPI RegQueryValueExA_hook(HKEY hKey, 
+    LPCSTR lpValueName, LPDWORD lpReserved, PDWORD lpType, 
+    LPBYTE lpData, LPDWORD lpcbData)
+{
+    LONG status = RegQueryValueExA(
+        hKey, lpValueName, lpReserved, 
+        lpType, lpData, lpcbData);
+    if(strstr(lpValueName, "InstallType"))
+    {
+        if(status==ERROR_FILE_NOT_FOUND)
+        {
+            
+            *((DWORD*)lpData) = 0x2;
+            status = ERROR_SUCCESS;
+            printf("RegQueryValueExA %s, redirect to %lx\n", 
+                lpValueName, *((DWORD*)lpData));
+        }
+    }
+    else if(strstr(lpValueName, "InstallDir"))
+    {
+        *lpcbData = GetCurrentDirectoryA(MAX_PATH, (LPSTR)lpData);
+        status = ERROR_SUCCESS;
+        printf("RegQueryValueExA %s, redirect to %s\n", 
+            lpValueName, (LPSTR)lpData);
+    }
+    return status;
+}
+
+LCID WINAPI GetSystemDefaultLCID_hook(void)
+{
+    LCID lcid = GetSystemDefaultLCID();
+    printf("GetSystemDefaultLCID %lx\n", lcid);
+    return 0x411;
+}
+
+HFONT WINAPI CreateFontIndirectA_hook(IN LOGFONTA *lplf)
+{
+    lplf->lfCharSet = g_charset;
+    strcpy(lplf->lfFaceName, g_font);
+    return CreateFontIndirectA(lplf);    
+}
+
+#endif
+
+#if 1 // advhd v2 iat hooks
 int WINAPI MultiByteToWideChar_hook(
     IN UINT CodePage,
     IN DWORD dwFlags,
     IN LPCCH lpMultiByteStr,
     IN int cbMultiByte,
     OUT LPWSTR lpWideCharStr,
-    IN int cchWideChar
-)
+    IN int cchWideChar)
 {
-    UINT cp = 936;
+    UINT cp = g_codepage;
     // PNA
     if(strstr(lpMultiByteStr,"\x2e\x50\x4e\x41"))
     {
@@ -90,10 +217,9 @@ int WINAPI WideCharToMultiByte_hook(
     OUT LPSTR lpMultiByteStr,
     IN int cbMultiByte,
     IN OPTIONAL LPCCH lpDefaultChar,
-    OUT OPTIONAL LPBOOL lpUsedDefaultChar
-)
+    OUT OPTIONAL LPBOOL lpUsedDefaultChar)
 {
-    int ret = WideCharToMultiByte(936, dwFlags, 
+    int ret = WideCharToMultiByte(g_codepage, dwFlags, 
         lpWideCharStr, cchWideChar, 
         lpMultiByteStr, cbMultiByte, 
         lpDefaultChar, lpUsedDefaultChar);
@@ -103,56 +229,158 @@ int WINAPI WideCharToMultiByte_hook(
 
 HFONT WINAPI CreateFontIndirectW_hook(IN LOGFONTW *lplf)
 {
-    lplf->lfCharSet = GB2312_CHARSET;
-    wcscpy(lplf->lfFaceName, L"simhei");
+    lplf->lfCharSet = g_charset;
+    MultiByteToWideChar(g_codepage, MB_COMPOSITE, 
+        g_font, strlen(g_font) + 1, 
+        lplf->lfFaceName, sizeof(lplf->lfFaceName));
     return CreateFontIndirectW(lplf);
 }
-
-void install_iathooks()
-{
-    if(!winhook_iathook("Kernel32.dll", 
-        GetProcAddress(GetModuleHandleA("Kernel32.dll"), 
-        "MultiByteToWideChar"), (PROC)MultiByteToWideChar_hook))
-    {
-        MessageBoxA(NULL, "MultiByteToWideChar iathook failed!", "error", 0);
-    }
-    if(!winhook_iathook("Kernel32.dll", 
-        GetProcAddress(GetModuleHandleA("Kernel32.dll"), 
-        "WideCharToMultiByte"), (PROC)WideCharToMultiByte_hook))
-    {
-         MessageBoxA(NULL, "WideCharToMultiByte iathook failed!", "error", 0);
-    }
-    if(!winhook_iathook("Gdi32.dll", 
-        GetProcAddress(GetModuleHandleA("Gdi32.dll"), 
-        "CreateFontIndirectW"), (PROC)CreateFontIndirectW_hook))
-    {
-         MessageBoxA(NULL, "CreateFontIndirectW iathook failed!", "error", 0);
-    }
-}
+#endif
 
 void install_inlinehooks()
 {
-    g_pfnTargets[0] =  (PVOID)GetProcAddress(
+    g_pfnTargets[CreateFileA_IDX] =  (PVOID)GetProcAddress(
+        GetModuleHandleA("Kernel32.dll"), 
+        "CreateFileA"),
+    g_pfnNews[CreateFileA_IDX] = (PVOID)CreateFileA_hook;
+    g_pfnTargets[CreateFileW_IDX] =  (PVOID)GetProcAddress(
         GetModuleHandleA("Kernel32.dll"), 
         "CreateFileW"),
-    g_pfnNews[0] = (PVOID)CreateFileW_hook;
+    g_pfnNews[CreateFileW_IDX] = (PVOID)CreateFileW_hook;
+    // g_pfnTargets[_ismbclegal_IDX] = (PVOID)0x488A1A;
+    g_pfnNews[_ismbclegal_IDX] = (PVOID)_ismbclegal_hook;
+
     winhook_inlinehooks(g_pfnTargets, 
         g_pfnNews, g_pfnOlds, 
         sizeof(g_pfnTargets)/sizeof(PVOID));
 }
 
-void install_hooks()
+void install_iathooksv1()
 {
-#ifdef _DEBUG
+    // advhd v1 hooks
+    if(!winhook_iathook("Advapi32.dll", 
+        GetProcAddress(GetModuleHandleA("Advapi32.dll"), 
+        "RegOpenKeyExA"), (PROC)RegOpenKeyExA_hook))
+    {
+         printf("RegOpenKeyExA not fount!\n");
+    }
+    if(!winhook_iathook("Advapi32.dll", 
+        GetProcAddress(GetModuleHandleA("Advapi32.dll"), 
+        "RegQueryValueExA"), (PROC)RegQueryValueExA_hook))
+    {
+         printf("RegQueryValueExA not fount!\n");
+    }
+    if(!winhook_iathook("Kernel32.dll", 
+        GetProcAddress(GetModuleHandleA("Kernel32.dll"), 
+        "GetSystemDefaultLCID"), (PROC)GetSystemDefaultLCID_hook))
+    {
+        printf("GetSystemDefaultLCID not fount!\n");
+    }
+    if(!winhook_iathook("Gdi32.dll", 
+        GetProcAddress(GetModuleHandleA("Gdi32.dll"), 
+        "CreateFontIndirectA"), (PROC)CreateFontIndirectA_hook))
+    {
+        printf("CreateFontIndirectA not fount!\n");
+    }
+}
+
+void install_iathooksv2()
+{
+    // advhd v2 hooks
+    if(!winhook_iathook("Kernel32.dll", 
+        GetProcAddress(GetModuleHandleA("Kernel32.dll"), 
+        "MultiByteToWideChar"), (PROC)MultiByteToWideChar_hook))
+    {
+        printf("MultiByteToWideChar not fount!\n");
+    }
+    if(!winhook_iathook("Kernel32.dll", 
+        GetProcAddress(GetModuleHandleA("Kernel32.dll"), 
+        "WideCharToMultiByte"), (PROC)WideCharToMultiByte_hook))
+    {
+        printf("WideCharToMultiByte not fount!\n");
+    }
+    if(!winhook_iathook("Gdi32.dll", 
+        GetProcAddress(GetModuleHandleA("Gdi32.dll"), 
+        "CreateFontIndirectW"), (PROC)CreateFontIndirectW_hook))
+    {
+        printf("CreateFontIndirectW not fount!\n");
+    }
+}
+
+void install_console()
+{
     AllocConsole();
     freopen("CONOUT$", "w", stdout);
     system("chcp 936");
     setlocale(LC_ALL, "chs");
-    printf("install hook, v0.1, build in 220803\n");
-    wprintf(L"汉化测试！\n");
-#endif
+    printf("advhd_patch v0.2.3, developed by devseed\n");
+    wprintf(L"advhd v1v2 版本通用汉化补丁, build in 220806\n");
+}
+
+void install_hooks()
+{
     install_inlinehooks();
-    install_iathooks();
+    install_iathooksv1();
+    install_iathooksv2();
+}
+
+size_t get_imagesize(void *pe)
+{
+    PIMAGE_DOS_HEADER pDosHeader = (PIMAGE_DOS_HEADER)pe;
+    PIMAGE_NT_HEADERS  pNtHeader = (PIMAGE_NT_HEADERS)
+        ((uint8_t*)pe + pDosHeader->e_lfanew);
+    PIMAGE_FILE_HEADER pFileHeader = &pNtHeader->FileHeader;
+    PIMAGE_OPTIONAL_HEADER pOptHeader = &pNtHeader->OptionalHeader;
+    size_t imagesize = pOptHeader->SizeOfImage;
+    return imagesize; 
+}
+
+void read_config(const char *path)
+{
+    char line[MAX_PATH] = {0};
+    char *k = NULL;
+    char *v = NULL;
+
+    // search _ismbclegal
+    size_t base = (size_t)GetModuleHandleA(NULL);
+    size_t imgsize = get_imagesize((void*)base);
+    void* addr = winhook_searchmemory((void*)base, imgsize, 
+        "55 8b ec 6a 00 ff 75 08 e8 aa ff ff ff 59 59 5d c3", NULL);
+    if(addr) printf("find _ismbclegal at %p\n", addr);
+    g_pfnTargets[_ismbclegal_IDX] = addr;
+    
+    FILE *fp = fopen(path, "r");
+    if(fp)
+    {
+        while(fgets(line, sizeof(line), fp))
+        {
+            k = strtok(line, "=\n");
+            v = strtok(NULL, "=\n");
+            printf("read config %s=%s\n", k, v);
+            if(!_stricmp(k, "codepage"))
+            {
+                g_codepage = atoi(v);
+            }
+            else if(!_stricmp(k, "charset"))
+            {
+                g_charset = atoi(v);
+            }
+            else if(!_stricmp(k, "font"))
+            {
+                strcpy(g_font, v);
+            }
+            else if(!_stricmp(k, "_ismbclegal"))
+            {
+                size_t rva = (size_t)strtol(v, NULL, 16);
+                g_pfnTargets[_ismbclegal_IDX] = (void*)(base+rva);
+            }
+        }
+        fclose(fp);
+    }
+    else
+    {
+        printf("config %s not found!\n", path);
+    }
 }
 
 BOOL WINAPI DllMain(
@@ -163,6 +391,10 @@ BOOL WINAPI DllMain(
     switch( fdwReason ) 
     { 
         case DLL_PROCESS_ATTACH:
+#ifdef _DEBUG
+            install_console();
+#endif
+            read_config(CONFIG_PATH);
             install_hooks();
             break;
         case DLL_THREAD_ATTACH:
@@ -174,3 +406,11 @@ BOOL WINAPI DllMain(
     }
     return TRUE;
 }
+
+/* history
+* v0.1, support advhd.exe v2 version
+* v0.2, add support to advhd v1
+* V0.2.1, add config file for redirect
+* v0.2.2, add _ismbclegal hook and rva config for other codepage
+* v0.2.3, add automaticly search _ismbclegal
+*/

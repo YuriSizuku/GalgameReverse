@@ -1,6 +1,6 @@
 """
-export or import ws2 text for willplus advhd, 
-tested in BlackishHouse (v1.6.2.1)
+export or import wsc text for willplus advhd, 
+tested in AyakashiGohan (v1.0.1.0)
     v0.1, developed by devseed
 """
 
@@ -187,76 +187,115 @@ def patch_text(orgdata: bytearray,
  
     return data
 
-# ws2 functions
-ws2name_t = namedtuple("ws2name_t", ['addr', 'size', 'text'])
-ws2option_t = namedtuple("ws2option_t", ['addr', 'size', 'text', 'rawaddr', 'rawsize'])
-ws2text_t = namedtuple("ws2text_t", ['addr', 'size', 'text'])
+# wsc functions
+wscname_t = namedtuple("wscname_t", ['addr', 'size', 'text'])
+wscoption_t = namedtuple("wscoption_t", ['addr', 'size', 'text', 'rawaddr', 'rawsize'])
+wsctext_t = namedtuple("wsctext_t", ['addr', 'size', 'text'])
 
-def export_ws2(inpath, outpath="out.txt", encoding='sjis'):
+def export_wsc(inpath, outpath="out.txt", encoding='sjis'):
     with open(inpath, 'rb') as fp:
         data = bytearray(fp.read())
-    
-    # find text to extract
-    names: List[ws2name_t] = []
+
+    entryids = [0]
+    names: List[wscname_t] = []
+    texts: List[wsctext_t] = []
+    options: List[wscoption_t] = []
+
+    # 41 [id 4] [text n] 00
     cur = 0
-    pattern = b'%LC'
+    pattern = b'\x41'
     while True:
         cur = data.find(pattern, cur)
         if cur < 0: break
-        addr = cur
+        cur += len(pattern)
+        entryid = int.from_bytes(
+            data[cur: cur+4], 'little', signed=False)
+        if entryid - max(entryids) > 0x1000:
+            cur += 1
+            continue
+        addr = cur + 4
         size = data.find(b'\x00', addr) - addr
-        text = data[addr: addr+size].decode(encoding)
-        names.append(ws2name_t(addr, size, text))
-        cur +=  size + 1
-    
-    options: List[ws2option_t] = []
-    cur = 0
-    pattern = b'\x0f\x02'
+        try:
+            text = data[addr: addr+size].decode(encoding)
+            if size > 0: texts.append(wsctext_t(addr, size, text))
+            cur = addr + size + 1
+        except UnicodeDecodeError as e:
+            cur += 1
+            continue
+        entryids.append(entryid)
+
+    # 42 [id 4] 00 [name n] 00 [text n] 00
+    cur = 0 
+    pattern = b'\x42'
     while True:
         cur = data.find(pattern, cur)
-        if cur < 0 or cur + 2 > len(data) -1: break
-        cur = cur + len(pattern)
-        if data[cur]==0 and data[cur+1]==0: 
-            cur += 2
+        if cur < 0: break
+        cur += len(pattern)
+        entryid = int.from_bytes(
+            data[cur: cur+4], 'little', signed=False)
+        if entryid - max(entryids) > 0x1000 or data[cur+4]!=0:
+            cur += 1
             continue
-        while data[cur]!=0xff:
-            rawaddr = cur
+        addr = cur + 5
+        size = data.find(b'\x00', addr) - addr
+        try:
+            text = data[addr: addr+size].decode(encoding)
+            if size > 0: names.append(wscname_t(addr, size, text))
+            cur = addr + size + 1
+        except UnicodeDecodeError as e:
+            cur += 1
+            continue
+        addr = cur
+        size = data.find(b'\x00', addr) - addr
+        try: 
+            text = data[addr: addr+size].decode(encoding)
+            if size > 0: texts.append(wsctext_t(addr, size, text))
+            cur = addr + size + 1
+        except UnicodeDecodeError as e:
+            cur += 1
+            continue
+        entryids.append(entryid)
+
+    # 03 00 00 00 00 02 [noption 2] 
+	#   [id 2] [text n] 00 [hash 4] [file n] 00
+    cur = 0
+    pattern = b'\x03\x00\x00\x00\x00\x02'
+    while True:
+        cur = data.find(pattern, cur)
+        if cur < 0: break
+        cur += len(pattern)
+        noption = int.from_bytes(
+            data[cur: cur+2], 'little', signed=False)
+        if noption > 5:
+            cur += 1
+            continue
+        cur += 2
+        for i in range(noption):
+            rawaddr = cur 
             addr = cur + 2
             size = data.find(b'\x00', addr) - addr
             text = data[addr: addr+size].decode(encoding)
             rawsize = data.find(b'\x00', addr+size+5)  - rawaddr + 1
-            options.append(ws2option_t(
+            options.append(wscoption_t(
                 addr, size, text, rawaddr, rawsize))
             cur += rawsize
-        cur += 1
-    
-    texts: List[ws2text_t] = []
-    cur = 0
-    pattern = b'char\x00'
-    while True:
-        cur = data.find(pattern, cur)
-        if cur < 0: break
-        addr = cur + len(pattern)
-        size = data.find(b'\x00', addr) - addr
-        text = data[addr: addr+size].decode(encoding)
-        texts.append(ws2text_t(addr, size, text))
-        cur +=  size + 1
     
     # merge text to ftext
     ftexts = []
     ftexts.extend([{'addr': x.addr, 
         'size': x.size, 'text': x.text} for x in names]) 
     ftexts.extend([{'addr': x.addr, 
-        'size': x.size, 'text': x.text} for x in options]) 
+        'size': x.size, 'text': x.text} for x in texts \
+            if x.addr not in [y['addr'] for y in ftexts]]) 
     ftexts.extend([{'addr': x.addr, 
-        'size': x.size, 'text': x.text} for x in texts]) 
+        'size': x.size, 'text': x.text} for x in options]) 
     ftexts.sort(key=lambda x: x['addr'])
     if outpath!="":
         dump_ftext(ftexts, ftexts, outpath)
 
     return ftexts
 
-def import_ws2(inpath, orgpath, outpath="out.ws2", encoding="gbk"):
+def import_wsc(inpath, orgpath, outpath="out.ws2", encoding="gbk"):
     
     def _addjumpentry(data, addr):
         if addr > len(data): return None
@@ -272,27 +311,6 @@ def import_ws2(inpath, orgpath, outpath="out.ws2", encoding="gbk"):
     
     # make jump_table
     jump_table = []
-    cur = 0
-    pattern = b'\x7F\x00\x00\x00\x80\x3F\x00\x00\x00\x00'
-    while True:
-        cur = data.find(pattern, cur)
-        if cur < 0: break
-        addr = cur + len(pattern)
-        entry = _addjumpentry(data, addr)
-        if entry is not None: jump_table.append(entry)
-        addr += 0x10
-        entry = _addjumpentry(data, addr)
-        if entry is not None: jump_table.append(entry)
-        cur = addr + 4
-    cur = 0
-    pattern = b'\x05\x00\x00\x00\x00\x00\x00\x00\x00'
-    while True:
-        cur = data.find(pattern, cur)
-        if cur < 0: break
-        addr = cur + len(pattern)
-        entry = _addjumpentry(data, addr)
-        if entry is not None: jump_table.append(entry)
-        cur = addr + 4
 
     # import text
     replace_map = {'〜':'~', '−':'-', '･':'.', '♪':'#', 
@@ -313,6 +331,7 @@ def import_ws2(inpath, orgpath, outpath="out.ws2", encoding="gbk"):
             f"jumpto 0x{jumpto:x}->0x{jumpto_new:x}")
         data[addr_new: addr_new+4] = int.to_bytes(
             jumpto_new, 4, 'little', signed=False)
+
     if outpath!="":
         with open(outpath, 'wb') as fp:
             fp.write(data)
@@ -320,6 +339,8 @@ def import_ws2(inpath, orgpath, outpath="out.ws2", encoding="gbk"):
     return data
 
 def debug():
+    export_wsc("./buildv1/intermediate/Rio/ASA_01.WSC")
+    # import_wsc("./build/intermediate/Rio2_ftext/BZhal_03.ws2.txt", "./build/intermediate/Rio2/BZhal_03.ws2")
     pass
 
 def main():
@@ -329,10 +350,10 @@ def main():
         return
     if sys.argv[1].lower() == 'e':
         outpath = sys.argv[3] if len(sys.argv) > 3 else "out.txt"
-        export_ws2(sys.argv[2], outpath)
+        export_wsc(sys.argv[2], outpath)
     elif sys.argv[1].lower() == 'i':
         outpath = sys.argv[4] if len(sys.argv) > 4 else "out.ws2"
-        import_ws2(sys.argv[2], sys.argv[3], outpath)
+        import_wsc(sys.argv[2], sys.argv[3], outpath)
     else: raise ValueError(f"unknow format {sys.argv[1]}")
 
 if __name__ == '__main__':

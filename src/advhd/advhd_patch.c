@@ -1,8 +1,12 @@
 /**
  *  for AdvHD v1 and v2  
  *  translation support and redirect arc file
- *  tested in BlackishHouse (v1.6.2.1) and AyakashiGohan (v1.0.1.0)
- *      v0.2.3, developed by devseed
+ *      v0.2.4, developed by devseed
+ * 
+ * tested game: 
+ *  あやかしごはん (v1.0.1.0)
+ *  BlackishHouse (v1.6.2.1) 
+ *  華は短し、踊れよ乙女 (1.9.9.9)
  *  
  * override/config.ini, codepage charset
  * codepage=932
@@ -29,6 +33,7 @@ int g_charset = GB2312_CHARSET;
 PVOID g_pfnTargets[3] = {NULL};
 PVOID g_pfnNews[3] = {NULL}; 
 PVOID g_pfnOlds[3] = {NULL};
+HANDLE g_mutexs[3] = {NULL};
 #define CreateFileA_IDX 0
 #define CreateFileW_IDX 1
 #define _ismbclegal_IDX 2
@@ -51,17 +56,10 @@ typedef HANDLE (WINAPI *PFN_CreateFileW)(
     IN DWORD dwFlagsAndAttributes,
     IN OPTIONAL HANDLE hTemplateFile);
 
-HANDLE WINAPI CreateFileA_hook(
-    IN LPSTR lpFileName,
-    IN DWORD dwDesiredAccess,
-    IN DWORD dwShareMode,
-    IN OPTIONAL LPSECURITY_ATTRIBUTES lpSecurityAttributes,
-    IN DWORD dwCreationDisposition,
-    IN DWORD dwFlagsAndAttributes,
-    IN OPTIONAL HANDLE hTemplateFile)
+LPSTR _RedirectArcA(LPSTR lpFileName)
 {
-    static char tmppath[MAX_PATH];
-    
+    static char tmppath[MAX_PATH] = {0};
+    tmppath[0] = 0;
     char *name = PathFindFileNameA(lpFileName);
     if(name && (strstr(name, ".arc")||strstr(name, ".ARC")))
     {
@@ -72,16 +70,53 @@ HANDLE WINAPI CreateFileA_hook(
         if(PathFileExistsA(tmppath))
         {
             printf("CreateFileA redirect %s -> %s\n", lpFileName, tmppath);
-            strcpy(lpFileName, tmppath);
+            // strcpy(lpFileName, tmppath);
+            return tmppath;
         }
     }
+    return NULL;
+}
 
+LPWSTR _RedirectArcW(LPWSTR lpFileName)
+{
+    static wchar_t tmppath[MAX_PATH] = {0};
+    tmppath[0] = 0;
+    wchar_t *name = PathFindFileNameW(lpFileName);
+    if(name && (wcsstr(name, L".arc")||wcsstr(name, L".ARC")))
+    {
+        wcsncpy(tmppath, lpFileName, name - lpFileName);
+        tmppath[name - lpFileName] = 0;
+        wcscat(tmppath, REDIRECT_DIRW L"\\");
+        wcscat(tmppath, name);
+        if(PathFileExistsW(tmppath))
+        {
+            wprintf(L"CreateFileW redirect %ls -> %ls\n", lpFileName, tmppath);
+            //wcscpy(lpFileName, tmppath);
+            return tmppath;
+        }
+    }
+    return NULL;
+}
+
+HANDLE WINAPI CreateFileA_hook(
+    IN LPSTR lpFileName,
+    IN DWORD dwDesiredAccess,
+    IN DWORD dwShareMode,
+    IN OPTIONAL LPSECURITY_ATTRIBUTES lpSecurityAttributes,
+    IN DWORD dwCreationDisposition,
+    IN DWORD dwFlagsAndAttributes,
+    IN OPTIONAL HANDLE hTemplateFile)
+{
+    WaitForSingleObject(g_mutexs[CreateFileA_IDX], INFINITE);
+    LPSTR targetpath = _RedirectArcA(lpFileName);
+    if(!targetpath) targetpath = lpFileName;
     PFN_CreateFileA pfnCreateFileA = 
         (PFN_CreateFileA)g_pfnOlds[CreateFileA_IDX];
-    return pfnCreateFileA(lpFileName, dwDesiredAccess, dwShareMode, 
+    HANDLE res = pfnCreateFileA(targetpath, dwDesiredAccess, dwShareMode, 
         lpSecurityAttributes, dwCreationDisposition, 
         dwFlagsAndAttributes, hTemplateFile);
-
+    ReleaseMutex(g_mutexs[CreateFileA_IDX]);
+    return res;
 }
 
 HANDLE WINAPI CreateFileW_hook(
@@ -93,27 +128,16 @@ HANDLE WINAPI CreateFileW_hook(
     IN DWORD dwFlagsAndAttributes,
     IN OPTIONAL HANDLE hTemplateFile)
 {
-    static wchar_t tmppath[MAX_PATH];
-    
-    wchar_t *name = PathFindFileNameW(lpFileName);
-    if(name && (wcsstr(name, L".arc")||wcsstr(name, L".ARC")))
-    {
-        wcsncpy(tmppath, lpFileName, name - lpFileName);
-        tmppath[name - lpFileName] = 0;
-        wcscat(tmppath, REDIRECT_DIRW L"\\");
-        wcscat(tmppath, name);
-        if(PathFileExistsW(tmppath))
-        {
-            wprintf(L"CreateFileW redirect %ls -> %ls\n", lpFileName, tmppath);
-            wcscpy(lpFileName, tmppath);
-        }
-    }
-
+    WaitForSingleObject(g_mutexs[CreateFileW_IDX], INFINITE);
+    LPWSTR targetpath = _RedirectArcW(lpFileName);
+    if(!targetpath) targetpath = lpFileName;
     PFN_CreateFileW pfnCreateFileW = 
         (PFN_CreateFileW)g_pfnOlds[CreateFileW_IDX];
-    return pfnCreateFileW(lpFileName, dwDesiredAccess, dwShareMode, 
+    HANDLE res = pfnCreateFileW(targetpath, dwDesiredAccess, dwShareMode, 
         lpSecurityAttributes, dwCreationDisposition, 
         dwFlagsAndAttributes, hTemplateFile);
+    ReleaseMutex(g_mutexs[CreateFileW_IDX]);
+    return res;
 }
 
 int __cdecl _ismbclegal_hook(unsigned int c)
@@ -239,17 +263,31 @@ HFONT WINAPI CreateFontIndirectW_hook(IN LOGFONTW *lplf)
 
 void install_inlinehooks()
 {
-    g_pfnTargets[CreateFileA_IDX] =  (PVOID)GetProcAddress(
-        GetModuleHandleA("Kernel32.dll"), 
-        "CreateFileA"),
+    // get kernel32 or kernelbase
+    PVOID kernel =  GetModuleHandleA("Kernelbase.dll");; 
+    if(kernel)
+    {
+        printf("using kernelbase.dll for inline hook\n");
+    }
+    else
+    {   kernel = GetModuleHandleA("Kernel32.dll");
+        printf("using kernel32.dll for inline hook\n");
+    }
+
+    // init each function
+    g_pfnTargets[CreateFileA_IDX] =  
+        (PVOID)GetProcAddress(kernel, "CreateFileA"),
     g_pfnNews[CreateFileA_IDX] = (PVOID)CreateFileA_hook;
-    g_pfnTargets[CreateFileW_IDX] =  (PVOID)GetProcAddress(
-        GetModuleHandleA("Kernel32.dll"), 
-        "CreateFileW"),
+    g_pfnTargets[CreateFileW_IDX] =  
+        (PVOID)GetProcAddress(kernel, "CreateFileW"),
     g_pfnNews[CreateFileW_IDX] = (PVOID)CreateFileW_hook;
-    // g_pfnTargets[_ismbclegal_IDX] = (PVOID)0x488A1A;
     g_pfnNews[_ismbclegal_IDX] = (PVOID)_ismbclegal_hook;
 
+    // init mutex
+    g_mutexs[CreateFileA_IDX] = CreateMutexA(NULL, FALSE, NULL);
+    g_mutexs[CreateFileW_IDX] = CreateMutexA(NULL, FALSE, NULL);
+
+    // make inline hook
     winhook_inlinehooks(g_pfnTargets, 
         g_pfnNews, g_pfnOlds, 
         sizeof(g_pfnTargets)/sizeof(PVOID));
@@ -313,8 +351,8 @@ void install_console()
     freopen("CONOUT$", "w", stdout);
     system("chcp 936");
     setlocale(LC_ALL, "chs");
-    printf("advhd_patch v0.2.3, developed by devseed\n");
-    wprintf(L"advhd v1v2 版本通用汉化补丁, build in 220806\n");
+    printf("advhd_patch v0.2.4, developed by devseed\n");
+    wprintf(L"advhd v1v2 版本通用汉化补丁, build in 220823\n");
 }
 
 void install_hooks()
@@ -413,4 +451,5 @@ BOOL WINAPI DllMain(
 * V0.2.1, add config file for redirect
 * v0.2.2, add _ismbclegal hook and rva config for other codepage
 * v0.2.3, add automaticly search _ismbclegal
+* v0.2.4, add kernelbase createfile redirect, and mutex for multi thread
 */

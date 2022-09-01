@@ -1,5 +1,5 @@
 #include<stdio.h>
-#include<Windows.h>
+#include<windows.h>
 
 #ifdef _WIN64
 #define ADDR_TYPE DWORD

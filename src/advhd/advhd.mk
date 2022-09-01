@@ -2,7 +2,7 @@ CC:=clang
 BUILD_DIR:=./build
 INCS:=-I./../../util/include -I./../../thirdparty/include
 LIBDIRS:=-L./../../thirdparty/lib32
-LIBS:=-luser32 -lgdi32 -lShlwapi -lAdvapi32
+LIBS:=-luser32 -lgdi32 -lshlwapi -ladvapi32
 CFLAGS:=-ffunction-sections -fdata-sections
 LDFLAGS:=
 

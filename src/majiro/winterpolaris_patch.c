@@ -3,9 +3,10 @@
   by devseed, v0.1
 */
 
-#include<Windows.h>
+#include<windows.h>
 #include<stdio.h>
 #define BINTEXT_IMPLEMENTATION
+#define BINTEXT_NOREGEX
 #include "bintext.h"
 #define WINHOOK_IMPLEMENTATION
 #include "winhook.h"
@@ -185,6 +186,9 @@ HWND WINAPI CreateWindowExA_hook(
 
 __declspec(naked) void showtext_hook() // replace text to chs, inline hook code
 {
+#ifdef __GNUC__
+    // asm()
+#endif
     __asm{
         pushad        
         mov ecx, g_base

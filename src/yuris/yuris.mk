@@ -2,7 +2,7 @@ CC:=clang
 BUILD_DIR:=./build
 INCS:=-I./../../util/include -I./../../thirdparty/include -I./../../src/dvfs
 LIBDIRS:=-L./../../thirdparty/lib32
-LIBS:=-luser32 -lgdi32 -lShlwapi
+LIBS:=-luser32 -lgdi32 -lshlwapi
 CFLAGS:=-ffunction-sections -fdata-sections
 LDFLAGS:=
 
@@ -18,13 +18,16 @@ LDFLAGS+=-Wl,/OPT:REF
 else 
 CFLAGS+=-m32
 ifneq (,$(findstring gcc, $(CC)))
-LDFLAGS+=-static-libgcc -static-libstdc++ -Wl,-Bstatic,--whole-archive -lwinpthread -Wl,--no-whole-archive
+LDFLAGS+= -Wl,--gc-sections\
+	-static-libgcc -static-libstdc++ \
+	-Wl,-Bstatic,--whole-archive -lwinpthread \
+	-Wl,--no-whole-archive
 endif
 endif
 
 all: yuris_patch
 
-yuris_patch: yurispatch.c
+yuris_patch: yuris_patch.c
 	$(CC) -shared $^ -o $(BUILD_DIR)/$@.dll \
 		$(INCS) $(LIBDIRS) $(LIBS) $(CFLAGS) $(LDFLAGS)
 	rm -rf $(BUILD_DIR)/$@.exp

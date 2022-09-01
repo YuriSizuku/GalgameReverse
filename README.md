@@ -54,6 +54,10 @@ util tools are moved to [ReverseUtil](https://github.com/YuriSizuku/ReverseUtil)
 
 * `akaihana_yurispatch.c`, yuris gbk support  
 
+> 3M_Marionettes
+
+* `yuris_patch.c`, universe yuris patch, tested by 3M_Marionettes  
+
 ### advhd (willplus)
 
 > Blackish House
@@ -100,6 +104,8 @@ util tools are moved to [ReverseUtil](https://github.com/YuriSizuku/ReverseUtil)
 
 > 天巫女姫
 
+(comming soon ...)  
+
 * `amanomiko_patch.c`, add new lzss support and gbk support
 * `AmaNoMikoHime_lzss.py`, parse lzss compress file with header
 * `AmaNoMikoHime_SO4.py`, export or import text in so4 files
@@ -122,6 +128,8 @@ util tools are moved to [ReverseUtil](https://github.com/YuriSizuku/ReverseUtil)
 
 > 神々の悪戯 (psp)
 
+(comming soon ...)  
+
 * `KamigamiNoAsobi_nispack.py`, export or import nispack  
 * `KamigamiNoAsobi_story.py`, export or import text in story.dat  
 * `KamigamiNoAsobi_font.py`, analyze the multi page font  
@@ -136,6 +144,8 @@ util tools are moved to [ReverseUtil](https://github.com/YuriSizuku/ReverseUtil)
 * `air_psv_4bppfnt.py`, for building the psv air 4bpp font  
 
 > Flowers (psv)
+
+(comming soon ...)  
 
 * `flowers_psv_text.py`, map flowers pc translation text  
 * `flowers1-2_psv_pak.py`, `flowers3_psv_pak.py`, `flowers4_psv_pak.py` export or import *.pak  
@@ -155,6 +165,8 @@ util tools are moved to [ReverseUtil](https://github.com/YuriSizuku/ReverseUtil)
 ### hobibox
 
 > Narcissus ナルキッソス～もしも明日があるなら (psp)
+
+(comming soon ...)  
 
 * `Narcissus_lzss.py`, parse lzss structure with header  
 * `Narcissus_sn.py`, export or import sn.bin (after decompress)  
@@ -181,6 +193,8 @@ util tools are moved to [ReverseUtil](https://github.com/YuriSizuku/ReverseUtil)
 
 > Jewelic Nightmare (psp)
 
+(comming soon ...)  
+
 * `Jewelic_UF.py`,  building the UF tile font,  for`Jewelic Nightmare (ジュエリック・ナイトメア)`  
 * `Jewelic_STCM2L.py`,  converting the `ftext` (by [bintext.py](https://github.com/YuriSizuku/ReverseUtil/blob/master/script/bintext.py)) to STCM2Ltool format (made by [STCM2L_import.py](https://github.com/Yggdrasill-Moe/Helheim/blob/master/%E5%8D%81%E9%AC%BC%E4%B9%8B%E7%BB%8A/STCM2L_import.py)),  for`Jewelic Nightmare (ジュエリック・ナイトメア)`  
 
@@ -192,13 +206,15 @@ util tools are moved to [ReverseUtil](https://github.com/YuriSizuku/ReverseUtil)
 
 ### koei
 
-> 遙かなる時空の中で (psp)
-
-* `Harukanaru_cdar.py`, parse cdvdar (type v4) structure  
-
 > 金色のコルダ (psp)
+
+(not finished ...)  
 
 * `KiniroNoCorda_cdar.py`, parse cdvdar (type v2) structure  
 * `KiniroNoCorda_eboot.py`, patch the eboot for chs support, extend the fontmap and font glphy memory  
 * `KiniroNoCorda_eventdat.py`, parse event text, export and import  
 * `KiniroNoCorda_font.py`, parse 4bpp 16X16 font  
+
+> 遙かなる時空の中で (psp)
+
+* `Harukanaru_cdar.py`, parse cdvdar (type v4) structure  

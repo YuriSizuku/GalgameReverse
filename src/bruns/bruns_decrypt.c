@@ -1,10 +1,11 @@
 /*
-    This is for decrypt EENZ files, DustmaniaGrotesque tested 
-    v0.1, by devseed
+This is for decrypt EENZ files, DustmaniaGrotesque tested 
+	v0.1, developed by devseed
 */
+
 #include <stdio.h>
 #include <locale.h>
-#include <Windows.h>
+#include <windows.h>
 #pragma pack(1)
 struct decrypt_buf
 {

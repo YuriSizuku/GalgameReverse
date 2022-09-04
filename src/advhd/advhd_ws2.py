@@ -1,7 +1,7 @@
 """
 export or import ws2 text for willplus advhd, 
-tested in BlackishHouse (v1.6.2.1)
-    v0.1, developed by devseed
+tested in BlackishHouse (v1.6.2.1), 華は短し、踊れよ乙女 (1.9.9.9)
+    v0.2, developed by devseed
 """
 
 import re
@@ -257,14 +257,84 @@ def export_ws2(inpath, outpath="out.txt", encoding='sjis'):
     return ftexts
 
 def import_ws2(inpath, orgpath, outpath="out.ws2", encoding="gbk"):
-    
-    def _addjumpentry(data, addr):
-        if addr > len(data): return None
+    def _addjumpentry(addr):
+        if addr > len(data): return False
         jumpto = int.from_bytes(data[addr: addr+4], 
             'little', signed=True)
+        if jumpto < addr: return False
         if jumpto > 0 and jumpto < len(data):
-            return {'addr': addr, 'jumpto': jumpto, 
-                'addr_new': addr, 'jumpto_new': jumpto}
+            if addr in jump_set: return False
+            jump_set.add(addr)
+            jump_table.append({'addr': addr, 'jumpto': jumpto, 
+                'addr_new': addr, 'jumpto_new': jumpto})
+            return True
+
+    def _add_BlackishHouse_jumptable():
+        cur = 0
+        pattern = b'\x7F\x00\x00\x00\x80\x3F\x00\x00\x00\x00'
+        while True:
+            cur = data.find(pattern, cur)
+            if cur < 0: break
+            addr = cur + len(pattern)
+            _addjumpentry(addr)
+            addr += 0x10
+            _addjumpentry(addr)
+            cur = addr + 4
+
+        cur = 0
+        pattern = b'\x05\x00\x00\x00\x00\x00\x00\x00\x00'
+        while True:
+            cur = data.find(pattern, cur)
+            if cur < 0: break
+            addr = cur + len(pattern)
+            _addjumpentry(addr)
+            cur = addr + 4
+        pass
+
+    def _add_Hanaoto_jumptable():
+        cur = 0 # 15 00|32|02 00 E6 // +0, +4 
+        pattern = b'\x00\xE6'
+        while True:
+            cur = data.find(pattern, cur)
+            if cur < 0: break
+            if cur < 1: 
+                cur += len(pattern)
+            elif data[cur-1] == 0x2 or data[cur-1] == 0x32 \
+                    or (cur > 1 and  
+                    (data[cur-1]==0x0 and data[cur-2]==0x15 )):
+                addr = cur + len(pattern)
+                _addjumpentry(addr)
+                addr += 4
+                _addjumpentry(addr)
+                cur = addr + 4
+            else: cur += len(pattern)
+
+        cur = 0
+        pattern = b'GetMsgSkip'
+        while True:
+            cur = data.find(pattern, cur)
+            if cur < 0: break
+            addr = cur + len(pattern) + 0xd
+            _addjumpentry(addr)
+            cur = addr + 4
+        
+        cur = 0 # bgm
+        pattern = b'\x1F\x62\x67\x6D'
+        while True:
+            cur = data.find(pattern, cur)
+            if cur < 0: break
+            addr = cur - 0x4
+            _addjumpentry(addr)
+            cur += len(pattern)
+
+        cur = 0 # movie
+        pattern = b'\x3A\x6D\x6F\x76\x69\x65'
+        while True:
+            cur = data.find(pattern, cur)
+            if cur < 0: break
+            addr = cur - 0x4
+            _addjumpentry(addr)
+            cur += len(pattern)
 
     _, ftexts = load_ftext(inpath)
     with open(orgpath, 'rb') as fp:
@@ -272,29 +342,12 @@ def import_ws2(inpath, orgpath, outpath="out.ws2", encoding="gbk"):
     
     # make jump_table
     jump_table = []
-    cur = 0
-    pattern = b'\x7F\x00\x00\x00\x80\x3F\x00\x00\x00\x00'
-    while True:
-        cur = data.find(pattern, cur)
-        if cur < 0: break
-        addr = cur + len(pattern)
-        entry = _addjumpentry(data, addr)
-        if entry is not None: jump_table.append(entry)
-        addr += 0x10
-        entry = _addjumpentry(data, addr)
-        if entry is not None: jump_table.append(entry)
-        cur = addr + 4
-    cur = 0
-    pattern = b'\x05\x00\x00\x00\x00\x00\x00\x00\x00'
-    while True:
-        cur = data.find(pattern, cur)
-        if cur < 0: break
-        addr = cur + len(pattern)
-        entry = _addjumpentry(data, addr)
-        if entry is not None: jump_table.append(entry)
-        cur = addr + 4
+    jump_set = set()
+    _add_BlackishHouse_jumptable()
+    _add_Hanaoto_jumptable()
 
     # import text
+    jump_table.sort(key=lambda x: x['addr'])
     replace_map = {'〜':'~', '−':'-', '･':'.', '♪':'#', 
         '・':'.', 'ｷ':'#', 'ﾀ':'#',  
         'ｧ':'#', '⇒':'-', '≫':'-', '・':'.'}
@@ -339,3 +392,9 @@ if __name__ == '__main__':
     # debug()
     main()
     pass
+
+"""
+history:
+v0.1, initial version for BlackishHouse
+v0.2, support 華は短し、踊れよ乙女 (1.9.9.9)
+"""

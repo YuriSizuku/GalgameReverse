@@ -61,7 +61,8 @@ LPSTR _RedirectArcA(LPSTR lpFileName)
     static char tmppath[MAX_PATH] = {0};
     tmppath[0] = 0;
     char *name = PathFindFileNameA(lpFileName);
-    if(name && (strstr(name, ".arc")||strstr(name, ".ARC")))
+    if(name && (strstr(name, ".arc")||strstr(name, ".ARC")
+    || strstr(name, ".dat")||strstr(name, ".DAT")))
     {
         strncpy(tmppath, lpFileName, name - lpFileName);
         tmppath[name - lpFileName] = 0;
@@ -82,7 +83,8 @@ LPWSTR _RedirectArcW(LPWSTR lpFileName)
     static wchar_t tmppath[MAX_PATH] = {0};
     tmppath[0] = 0;
     wchar_t *name = PathFindFileNameW(lpFileName);
-    if(name && (wcsstr(name, L".arc")||wcsstr(name, L".ARC")))
+    if(name && (wcsstr(name, L".arc")||wcsstr(name, L".ARC")
+    ||wcsstr(name, L".dat")||wcsstr(name, L".DAT")))
     {
         wcsncpy(tmppath, lpFileName, name - lpFileName);
         tmppath[name - lpFileName] = 0;

@@ -334,6 +334,8 @@ def import_ws2(inpath, orgpath, outpath="out.ws2", encoding="gbk"):
             if cur < 0: break
             addr = cur - 0x4
             _addjumpentry(addr)
+            addr = addr - 0x4 # not for second movie
+            _addjumpentry(addr) 
             cur += len(pattern)
 
     _, ftexts = load_ftext(inpath)

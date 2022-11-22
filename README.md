@@ -9,6 +9,7 @@ util tools are moved to [ReverseUtil](https://github.com/YuriSizuku/ReverseUtil)
 ### onscripter
 
 * `extract_nt3.c`,  extract *.nt3 script  
+* `nscript_patch.c`, support gbk, redirect *.dat, *.arc file
 
 ### krkr
 

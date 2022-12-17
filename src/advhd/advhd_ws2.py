@@ -1,7 +1,7 @@
 """
 export or import ws2 text for willplus advhd, 
 tested in BlackishHouse (v1.6.2.1), 華は短し、踊れよ乙女 (1.9.9.9)
-    v0.2, developed by devseed
+    v0.2.1, developed by devseed
 """
 
 import re
@@ -292,22 +292,25 @@ def import_ws2(inpath, orgpath, outpath="out.ws2", encoding="gbk"):
         pass
 
     def _add_Hanaoto_jumptable():
-        cur = 0 # 15 00|32|02 00 E6 // +0, +4 
-        pattern = b'\x00\xE6'
-        while True:
-            cur = data.find(pattern, cur)
-            if cur < 0: break
-            if cur < 1: 
-                cur += len(pattern)
-            elif data[cur-1] == 0x2 or data[cur-1] == 0x32 \
-                    or (cur > 1 and  
-                    (data[cur-1]==0x0 and data[cur-2]==0x15 )):
-                addr = cur + len(pattern)
-                _addjumpentry(addr)
-                addr += 4
-                _addjumpentry(addr)
-                cur = addr + 4
-            else: cur += len(pattern)
+        # (15 00)|32|04|02 00 E6 // +0, +4 
+        patterns = [b'\x00\xE6', b'\x01\xE6']
+        for pattern in patterns:
+            cur = 0
+            while True:
+                cur = data.find(pattern, cur)
+                if cur < 0: break
+                if cur < 1: 
+                    cur += len(pattern)
+                elif data[cur-1] == 0x2 \
+                    or data[cur-1] == 0x4\
+                    or data[cur-1] == 0x32 \
+                    or (cur > 1 and  (data[cur-1]==0x0 and data[cur-2]==0x15 )):
+                    addr = cur + len(pattern)
+                    _addjumpentry(addr)
+                    addr += 4
+                    _addjumpentry(addr)
+                    cur = addr + 4
+                else: cur += len(pattern)
 
         cur = 0
         pattern = b'GetMsgSkip'
@@ -399,4 +402,5 @@ if __name__ == '__main__':
 history:
 v0.1, initial version for BlackishHouse
 v0.2, support 華は短し、踊れよ乙女 (1.9.9.9)
+v0.2.1, fix some opcode for 華は短し、踊れよ乙女
 """

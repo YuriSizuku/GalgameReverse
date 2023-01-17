@@ -41,6 +41,7 @@ util tools are moved to [ReverseUtil](https://github.com/YuriSizuku/ReverseUtil)
 
 * `lamune_hook.js`, decrypt the `*.asb` and `*.tbl` files  
 * `lamune_patch.c`, semi-dynamic framework for chs localization
+* `lamune_asbtext.py`, export or import text to `*.asb` files
 
 ### majiro
 

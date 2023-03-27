@@ -9,7 +9,7 @@ util tools are moved to [ReverseUtil](https://github.com/YuriSizuku/ReverseUtil)
 ### onscripter
 
 * `extract_nt3.c`,  extract *.nt3 script  
-* `nscript_patch.c`, support gbk, redirect *.dat, *.arc file
+* `nscript_patch.c`, support gbk, redirect `*.dat`, `*.arc` file
 
 ### krkr
 
@@ -118,6 +118,12 @@ util tools are moved to [ReverseUtil](https://github.com/YuriSizuku/ReverseUtil)
 > 空色の風琴
 
 * `sorairo_patch.c`, support for gbk enconding text in dll
+
+### nvl  
+
+> 我和她的世界末日  
+
+* `nvl_asar.py`, to decrypt the `game.asar` made by nvlcloud  
 
 ## (3) Console galgame
 

@@ -52,7 +52,7 @@ util tools are moved to [ReverseUtil](https://github.com/YuriSizuku/ReverseUtil)
 
 ### systemnnn
 
-* `systemnnn_patch.c`, patch sjis check, change font, redirect files
+* `systemnnn_patch.c`, patch sjis check, change font, redirect files, repalce `dwq` with png
 * `systemnnn_spt.py`, parser `spt` opcode, export and import text
 
 > 倭人異聞録～あさき、ゆめみし～

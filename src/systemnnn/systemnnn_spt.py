@@ -451,9 +451,9 @@ class Spt:
 
         def _make_textdata(text):
             textdata = text.encode(encoding) + b'\x00'
-            # m = re.search("#(.+?)\r\n", text) # such as #名
-            # if m: textdata = textdata.replace(m.group().encode(encoding), m.group().encode('sjis'))
-            textdata = textdata.replace("#名".encode(encoding), "#名".encode('sjis'))
+            remain_set = {"#名", "#心", "#猫"}
+            for v in remain_set:
+                textdata = textdata.replace(v.encode(encoding), v.encode('sjis'))
             return textdata
         
         # load ftext and prepare data

@@ -1,16 +1,18 @@
 /**
- * translation support and redirect arc file
- * for systemNNN engine
- *   v0.1, developed by devseed
+ * systemNNN engine 
+ * localization support, redirect file, loadpng in dib
+ *   v0.2, developed by devseed
  * 
  * tested game: 
- *   倭人異聞録～あさき、ゆめみし～ (+3DC17:FE)
+ *   倭人異聞録～あさき、ゆめみし～ 
+ *   (patch=+3DC17:FE;CPicture_LoadDWQ=;CPicture_mpic=32)
  *  
- * override/config.ini, codepage charset
- *   codepage=932
+ * override/config.ini // number must be decimal except patchpattern
  *   charset=128
  *   font=simhei
- *   patch=wajin_asaki.patch 
+ *   patchpattern=wajin_asaki.patch
+ *   CPicture_LoadDWQ=rva
+ *   CPicture_mpic=offset
 */
 
 #include <stdio.h>
@@ -18,17 +20,39 @@
 #include <shlwapi.h>
 #include <locale.h>
 
-// winhook v0.3
+// winhook.h v0.3
 #define WINHOOK_IMPLEMENTATION
+#define MINHOOK_IMPLEMENTATION
 #include "winhook.h"
+
+// stb_image.h v2.27
+#define STB_IMAGE_IMPLEMENTATION
+#define STBI_NO_THREAD_LOCALS
+#include "stb_image.h"
 
 #define CONFIG_PATH "override\\config.ini"
 #define REDIRECT_DIRA "override"
 #define REDIRECT_DIRW L"override"
-char g_font[MAX_PATH] = "simhei";
-char g_patchpattern[1024] = {0};
-int g_codepage = 936;
-int g_charset = GB2312_CHARSET;
+
+#define CPicture_LoadDWQ_IDX 0
+PVOID g_pfnTargets[1] = {NULL};
+PVOID g_pfnNews[1] = {NULL}; 
+PVOID g_pfnOlds[1] = {NULL};
+HANDLE g_mutexs[1] = {NULL};
+
+struct systemnnn_cfg_t{
+    int charset;
+    char font[MAX_PATH];
+    char patch[1024];
+    size_t CPicture_LoadDWQ; // addr
+    size_t CPicture_mpic; // offset
+};
+
+struct systemnnn_cfg_t g_systemnnncfg = 
+{
+    .charset=936, .font="simehei",
+    .patch={0}, .CPicture_LoadDWQ=0, .CPicture_mpic=32,
+};
 
 #if 1 // iat hooks
 LPSTR _RedirectFileA(LPSTR lpFileName)
@@ -63,41 +87,6 @@ HANDLE WINAPI CreateFileA_hook(
     return res;
 }
 
-int WINAPI MultiByteToWideChar_hook(
-    IN UINT CodePage,
-    IN DWORD dwFlags,
-    IN LPCCH lpMultiByteStr,
-    IN int cbMultiByte,
-    OUT LPWSTR lpWideCharStr,
-    IN int cchWideChar)
-{
-    UINT cp = g_codepage;
-    // printf("mbtwc %s\n", lpMultiByteStr);
-    int ret = MultiByteToWideChar(cp, dwFlags, 
-        lpMultiByteStr, cbMultiByte, 
-        lpWideCharStr, cchWideChar);
-    // wprintf(L"mbtwc %ls\n", lpWideCharStr);
-    return ret;
-}
-
-int WINAPI WideCharToMultiByte_hook(
-    IN UINT CodePage,
-    IN DWORD dwFlags,
-    IN LPCWCH lpWideCharStr,
-    IN int cchWideChar,
-    OUT LPSTR lpMultiByteStr,
-    IN int cbMultiByte,
-    IN OPTIONAL LPCCH lpDefaultChar,
-    OUT OPTIONAL LPBOOL lpUsedDefaultChar)
-{
-    int ret = WideCharToMultiByte(g_codepage, dwFlags, 
-        lpWideCharStr, cchWideChar, 
-        lpMultiByteStr, cbMultiByte, 
-        lpDefaultChar, lpUsedDefaultChar);
-    // wprintf(L"wctmb %ls\n", lpWideCharStr);
-    return ret;
-}
-
 HFONT WINAPI CreateFontA_hook(int cHeight, int cWidth, 
     int cEscapement, int cOrientation, int cWeight, DWORD bItalic,
     DWORD bUnderline, DWORD bStrikeOut, DWORD iCharSet,  
@@ -106,15 +95,52 @@ HFONT WINAPI CreateFontA_hook(int cHeight, int cWidth,
 {
     return CreateFontA(cHeight, cWidth, 
         cEscapement, cOrientation, cWeight, bItalic, 
-        bUnderline, bStrikeOut, g_charset, 
+        bUnderline, bStrikeOut, g_systemnnncfg.charset, 
         iOutPrecision, iClipPrecision, 
-        iQuality, iPitchAndFamily, g_font);
+        iQuality, iPitchAndFamily,  g_systemnnncfg.font);
 }
 
 #endif
 
+#if 1 // inline hooks
+typedef BOOL (__fastcall *PFN_CPicture_LoadDWQ)(
+    void *this, size_t edx, LPSTR fileName, BOOL b256Flag, LPSTR dirName);
+
+BOOL __fastcall CPicture_LoadDWQ_hook(void *this, size_t edx, 
+    LPSTR fileName, BOOL b256Flag, LPSTR dirName)
+{
+    static char tmp[MAX_PATH] = {0};
+    printf("CPicture::LoadDWQ %s, %s\n", fileName, dirName);
+    PFN_CPicture_LoadDWQ pfn = (PFN_CPicture_LoadDWQ) g_pfnOlds[CPicture_LoadDWQ_IDX];
+    BOOL res = pfn(this, edx, fileName, b256Flag, dirName);
+    uint8_t *pic = (uint8_t*)*(size_t*)((size_t)this + g_systemnnncfg.CPicture_mpic);
+    if (res)
+    {
+        int x, y, comp;
+        char *name = PathFindFileNameA(fileName);
+        if (!name) return res;
+        sprintf(tmp, "%s\\png\\%s.png", REDIRECT_DIRA, name);
+        stbi_uc *img = stbi_load(tmp, &x, &y, &comp, 0);
+        if(img)
+        {
+            printf("-> %s(%dx%d, %d)\n", tmp, x, y, comp);
+            for(int i=0;i<x*y;i++) // rgb -> bgr
+            {
+                pic[4*i] = img[comp*i+2];
+                pic[4*i+1] = img[comp*i+1];
+                pic[4*i+2] = img[comp*i];
+                if(comp==4)   pic[4*i+3] = img[comp*i+3];
+            }
+            stbi_image_free(img);
+        }
+    }
+    return res;
+}
+#endif
+
 void install_hooks()
 {
+    // iat hooks
     if(!winhook_iathook("Gdi32.dll", 
         GetProcAddress(GetModuleHandleA("Gdi32.dll"), 
         "CreateFontA"), (PROC)CreateFontA_hook))
@@ -130,7 +156,13 @@ void install_hooks()
 
     // some patch like sjis check, like wajin_asaki, change A0 to FE
     // 0043DC11 | 81BD ACFEFFFF A0000000 | cmp dword ptr ss:[ebp-154],A0
-    winhook_patchmemorypattern(g_patchpattern);
+    winhook_patchmemorypattern(g_systemnnncfg.patch);
+
+    // replace dwq dib buffer hook
+    g_pfnTargets[CPicture_LoadDWQ_IDX] = (void*)g_systemnnncfg.CPicture_LoadDWQ;
+    g_pfnNews[CPicture_LoadDWQ_IDX] = (void*) CPicture_LoadDWQ_hook;
+    winhook_inlinehooks(g_pfnTargets, g_pfnNews, g_pfnOlds, 
+        sizeof(g_pfnTargets)/sizeof(PVOID));
 }
 
 void install_console()
@@ -139,7 +171,7 @@ void install_console()
     freopen("CONOUT$", "w", stdout);
     system("chcp 936");
     setlocale(LC_ALL, "chs");
-    printf("systemnnn_patch v0.1, developed by devseed\n");
+    printf("systemnnn_patch v0.2, developed by devseed\n");
 }
 
 void read_config(const char *path)
@@ -156,27 +188,26 @@ void read_config(const char *path)
         {
             k = strtok(line, "=\n");
             v = strtok(NULL, "=\n");
-            printf("read config %s=%s\n", k, v);
-            if(!_stricmp(k, "codepage"))
+            printf("read systemnnn config %s=%s\n", k, v);
+            if(!_stricmp(k, "charset"))
             {
-                g_codepage = atoi(v);
-            }
-            else if(!_stricmp(k, "charset"))
-            {
-                g_charset = atoi(v);
+                g_systemnnncfg.charset = atoi(v);
             }
             else if(!_stricmp(k, "font"))
             {
-                strcpy(g_font, v);
+                strcpy(g_systemnnncfg.font, v);
             }
             else if(!_stricmp(k, "patch"))
             {
-                sprintf(tmp, "%s\\%s", REDIRECT_DIRA, v);
-                FILE *fp = fopen(tmp, "rb");
-                fseek(fp, 0, SEEK_END);
-                size_t fsize = ftell(fp);
-                fseek(fp, 0, SEEK_SET);
-                fread(g_patchpattern, 1, fsize, fp);
+                strcpy(g_systemnnncfg.patch, v);
+            }
+            else if(!_stricmp(k, "CPicture_LoadDWQ"))
+            {
+                g_systemnnncfg.CPicture_LoadDWQ = atoi(v)+ (size_t)GetModuleHandleA(NULL);
+            }
+            else if(!_stricmp(k, "CPicture_mpic"))
+            {
+                g_systemnnncfg.CPicture_mpic = atoi(v);
             }
         }
         fclose(fp);
@@ -216,6 +247,7 @@ BOOL WINAPI DllMain(
     return TRUE;
 }
 
-/* history
-* v0.1, support advhd.exe v2 version
+/** history
+ * v0.1, initial version, support sjis chcp, range patch, redirect file
+ * v0.2, support dwq dib replace
 */

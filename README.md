@@ -50,6 +50,13 @@ util tools are moved to [ReverseUtil](https://github.com/YuriSizuku/ReverseUtil)
 * `winterpolaris_hook.js`, dump `mjo` and analyze `majiro` in `winter polaris` game  
 * `winterpolaris_patch.c`, Majirov3 dynamic hook framework code example  
 
+### systemnnn
+
+* `systemnnn_patch.c`, patch sjis check, change font, redirect files
+* `systemnnn_spt.py`, parser `spt` opcode, export and import text
+
+> 倭人異聞録～あさき、ゆめみし～
+
 ### yuris
 
 > 越えざるは红い花 remaster
@@ -62,12 +69,16 @@ util tools are moved to [ReverseUtil](https://github.com/YuriSizuku/ReverseUtil)
 
 ### advhd (willplus)
 
-> Blackish House
-
 * `advhd_patch.c`, gbk support and overide arc file  
-* `advhd_arcv2.py`, willplus advhd arcv2 pack or unpack  
-* `advhd_ws2.py`, willplus advhd ws2 text export or import  
-* `advhd_pna.py`, willplus advhd ws2 pna export and import  
+* `advhd_arcv1.py`, willplus advhd v1 arc pack or unpack  
+* `advhd_arcv2.py`, willplus advhd v2 arc pack or unpack  
+* `advhd_wsc.py`, willplus advhd v1 wsc text export or import  
+* `advhd_ws2.py`, willplus advhd v2 ws2 text export or import  
+* `advhd_pna.py`, willplus advhd pna export and import  
+
+> あやかしごはん (advhd v1)
+> Blackish House (advhd v2)
+> 華は短し、踊れよ乙女 (advhd v2)
 
 ### criware
 
@@ -78,9 +89,9 @@ util tools are moved to [ReverseUtil](https://github.com/YuriSizuku/ReverseUtil)
 
 ### ig (innocent gray)
 
-> 天ノ少女
-
 * `redirect_ig.c`, redirect the files to `xxx_chs` for separate CHSPATCH, tested in `天ノ少女`　`Innocent Gray`  
+
+> 天ノ少女
 
 ### hibiki
 

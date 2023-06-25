@@ -9,7 +9,7 @@ import sys
 
 sys.path.append(r".\..\..\util\script")
 try:
-    import zzbintext as bintext
+    import zbintext_v044 as bintext
 except:
     import bintext
 

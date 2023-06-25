@@ -13,7 +13,7 @@ sys.path.append(r".\..\..\util\script")
 try:
     import zzbintext as btext
 except:
-    import btext
+    import bintext as btext
 
 def print_vmc(path, offset_text=0x34a20): # for op.vmc
     with open(path, 'rb') as fp:
@@ -126,9 +126,15 @@ def import_vmc_text(vmcpath, textpath, outpath, tblpath=""):
     text_ref_map =dict() # {text_addr:[opcode_addr1, ...]}
     opcodes = get_vmc_opcode(data)
     for i, t in enumerate(opcodes):
+        # 0x198b4: 0x3 0xfdad(0x3f6bc) 0x2 0x12 0x2 0x3 0x4 0x0 "my270033"
         if len(t['opcode']) == 8 and t['opcode'][0]==3:
-            if t['opcode'][-2] == 0x12 or  t['opcode'][-2] == 0xa or t['opcode'][-2] == 0x22220001:
+            if t['opcode'][-2] == 0x12 or  \
+                t['opcode'][-2] == 0xa or \
+                t['opcode'][-2] == 0x4 or \
+                t['opcode'][-2] == 0x22220001:
+
                 addr = t['opcode'][1] * 4 + 8
+                # print(i, hex(addr))
                 text_ref_addr = t['addr'] + 4
                 if addr >= text_start_addr:
                     if addr not in text_ref_map.keys():
@@ -198,12 +204,12 @@ def main():
 
 def debug():
     basedir = "./build/intermediate"
-    #print_vmc(os.path.join(basedir, "./vmc/op.vmc"))
-    import_vmc_text(os.path.join(basedir, "./vmc/0306.vmc"), 
-        os.path.join(basedir, "./vmc_chs/0306.vmc.txt"),
-        os.path.join(basedir, "./vmc_rebuild/0306.vmc"),
+    #print_vmc(os.path.join(basedir, "./vmc/special.vmc"))
+    import_vmc_text(os.path.join(basedir, "./vmc/special.vmc"), 
+        os.path.join(basedir, "./vmc_chs/special.vmc.txt"),
+        os.path.join(basedir, "./vmc_rebuild/special.vmc"),
         os.path.join(basedir, "MINTYOU16_rebuild.FNT.tbl"))
-    print_vmc(os.path.join(basedir, "./vmc_rebuild/op.vmc"))
+    print_vmc(os.path.join(basedir, "./vmc_rebuild/special.vmc"))
     pass
 
 if __name__ == "__main__":

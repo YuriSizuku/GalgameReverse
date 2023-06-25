@@ -14,7 +14,7 @@ from PIL import ImageFont, ImageDraw, Image
 
 sys.path.append(r".\..\..\util\script")
 try:
-    import zzlibfont as futil
+    import zlibfont_v018 as futil
 except:
     import libfont as futil
 
@@ -201,6 +201,19 @@ def make_tbf(fntpath, outpath=""):
         print("tbl with " + str(len(tbl)) + " generated!")
     return tbl
 
+def debug():
+    def f_decode2(data, bpp, idx):
+        b=g=r=a = 0
+        start = int(idx)
+        if bpp==4:
+            d = struct.unpack('<B', data[start:start+1])[0]
+            if idx <= start:  d >>= 4
+            else: d &= 0b00001111
+            a = r = g = b = round(d*255/15)
+        return np.array([b, g, r, a], dtype='uint8')
+    futil.extract_tilefont(r"D:\Make\Reverse\#pause\air_psv\test\mdnp32_dump.fnt", 32, 32, 4, r"D:\Make\Reverse\#pause\air_psv\test\mdnp32_dump.png", f_decode=f_decode2)
+    pass
+
 def main():
     basedir = r"./build/intermediate"
     if len(sys.argv) > 1: basedir = sys.argv[1]
@@ -211,10 +224,7 @@ def main():
     make_tbf( os.path.join(basedir, r"./origin/mdnp32.fnt"), 
               os.path.join(basedir, r"airpsv.tbl"))
 
-def debug():
-    pass
-
 if __name__ == "__main__":
-    #debug()
+    debug()
     main()
     pass

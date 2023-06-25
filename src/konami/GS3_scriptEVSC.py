@@ -13,7 +13,7 @@ from io import BytesIO
 
 sys.path.append(r".\..\..\util\script")
 try:
-    import zzbintext as bintext
+    import zbintext_v053 as bintext
 except:
     import bintext
 

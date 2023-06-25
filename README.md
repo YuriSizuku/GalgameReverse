@@ -185,8 +185,6 @@ util tools are moved to [ReverseUtil](https://github.com/YuriSizuku/ReverseUtil)
 
 > Narcissus ナルキッソス～もしも明日があるなら (psp)
 
-(comming soon ...)  
-
 * `Narcissus_lzss.py`, parse lzss structure with header  
 * `Narcissus_sn.py`, export or import sn.bin (after decompress)  
 * `Narcissus_sntext.py`, export or import sn.bin (after extract) text  

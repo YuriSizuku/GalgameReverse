@@ -12,7 +12,7 @@ import codecs
 
 sys.path.append(r".\..\..\util\script")
 try:
-    import zzlibfont as futil
+    import zlibfont_v022 as futil
 except:
     import libfont as futil
 

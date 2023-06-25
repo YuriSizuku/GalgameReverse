@@ -13,13 +13,13 @@ import codecs
 import struct
 import numpy as np
 from PIL import Image, ImageEnhance
-from typing import Dict, Tuple, List
+from typing import Dict, Tuple
 
 sys.path.append(os.path.join(
     os.path.dirname(__file__), 
     r"./../../util/script"))
 try:
-    import zzlibfont as libfont
+    import zlibfont_v024 as libfont
 except:
     import libfont
 

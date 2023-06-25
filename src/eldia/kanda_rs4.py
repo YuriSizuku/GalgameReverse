@@ -16,7 +16,7 @@ import mmap
 
 sys.path.append(r".\..\..\util\script")
 try:
-    import zzbintext as bintext
+    import zbintext_v043 as bintext
 except:
     import bintext
 

@@ -11,7 +11,7 @@ import argparse
 
 sys.path.append(r".\..\..\util\script")
 try:
-    import zzbintext as bintext
+    import zbintext_v040 as bintext
 except:
     import bintext
     

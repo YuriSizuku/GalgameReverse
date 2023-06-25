@@ -10,7 +10,7 @@ sys.path.append(os.path.join(
     os.path.dirname(__file__), 
     r"./../../util/script"))
 try:
-    import zzbintext as bintext
+    import zbintext_v058 as bintext
 except:
     import bintext
 

@@ -19,7 +19,7 @@ import sys
 import re
 import struct
 from io import BytesIO
-import cycrose_zp as zp
+import baranoki_psp_zp as zp
 
 def print_pk(path):
     with open(path, "rb") as fp:

@@ -1,6 +1,6 @@
 /**
  *  for lamune.exe v1.0  (azsystem) chs support
- *  v0.2.1, developed by devseed
+ *  v0.2.2, developed by devseed
  *  
 */
 
@@ -12,9 +12,9 @@
 #define WINPE_IMPLEMENTATION
 #define WINPE_NOASM
 #include "winpe.h"
-#define STB_IMAGE_IMPLEMENTATION
 
 // for fix xp threadlocal loadlibrary problem
+#define STB_IMAGE_IMPLEMENTATION
 #define STBI_NO_THREAD_LOCALS
 #include "stb_image.h"
 #define ZIP_IMPLEMENTATION
@@ -35,8 +35,8 @@
 004311A5   | 8945 F0  | mov dword ptr ss:[ebp-10],eax
 004311A8   | E8 96510000         | call lamune.436343  | new raw_buf
 */
-const DWORD g_newrawbufi_4311A2 = 0x4311A2;
-const DWORD g_newrawbufo_4311A8 = 0x4311A8;
+const DWORD g_newrawbufi = 0x4311A2;
+const DWORD g_newrawbufo = 0x4311A8;
 
 /* for hook decompress asb
 .text:004311D4 FF 75 E4          push    [ebp+raw_size]  ; raw_len
@@ -46,8 +46,8 @@ const DWORD g_newrawbufo_4311A8 = 0x4311A8;
 .text:004311DE FF 75 F0    push [ebp+compressed_data] ; compressed_data
 .text:004311E1 E8 7F 99 FD FF    call    decompress_40AB65
 */
-const DWORD g_decompressasbi_4311E1 = 0x4311E1;
-const DWORD g_decompressasbo_40AB65 = 0x40AB65;
+const DWORD g_decompressasbi = 0x4311E1;
+const DWORD g_decompressasbo = 0x40AB65;
 
 /*  for hook loadcpb, save cpbname
 .text:00419E04 8B EC             mov     ebp, esp
@@ -58,8 +58,8 @@ const DWORD g_decompressasbo_40AB65 = 0x40AB65;
 .text:00419E0D 39 5D 08          cmp     [ebp+filename], ebx
 */
 const char* g_curcpbname = NULL;
-const DWORD g_loadcpbi_419E03 = 0x419E03;
-const DWORD g_loadcpbo_419E09 = 0x419E09;
+const DWORD g_loadcpbi = 0x419E03;
+const DWORD g_loadcpbo = 0x419E09;
 
 /* for hook decompressed cpb24 buffer
 0041E2DB   | 8B55 0C  | mov edx,dword ptr ss:[ebp+C]
@@ -71,24 +71,27 @@ const DWORD g_loadcpbo_419E09 = 0x419E09;
 0041E2E9   | 85DB | test ebx,ebx 
 0041E2EB   | 7E 35 | jle lamune_chs.41E322 
 */
-const DWORD g_copycpb24i_41E2DB = 0x41E2DB;
-const DWORD g_copycpb24o_41E2E0 = 0x41E2E0;
+const DWORD g_copycpb24i = 0x41E2DB;
+const DWORD g_copycpb24o = 0x41E2E0;
+
+const DWORD g_copycpb24i2 = 0x41DD1D;
+const DWORD g_copycpb24o2 = 0x41DD22;
 
 /* for hook decompressed cpb32 buffer
 0041E4C6   | 8B45 E4 | mov eax,dword ptr ss:[ebp-1C]                     
 0041E4C9   | 85C0   | test eax,eax
 0041E4CB < | 0F8E 83000000 | jle lamune_chs.41E554 
 */
-const DWORD g_copycpb32i_41E4C6 = 0x41E4C6;
-const DWORD g_copycpb32o_41E4CB = 0x41E4CB;
+const DWORD g_copycpb32i = 0x41E4C6;
+const DWORD g_copycpb32o = 0x41E4CB;
 
 /* for hook decompressed cpb32 2 buffer
 0041DEFD   | 8B45 DC  | mov eax,dword ptr ss:[ebp-24]
 0041DF00   | 85C0      |test eax,eax
 0041DF02   | 0F8E 83000000 | jle lamune_chs.41DF8B
 */
-const DWORD g_copycpb32i_41DEFD = 0x41DEFD;
-const DWORD g_copycpb32o_41DF02 = 0x41DF02;
+const DWORD g_copycpb32i2 = 0x41DEFD;
+const DWORD g_copycpb32o2 = 0x41DF02;
 
 
 __declspec(dllexport) void dummy()
@@ -243,7 +246,7 @@ void __declspec(naked) newrawbuf_hook_4311A2()
         // fix origin code
         push dword ptr [ebp-0x1c]; 
         mov dword ptr [ebp-0x10], eax;
-        jmp dword ptr ds:[g_newrawbufo_4311A8];
+        jmp dword ptr ds:[g_newrawbufo];
     } 
 }
 
@@ -260,7 +263,7 @@ void __declspec(naked) decompressasb_hook_4311E1()
         decompress_origin:
         mov eax, 0x99E15CB4; // this is the original corrent crc value
         mov dword ptr ds:[0x0047E718], eax; // this is not worked...
-        jmp dword ptr ds:[g_decompressasbo_40AB65];
+        jmp dword ptr ds:[g_decompressasbo];
     }
 }
 
@@ -276,7 +279,7 @@ void __declspec(naked) loadcpb_hook_419E03()
         push ebp;
         mov ebp, esp;
         sub esp, 0x2c;
-        jmp dword ptr ds:[g_loadcpbo_419E09];
+        jmp dword ptr ds:[g_loadcpbo];
     }
 }
 
@@ -288,10 +291,27 @@ void __declspec(naked) copycpb24_hook_41E2DB()
         push g_curcpbname;
         call load_rawcpb;
         popad;
+        
         // fix origin code
         mov edx,dword ptr [ebp+0xC];
         mov eax,edi;
-        jmp dword ptr ds:[g_copycpb24o_41E2E0];
+        jmp dword ptr ds:[g_copycpb24o];
+    }
+}
+
+void __declspec(naked) copycpb24_hook_41DC20()
+{
+    __asm {
+        pushad;
+        push [ebp-0x1c];
+        push g_curcpbname;
+        call load_rawcpb;
+        popad;
+       
+        // fix origin code
+        mov ecx,dword ptr [ebp-0x20];
+        test ecx,ecx;
+        jmp dword ptr ds:[g_copycpb24o2];
     }
 }
 
@@ -306,7 +326,7 @@ void __declspec(naked) copycpb32_hook_41E4C6()
         // fix origin code
         mov eax, dword ptr [ebp-0x1c];
         test eax,eax;
-        jmp dword ptr ds:[g_copycpb32o_41E4CB];
+        jmp dword ptr ds:[g_copycpb32o];
     }
 }
 
@@ -321,7 +341,7 @@ void __declspec(naked) copycpb32_hook_41DEFD()
         // fix origin code
         mov eax, dword ptr [ebp-0x24];
         test eax,eax;
-        jmp dword ptr ds:[g_copycpb32o_41DF02];
+        jmp dword ptr ds:[g_copycpb32o2];
     }
 }
 
@@ -379,15 +399,15 @@ void install_asbhook()
     // inlinehook newrawdata
     BYTE jmpE8buf[0x5]={0xE9}; // jmp relative
     *(DWORD*)(jmpE8buf+1) = (DWORD)newrawbuf_hook_4311A2-  
-        ((DWORD)g_newrawbufi_4311A2 + sizeof(jmpE8buf));
-    winhook_patchmemory((LPVOID)g_newrawbufi_4311A2, 
+        ((DWORD)g_newrawbufi + sizeof(jmpE8buf));
+    winhook_patchmemory((LPVOID)g_newrawbufi, 
         jmpE8buf, sizeof(jmpE8buf));
 
     // inlinehook decompress
     BYTE callE9buf[0x5]={0xE8}; // call relative
     *(DWORD*)(callE9buf+1) =(DWORD)decompressasb_hook_4311E1-  
-        ((DWORD)g_decompressasbi_4311E1 + sizeof(jmpE8buf));
-    winhook_patchmemory((LPVOID)g_decompressasbi_4311E1, 
+        ((DWORD)g_decompressasbi + sizeof(jmpE8buf));
+    winhook_patchmemory((LPVOID)g_decompressasbi, 
         callE9buf, sizeof(callE9buf));
 }
 
@@ -396,25 +416,30 @@ void install_cpbhook()
     // inlinehook loadcpb
     BYTE jmpE8buf[0x5]={0xE9}; // jmp relative
     *(DWORD*)(jmpE8buf+1) = (DWORD)loadcpb_hook_419E03-  
-        ((DWORD)g_loadcpbi_419E03 + sizeof(jmpE8buf));
-    winhook_patchmemory((LPVOID)g_loadcpbi_419E03, 
+        ((DWORD)g_loadcpbi + sizeof(jmpE8buf));
+    winhook_patchmemory((LPVOID)g_loadcpbi, 
         jmpE8buf, sizeof(jmpE8buf));
 
     // inlinehook copycpb24
     *(DWORD*)(jmpE8buf+1) = (DWORD)copycpb24_hook_41E2DB-  
-        ((DWORD)g_copycpb24i_41E2DB + sizeof(jmpE8buf));
-    winhook_patchmemory((LPVOID)g_copycpb24i_41E2DB, 
+        ((DWORD)g_copycpb24i + sizeof(jmpE8buf));
+    winhook_patchmemory((LPVOID)g_copycpb24i, 
+        jmpE8buf, sizeof(jmpE8buf));
+
+    *(DWORD*)(jmpE8buf+1) = (DWORD)copycpb24_hook_41DC20-  
+        ((DWORD)g_copycpb24i2 + sizeof(jmpE8buf));
+    winhook_patchmemory((LPVOID)g_copycpb24i2, 
         jmpE8buf, sizeof(jmpE8buf));
 
     // inlinehook copycpb32
     *(DWORD*)(jmpE8buf+1) = (DWORD)copycpb32_hook_41E4C6-  
-        ((DWORD)g_copycpb32i_41E4C6 + sizeof(jmpE8buf));
-    winhook_patchmemory((LPVOID)g_copycpb32i_41E4C6, 
+        ((DWORD)g_copycpb32i + sizeof(jmpE8buf));
+    winhook_patchmemory((LPVOID)g_copycpb32i, 
         jmpE8buf, sizeof(jmpE8buf));
 
     *(DWORD*)(jmpE8buf+1) = (DWORD)copycpb32_hook_41DEFD-  
-        ((DWORD)g_copycpb32i_41DEFD + sizeof(jmpE8buf));
-    winhook_patchmemory((LPVOID)g_copycpb32i_41DEFD, 
+        ((DWORD)g_copycpb32i2 + sizeof(jmpE8buf));
+    winhook_patchmemory((LPVOID)g_copycpb32i2, 
         jmpE8buf, sizeof(jmpE8buf));
 }
 
@@ -532,7 +557,7 @@ void install_hooks()
     AllocConsole();
     //MessageBoxA(0, "debug install", "debug", 0);
     freopen("CONOUT$", "w", stdout);
-    printf("install hook, v0.2.1, build in 220504 \n");
+    printf("install hook, v0.2.2, build in 230627 \n");
     #endif
     install_asbhook();
     install_cpbhook();
@@ -567,4 +592,5 @@ BOOL WINAPI DllMain(
  *  v0.1.5 cpb picture dynamic import
  *  v0.2 support the zip archive including outer and inner overlay data
  *  v0.2.1 fix menu_epilogue@n.png not display bug in 0041ddb8
+ *  v0.2.2 add redirect to graphic cpb24 image
 */

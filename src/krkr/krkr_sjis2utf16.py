@@ -7,24 +7,18 @@ def sjis2utf16bom(inpath, outpath="./out.txt"):
     data_utf16bom = BytesIO()
     with open(inpath, 'rb') as fp:
         data_sjis = fp.read()
-    if data_sjis[0:3] == codecs.BOM_UTF16_LE:
-        print(inpath, "is already UTF file!")
-        return None
-    if data_sjis[0:3] == b'TJS':
-        print(inpath, "is TJS file")
-        return None
-    
-    print(inpath, "is converting...")
-    text = data_sjis.decode('sjis')
-    data_utf16bom.write(codecs.BOM_UTF16_LE)
-    data_utf16bom.write(text.encode('utf-16le'))
-
-    if outpath!="":
-        data_utf16bom.seek(0, os.SEEK_SET)
-        with open(outpath, 'wb') as fp:
-            fp.write(data_utf16bom.read())
-
-    return data_utf16bom.getbuffer()
+        try:
+            text = data_sjis.decode('sjis')
+            print(inpath, "is converting...")
+            data_utf16bom.write(codecs.BOM_UTF16_LE)
+            data_utf16bom.write(text.encode('utf-16le'))
+            if outpath!="":
+                data_utf16bom.seek(0, os.SEEK_SET)
+                with open(outpath, 'wb') as fp:
+                    fp.write(data_utf16bom.read())
+                    return data_utf16bom.getbuffer()
+        except UnicodeDecodeError:
+            print(inpath, "is not JIS file!")
 
 def debug():
     pass

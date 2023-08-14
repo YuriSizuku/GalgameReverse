@@ -45,10 +45,16 @@ util tools are moved to [ReverseUtil](https://github.com/YuriSizuku/ReverseUtil)
 
 ### majiro
 
+* `majiro_arc.py`, export and build majiro `*.arc` file
+* `majiro_mjo.py`,  decrypt `*.mjo` file,  `MajiroObjX1.000` to `MajiroObjV1.000`
+* `majiro_mjiltext.py`, export and import text from `*.mjil` file by `mjotool2`
+
 > Winter Polaris
 
 * `winterpolaris_hook.js`, dump `mjo` and analyze `majiro` in `winter polaris` game  
 * `winterpolaris_patch.c`, Majirov3 dynamic hook framework code example  
+
+> そらいろ // 230815 added
 
 ### systemnnn
 

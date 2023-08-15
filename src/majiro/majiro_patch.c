@@ -1,6 +1,6 @@
 /**
  * majiro engine, localization support
- *   v0.1.2, developed by devseed
+ *   v0.1.3, developed by devseed
  * 
  * tested game:
  *   そらいろ (ねこねこソフト) v1.1
@@ -22,14 +22,6 @@
 #define MINHOOK_IMPLEMENTATION
 #include "winhook.h"
 
-// stb_image.h v2.27
-#define STB_IMAGE_IMPLEMENTATION
-#define STBI_NO_THREAD_LOCALS
-#ifdef __TINYC__
-#define STBI_NO_SIMD
-#endif
-#include "stb_image.h"
-
 #define CONFIG_PATH "override\\config.ini"
 #define REDIRECT_DIRA "override"
 #define REDIRECT_DIRW L"override"
@@ -42,13 +34,16 @@ FONTENUMPROCA g_fontproc = NULL;
 
 struct majirocfg_t{
     int charset;
+    int codepage;
     char font[MAX_PATH];
     char patch[1024];
 };
 
 struct majirocfg_t g_majirocfg = 
 {
-    .charset=0x0, .font="\0",
+    .charset=0x0, 
+    .codepage=0x0,
+    .font="\0",
     .patch={0}
 };
 
@@ -121,6 +116,20 @@ int WINAPI EnumFontFamiliesA_hook(IN HDC hdc,
     return EnumFontFamiliesA(hdc, lpLogfont, (FONTENUMPROCA)fontproc_hook, lParam);
 }
 
+UINT WINAPI GetACP_hook()
+{
+    UINT CodePage = GetACP();
+    if(g_majirocfg.codepage) CodePage = g_majirocfg.codepage;
+    return CodePage;
+}
+
+BOOL GetCPInfo_hook(IN UINT CodePage, OUT LPCPINFO lpCPInfo)
+{
+    if(g_majirocfg.codepage) CodePage = g_majirocfg.codepage;
+    BOOL res = GetCPInfo(CodePage, lpCPInfo);
+    return res;
+}
+
 int WINAPI MultiByteToWideChar_hook(
   UINT CodePage,
   DWORD  dwFlags,
@@ -129,9 +138,10 @@ int WINAPI MultiByteToWideChar_hook(
   LPWSTR  lpWideCharStr,
   int cchWideChar)
 {
+    if(CodePage==0) CodePage = g_majirocfg.codepage;
     int ret = MultiByteToWideChar(CodePage, dwFlags, 
         lpMultiByteStr, cbMultiByte, lpWideCharStr, cchWideChar);
-    printf("mbtowc %s\n", lpMultiByteStr);
+    // wprintf(L"mbtowc %ls\n", lpWideCharStr);
     return ret;
 }
 
@@ -145,11 +155,12 @@ int WINAPI WideCharToMultiByte_hook(
     IN OPTIONAL LPCCH lpDefaultChar,
     OUT OPTIONAL LPBOOL lpUsedDefaultChar)
 {
+    if(CodePage==0) CodePage = g_majirocfg.codepage;
     int ret = WideCharToMultiByte(CodePage, dwFlags, 
         lpWideCharStr, cchWideChar, 
         lpMultiByteStr, cbMultiByte, 
         lpDefaultChar, lpUsedDefaultChar);
-    printf("wctmb %s\n", lpMultiByteStr);
+    // wprintf(L"wctmb %ls\n", lpWideCharStr);
     return ret;
 }
 #endif
@@ -178,7 +189,19 @@ void install_hooks()
     {
         printf("CreateFileA not fount!\n");
     }
-#if 0
+    if(!winhook_iathook("Kernel32.dll", 
+        GetProcAddress(GetModuleHandleA("Kernel32.dll"), 
+        "GetACP"), (PROC)GetACP_hook))
+    {
+        printf("GetACP not fount!\n");
+    }
+    if(!winhook_iathook("Kernel32.dll", 
+        GetProcAddress(GetModuleHandleA("Kernel32.dll"), 
+        "GetCPInfo"), (PROC)GetCPInfo_hook))
+    {
+        printf("GetCPInfo not fount!\n");
+    }
+
     if(!winhook_iathook("Kernel32.dll", 
         GetProcAddress(GetModuleHandleA("Kernel32.dll"), 
         "MultiByteToWideChar"), (PROC)MultiByteToWideChar_hook))
@@ -191,7 +214,6 @@ void install_hooks()
     {
         printf("WideCharToMultiByte not fount!\n");
     }
-#endif
 
     winhook_patchmemorypattern(g_majirocfg.patch);
 }
@@ -223,6 +245,10 @@ void read_config(const char *path)
             if(!_stricmp(k, "charset"))
             {
                 g_majirocfg.charset = atoi(v);
+            }
+            else if(!_stricmp(k, "codepage"))
+            {
+                g_majirocfg.codepage = atoi(v);
             }
             else if(!_stricmp(k, "font"))
             {
@@ -274,4 +300,5 @@ BOOL WINAPI DllMain(
  * v0.1, initial version, redirect file and patch
  * v0.1.1, add EnumFontFamiliesA_hook
  * v0.1.2, redirect savedata, as it is related to text modify
+ * v0.1.3, add GetACP_hook, GetCPInfo_hook for other language os
 */

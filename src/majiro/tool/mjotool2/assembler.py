@@ -1353,7 +1353,7 @@ class MjILAssembler:
                     else:
                         raise Exception(f'unexpected token during switch case list operand parsing, got {token!r}')
 
-                    token = self.next_token_skipws(nextline=True)
+                    token = self.next_token_skipws(nextline=not no_brace)
                 if case_list and last_case is None:
                     raise Exception(f'unexpected extra punctuation \',\' before closing switch case list operand')
                 ##TODO: Proper handling of []'s or no []'s for switch cases, right now it just thinks of them as a common courtasy

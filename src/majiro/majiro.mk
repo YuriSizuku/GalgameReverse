@@ -32,5 +32,6 @@ majiro_patch: majiro_patch.c
 		$(INCS) $(LIBDIRS) $(LIBS) $(CFLAGS) $(LDFLAGS) 
 	rm -rf $(BUILD_DIR)/$@.exp
 	rm -rf $(BUILD_DIR)/$@.lib
+	rm -rf $(BUILD_DIR)/$@.def
 
 .PHONY: majiro_patch

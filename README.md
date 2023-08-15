@@ -1,8 +1,7 @@
 # GalgameReverse
 
-Some methods for extracting or importing in Galgame,  
-as well as some methods for CHS localization.  
-util tools are moved to [ReverseUtil](https://github.com/YuriSizuku/ReverseUtil).
+Some methods for galgame engine reverse and localization support.  
+Util tools are moved to [ReverseUtil](https://github.com/YuriSizuku/ReverseUtil).
 
 ## (1) Cross galgame
 
@@ -82,9 +81,9 @@ util tools are moved to [ReverseUtil](https://github.com/YuriSizuku/ReverseUtil)
 * `advhd_ws2.py`, willplus advhd v2 ws2 text export or import  
 * `advhd_pna.py`, willplus advhd pna export and import  
 
-> あやかしごはん (advhd v1)
-> Blackish House (advhd v2)
-> 華は短し、踊れよ乙女 (advhd v2)
+> あやかしごはん (advhd v1)  
+> Blackish House (advhd v2)  
+> 華は短し、踊れよ乙女 (advhd v2)  
 
 ### criware
 

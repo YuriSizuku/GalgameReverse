@@ -4,6 +4,7 @@ majiro engine, arc export or build
 
 tested game: 
   そらいろ (ねこねこソフト) v1.1
+  ルリのかさね ～いもうと物語り (ねこねこソフト)
 
 See also,  
 https://github.com/AtomCrafty/MajiroTools/wiki/Format%3A-Arc-archive

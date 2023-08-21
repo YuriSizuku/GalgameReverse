@@ -4,6 +4,7 @@ majiro engine, decrypt mjo file,  MajiroObjX1.000 -> MajiroObjV1.000
 
 tested game: 
   そらいろ (ねこねこソフト) v1.1
+  ルリのかさね ～いもうと物語り (ねこねこソフト)
 
 See also,  
 https://github.com/AtomCrafty/MajiroTools/wiki/Format%3A-Mjo-script

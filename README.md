@@ -54,6 +54,7 @@ Util tools are moved to [ReverseUtil](https://github.com/YuriSizuku/ReverseUtil)
 * `winterpolaris_patch.c`, Majirov3 dynamic hook framework code example  
 
 > そらいろ // 230815 added
+> ルリのかさね ～いもうと物語り // 230822 added
 
 ### systemnnn
 

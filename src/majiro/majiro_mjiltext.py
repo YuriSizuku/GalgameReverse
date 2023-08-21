@@ -5,6 +5,7 @@ majiro engine, mjil text export import
 
 tested game: 
   そらいろ (ねこねこソフト) v1.1
+  ルリのかさね ～いもうと物語り (ねこねこソフト)
 
 See also,  
 https://github.com/AtomCrafty/MajiroTools
@@ -151,7 +152,7 @@ def import_mjiltext(inpath, orgpath, outpath="out.mjil",
         encoding="", replace_map = None):
     if replace_map is None:
         if encoding.lower() in ['gbk', 'gb2312', 'cp936']: 
-            replace_map = {'・': '.', '･':'.', 'ﾞ':'"', '♪':'.', '､': '、', 'ﾄ':' '}
+            replace_map = {'・': '.', 'ﾟ': '.', '･':'.', 'ﾞ':'"', '♪':'.', '､': '、', 'ﾄ':' ', '∀':' '}
     prefix = "" if encoding=="" else f"[[{encoding}]]"
 
     with codecs.open(orgpath, 'r', 'utf8') as fp:

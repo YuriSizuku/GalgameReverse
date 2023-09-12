@@ -1,6 +1,6 @@
 """
 majiro engine, mjil text export import   
-  v0.1.1, developed by devseed
+  v0.1.3, developed by devseed
 　the multi encoding annotation [[cp936]] is for mjotool2 modified by me
 
 tested game: 
@@ -115,7 +115,9 @@ def load_ftext(ftextobj: Union[str, List[str]],
 
 # mjil functions
 mjil_pattern = re.compile(r'(\S+): (\S+)\s*(.+?)[\r\n]+')
-mjil_optioncall_pattern = re.compile(r'\$57f252db \((\d+)\)')
+mjil_call_option_pattern = re.compile(r'\$57f252db \((\d+)\)')
+mjil_call_selectmenu_pattern = re.compile(r'\$\$select@MENU \((\d+)\)')
+mjil_callp_ruby_pattern = re.compile(r'\$3198fd01 \((\d+)\)')
 mjil_t = namedtuple("mjil_t", ["addr", "opcode", "operand"])
 
 def load_mjil(line) -> mjil_t:
@@ -137,15 +139,35 @@ def export_mjiltext(inpath, outpath="out.txt"):
         if mjil.opcode == "text": # normal text
             ftexts.append({"addr": mjil.addr, "size": 0, 
                 "text": mjil.operand.strip('"')})
-        elif mjil.opcode == "call": # option
-            m = re.search(mjil_optioncall_pattern, mjil.operand)
-            if m is None: continue
-            n = int(m.group(1))
-            for j in range(n-2):
-                if mjils[i-n+j].opcode != "ldstr": continue
-                ftexts.append({"addr": mjils[i-n+j].addr, "size": 0, 
-                    "text": mjils[i-n+j].operand.strip('"')})
             
+        elif mjil.opcode == "call": # call text
+            m = re.search(mjil_call_option_pattern, mjil.operand)
+            if m: # option
+                n = int(m.group(1))
+                for j in range(n-2):
+                    if mjils[i-n+j].opcode != "ldstr": continue
+                    ftexts.append({"addr": mjils[i-n+j].addr, "size": 0, 
+                        "text": mjils[i-n+j].operand.strip('"')})
+                continue
+            m = re.search(mjil_call_selectmenu_pattern, mjil.operand)
+            if m: # select menu
+                n = int(m.group(1))
+                for j in range(n):
+                    if mjils[i-n+j].opcode != "ldstr": continue
+                    ftexts.append({"addr": mjils[i-n+j].addr, "size": 0, 
+                        "text": mjils[i-n+j].operand.strip('"')})
+                continue
+
+        elif  mjil.opcode == "callp": # callp text
+            m = re.search(mjil_callp_ruby_pattern, mjil.operand)
+            if m : # ruby text
+                n = int(m.group(1))
+                for j in range(n):
+                    if mjils[i-n+j].opcode != "ldstr": continue
+                    ftexts.append({"addr": mjils[i-n+j].addr, "size": 0, 
+                        "text": mjils[i-n+j].operand.strip('"')})
+                continue
+                
     return dump_ftext(ftexts, ftexts, outpath)
 
 def import_mjiltext(inpath, orgpath, outpath="out.mjil", 
@@ -202,3 +224,10 @@ if __name__ == '__main__':
     # debug()
     main()
     pass
+
+"""
+history:
+  v0.1, initial version
+  v0.1.2, add mjil_call_selectmenu_pattern
+  v0.1.3, add mjil_callp_ruby_pattern
+"""

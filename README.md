@@ -53,8 +53,8 @@ Util tools are moved to [ReverseUtil](https://github.com/YuriSizuku/ReverseUtil)
 * `winterpolaris_hook.js`, dump `mjo` and analyze `majiro` in `winter polaris` game  
 * `winterpolaris_patch.c`, Majirov3 dynamic hook framework code example  
 
-> そらいろ // 230815 added
-> ルリのかさね ～いもうと物語り // 230822 added
+> そらいろ // 230815 added  
+> ルリのかさね ～いもうと物語り // 230822 added  
 
 ### systemnnn
 
@@ -123,8 +123,6 @@ Util tools are moved to [ReverseUtil](https://github.com/YuriSizuku/ReverseUtil)
 
 > 天巫女姫
 
-(comming soon ...)  
-
 * `amanomiko_patch.c`, add new lzss support and gbk support
 * `AmaNoMikoHime_lzss.py`, parse lzss compress file with header
 * `AmaNoMikoHime_SO4.py`, export or import text in so4 files
@@ -169,8 +167,6 @@ Util tools are moved to [ReverseUtil](https://github.com/YuriSizuku/ReverseUtil)
 * `air_psv_4bppfnt.py`, for building the psv air 4bpp font  
 
 > Flowers (psv)
-
-(comming soon ...)  
 
 * `flowers_psv_text.py`, map flowers pc translation text  
 * `flowers1-2_psv_pak.py`, `flowers3_psv_pak.py`, `flowers4_psv_pak.py` export or import *.pak  

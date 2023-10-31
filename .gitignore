@@ -9,7 +9,8 @@ __pycache__
 *.ilk
 .vs
 .vscode
-/script/tmp/*
-/src/**/release/*
-/src/**/debug/*
-/util/bin/**
+
+dvfs
+
+project/**/asset/build
+project/**/task/**/workflow

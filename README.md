@@ -1,6 +1,6 @@
 # GalgameReverse
 
-Some methods for galgame engine reverse and localization support.  
+Reverse Projects for Galgame.  
 Util tools are moved to [ReverseUtil](https://github.com/YuriSizuku/ReverseUtil).
 
 ## (1) Cross galgame
@@ -44,6 +44,9 @@ Util tools are moved to [ReverseUtil](https://github.com/YuriSizuku/ReverseUtil)
 
 ### majiro
 
+> そらいろ // 230815 added  
+> ルリのかさね ～いもうと物語り // 230822 added  
+
 * `majiro_arc.py`, export and build majiro `*.arc` file
 * `majiro_mjo.py`,  decrypt `*.mjo` file,  `MajiroObjX1.000` to `MajiroObjV1.000`
 * `majiro_mjiltext.py`, export and import text from `*.mjil` file by `mjotool2`
@@ -52,9 +55,6 @@ Util tools are moved to [ReverseUtil](https://github.com/YuriSizuku/ReverseUtil)
 
 * `winterpolaris_hook.js`, dump `mjo` and analyze `majiro` in `winter polaris` game  
 * `winterpolaris_patch.c`, Majirov3 dynamic hook framework code example  
-
-> そらいろ // 230815 added  
-> ルリのかさね ～いもうと物語り // 230822 added  
 
 ### systemnnn
 
@@ -75,16 +75,16 @@ Util tools are moved to [ReverseUtil](https://github.com/YuriSizuku/ReverseUtil)
 
 ### advhd (willplus)
 
+> あやかしごはん (advhd v1)  
+> Blackish House (advhd v2)  
+> 華は短し、踊れよ乙女 (advhd v2)  
+
 * `advhd_patch.c`, gbk support and overide arc file  
 * `advhd_arcv1.py`, willplus advhd v1 arc pack or unpack  
 * `advhd_arcv2.py`, willplus advhd v2 arc pack or unpack  
 * `advhd_wsc.py`, willplus advhd v1 wsc text export or import  
 * `advhd_ws2.py`, willplus advhd v2 ws2 text export or import  
 * `advhd_pna.py`, willplus advhd pna export and import  
-
-> あやかしごはん (advhd v1)  
-> Blackish House (advhd v2)  
-> 華は短し、踊れよ乙女 (advhd v2)  
 
 ### criware
 
@@ -160,11 +160,13 @@ Util tools are moved to [ReverseUtil](https://github.com/YuriSizuku/ReverseUtil)
 
 ### prototype
 
-> Air (psv)
+> Air (psv)  
+> Clannad (psv)  
+> ヴァルプルガの詩(psv)  
 
-* `air_psv_dat.py`, dat picture（RGBA8888, RGB888, delta encoding,color panel） decode and encode  
-* `air_psv_psbtext.py`, extract and import the text to PSV `air`, can be longer than origin  
-* `air_psv_4bppfnt.py`, for building the psv air 4bpp font  
+* `prot_psv_dat.py`, dat picture（RGBA8888, RGB888, delta encoding,color panel） decode and encode  
+* `port_psv_psbtext.py`, extract and import the text to PSV `air`, can be longer than origin  
+* `prot_psv_4bppfnt.py`, for building the psv air 4bpp font  
 
 > Flowers (psv)
 
@@ -227,7 +229,7 @@ Util tools are moved to [ReverseUtil](https://github.com/YuriSizuku/ReverseUtil)
 
 > 金色のコルダ (psp)
 
-(not finished ...)  
+(in processing ...)  
 
 * `KiniroNoCorda_cdar.py`, parse cdvdar (type v2) structure  
 * `KiniroNoCorda_eboot.py`, patch the eboot for chs support, extend the fontmap and font glphy memory  

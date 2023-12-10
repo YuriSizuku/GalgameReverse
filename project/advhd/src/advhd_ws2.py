@@ -213,7 +213,10 @@ def export_ws2(inpath, outpath="out.txt", encoding='sjis'):
     cur = 0
     pattern = b'\x0f\x02'
     while True:
+        oldcur = cur
         cur = data.find(pattern, cur)
+        if cur < 0: cur = data.find(b'\x0f\x03', oldcur) # hard code fix for option 3
+        if cur < 0: cur = data.find(b'\x0f\x04', oldcur) # hard code fix for option 4
         if cur < 0 or cur + 2 > len(data) -1: break
         cur = cur + len(pattern)
         if data[cur]==0 and data[cur+1]==0: 
@@ -224,6 +227,7 @@ def export_ws2(inpath, outpath="out.txt", encoding='sjis'):
             addr = cur + 2
             size = data.find(b'\x00', addr) - addr
             text = data[addr: addr+size].decode(encoding)
+            print(hex(addr), text)
             rawsize = data.find(b'\x00', addr+size+5)  - rawaddr + 1
             options.append(ws2option_t(
                 addr, size, text, rawaddr, rawsize))
@@ -276,6 +280,20 @@ def import_ws2(inpath, orgpath, outpath="out.ws2", encoding="gbk"):
             cur = data.find(pattern, cur)
             if cur < 0: break
             addr = cur + len(pattern)
+            _addjumpentry(addr)
+            addr += 0x10
+            _addjumpentry(addr)
+            cur = addr + 4
+
+        cur = 0 # fix BZkyo_03f.ws2 option
+        pattern = b'\x7F\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+        while True:
+            cur = data.find(pattern, cur)
+            if cur < 0: break
+            addr = cur + len(pattern)
+            if data[addr: addr + 4] != data[addr+0x10: addr+0x14]:
+                cur += 1
+                continue
             _addjumpentry(addr)
             addr += 0x10
             _addjumpentry(addr)

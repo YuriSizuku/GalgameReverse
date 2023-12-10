@@ -120,12 +120,14 @@ def import_vmc_text(vmcpath, textpath, outpath, tblpath=""):
         i = j
 
     # find all text references addr in text_ref_map
-    text_ref_map =dict() # {text_addr:[opcode_addr1, ...]}
+    text_ref_map = dict() # {text_addr:[opcode_addr1, ...]}
     opcodes = get_vmc_opcode(data)
     for i, t in enumerate(opcodes):
         # 0x198b4: 0x3 0xfdad(0x3f6bc) 0x2 0x12 0x2 0x3 0x4 0x0 "my270033"
+        # 0x1627c: 0x3 0xfda7(0x3f6a4) 0x2 0x12 0x2 0x3 0x15 0x0 "my270018" // special.vmc
         if len(t['opcode']) == 8 and t['opcode'][0]==3:
             if t['opcode'][-2] == 0x12 or  \
+                t['opcode'][-2] == 0x15 or \
                 t['opcode'][-2] == 0xa or \
                 t['opcode'][-2] == 0x4 or \
                 t['opcode'][-2] == 0x22220001:
@@ -184,7 +186,6 @@ def main():
     if len(sys.argv) <= 2:
         print(r"vmc e vmcpath [outpath] //export xxx.vmc text:")
         print(r"vmc i vmcpath textpath tblpath [outpath] //import text into xxx.vmc")
-    ext = sys.argv[2].split('.')[-1]
     if sys.argv[1].lower() == 'e':   
         vmcpath = sys.argv[2]
         if len(sys.argv) <= 3: outdir = vmcpath + '.txt'
@@ -200,8 +201,8 @@ def main():
     else: print("invalid arguemnts!")
 
 def debug():
-    basedir = "./build/intermediate"
-    #print_vmc(os.path.join(basedir, "./vmc/special.vmc"))
+    basedir = "task/task_baranokipsp/workflow"
+    print_vmc(os.path.join(basedir, "2.pre/vmc/special.vmc"))
     import_vmc_text(os.path.join(basedir, "./vmc/special.vmc"), 
         os.path.join(basedir, "./vmc_chs/special.vmc.txt"),
         os.path.join(basedir, "./vmc_rebuild/special.vmc"),
@@ -210,6 +211,6 @@ def debug():
     pass
 
 if __name__ == "__main__":
-    #debug()
+    # debug()
     main()
     pass

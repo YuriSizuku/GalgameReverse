@@ -239,3 +239,9 @@ Util tools are moved to [ReverseUtil](https://github.com/YuriSizuku/ReverseUtil)
 > 遙かなる時空の中で (psp)
 
 * `Harukanaru_cdar.py`, parse cdvdar (type v4) structure  
+
+### entergram  
+
+> 9 Nine (switch)  // added on 231211  
+
+* `9nine_fnt.py`, extract and insert glphys for fnt font

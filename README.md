@@ -1,9 +1,11 @@
 # GalgameReverse
 
-Reverse Projects for Galgame.  
-Util tools are moved to [ReverseUtil](https://github.com/YuriSizuku/ReverseUtil).
+🍀 Reverse Projects for Galgame.  
 
-## (1) Console galgame  
+Reverse util tools are moved to [ReverseTool](https://github.com/YuriSizuku/ReverseTool)  
+Localization util tools are moved to [Localization](https://github.com/YuriSizuku/LocalizationTool)  
+
+## 1. Console galgame  
 
 * `psptm2.py`, encode or decode `tm2` format, support swizzle // 231218 added  
 
@@ -112,7 +114,7 @@ Util tools are moved to [ReverseUtil](https://github.com/YuriSizuku/ReverseUtil)
 
 * `9nine_fnt.py`, extract and insert glphys for fnt font
 
-## (2) PC galgame
+## 2. PC galgame
 
 ### majiro
 
@@ -220,7 +222,7 @@ Util tools are moved to [ReverseUtil](https://github.com/YuriSizuku/ReverseUtil)
 
 * `sorairo_patch.c`, support for gbk enconding text in dll
 
-## (3) Cross galgame
+## 3. Cross galgame
 
 ### onscripter
 

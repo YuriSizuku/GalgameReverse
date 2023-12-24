@@ -1,9 +1,11 @@
 """
   for decoding and encoding tm2 format texture
-    v0.3, developed by devseed
+    v0.3.1, developed by devseed
 
     tested games:
-    ULJM05054 金色のコルダ
+    ULJM05054 金色のコルダ (index4)
+    ULJM06326 Jewelic Nightmare (index8)
+
 
     refer:
     https://openkh.dev/common/tm2.html
@@ -81,6 +83,52 @@ class Tm2():
         return (x2, y2)
     
     @classmethod
+    def deinterlace_palatte(cls, palatte):
+        """
+        https://github.com/marco-calautti/Rainbow/blob/51bb1834181c474893bdfbd810e3a45fe6397914/Rainbow.ImgLib/ImgLib/Filters/TIM2PaletteFilter.cs#L26
+        """
+
+        parts = len(palatte) // 32
+        stripes = 2
+        colors = 8
+        blocks = 2
+        
+        newpallate = [0] * len(palatte)
+        i = 0
+        for part in range(parts):
+            for block in range(blocks):
+                for stripe in range(stripes):
+                    for color in range(colors):
+                        i2 = part * colors * stripes * blocks + block * colors + stripe * stripes * colors + color 
+                        newpallate[i] = palatte[i2]
+                        i+=1
+        assert(i==len(palatte))
+        return newpallate
+    
+    @classmethod
+    def interlace_palatte(cls, palatte):
+        """
+        https://github.com/marco-calautti/Rainbow/blob/51bb1834181c474893bdfbd810e3a45fe6397914/Rainbow.ImgLib/ImgLib/Filters/TIM2PaletteFilter.cs#L26
+        """
+
+        parts = len(palatte) // 32
+        stripes = 2
+        colors = 8
+        blocks = 2
+        
+        newpallate = [0] * len(palatte)
+        i = 0
+        for part in range(parts):
+            for block in range(blocks):
+                for stripe in range(stripes):
+                    for color in range(colors):
+                        i2 = part * colors * stripes * blocks + block * colors + stripe * stripes * colors + color 
+                        newpallate[i2] = palatte[i]
+                        i+=1
+        assert(i==len(palatte))
+        return newpallate
+    
+    @classmethod
     def idx2xy(cls, idx, w) -> Tuple[int, int]:
         return (idx%w, idx//w)
     
@@ -145,12 +193,15 @@ class Tm2():
         w, h = pic.width, pic.height
         offset_picdata = self.get_picdata_offset(pic)
         color_type = COLOR_TYPE(pic.type_imagecolor)
+        interlaced = pic.type_clutcolor & 0x80 == 0 
         if color_type == COLOR_TYPE.INDEX4 or \
             color_type == COLOR_TYPE.INDEX8 :
             size_palette = pic.size_palette # load palette
             offset_palette = offset_picdata + pic.size_image # palette is at the end
             palette = [np.frombuffer(self.m_data, np.uint8, 4, cur) 
-                       for cur in range(offset_palette, offset_palette + size_palette, 4)]
+                    for cur in range(offset_palette, offset_palette + size_palette, 4)]
+            if interlaced:  palette = self.deinterlace_palatte(palette)
+
             img = np.zeros((h, w, 4), dtype=np.uint8) # load image
             for y in range(h):
                 for x in range(w):
@@ -188,6 +239,8 @@ class Tm2():
                     low, high = img[2*i//w, 2*i%w], img[(2*i+1)//w, (2*i+1)%w]
                     ppicdata[i] = (low&0xf) + ((high<<4)&0xf0)
             elif color_type == COLOR_TYPE.INDEX8:
+                interlaced = pic.type_clutcolor & 0x80 == 0
+                if interlaced: palettedata = np.array(self.interlace_palatte(palette)).tobytes()
                 assert(img.size == pic.size_image)
                 memmove(ppicdata, img.tobytes(), pic.size_image)
             memmove(ppalette, palettedata, pic.size_palette)
@@ -225,9 +278,11 @@ class Tm2():
         if pic.type_imagecolor == COLOR_TYPE.INDEX4.value:
             imgpil = imgpil.convert("P", colors=16)
             palette = [np.array(color, np.uint8) for color in imgpil.palette.colors]
+            if len(palette) < 16: palette.extend([np.array([0, 0, 0, 0], dtype=np.uint8)]*(16- len(palette)))
         elif pic.type_imagecolor == COLOR_TYPE.INDEX8.value:
             imgpil = imgpil.convert("P", colors=256)
             palette = [np.array(color, np.uint8) for color in imgpil.palette.colors]
+            if len(palette) < 256: palette.extend([np.array([0, 0, 0, 0], dtype=np.uint8)]*(256- len(palette)))
         img = np.array(imgpil)
  
         if use_swizzle:
@@ -320,4 +375,5 @@ history:
   v0.1, implement export iamge with COLOR_A8B8G8R8, COLOR_INDEX4, COLOR_INDEX8
   v0.2, add swizzle deswizzle method
   v0.3, add insert png32 to tim2, and convert with index4/index8 if necessory
+  v0.3.1, support index8 interlaced pallatte format 
 """

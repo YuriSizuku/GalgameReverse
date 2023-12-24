@@ -1,5 +1,5 @@
 set BASE_DIR=D:\Make\reverse\Narcissus_psp
-set GAME_DIR=D:\Make\reverse\Narcissus_psp\ULJM05674_rebuild
+set GAME_DIR=D:\Make\reverse\Narcissus_psp\ULJM05674
 set GAME_LAUNCHER=D:\Game\emulator\PSP\PPSSPPWindows64.exe
 set WORKFLOW_DIR=D:\Make\reverse\Narcissus_psp\workflow
 set WORKFLOW2_DIR=D:\Make\reverse\Narcissus_psp\workflow2

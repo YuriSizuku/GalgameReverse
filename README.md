@@ -13,22 +13,22 @@ Localization util tools are moved to [Localization](https://github.com/YuriSizuk
 
 > 金色のコルダ (psp)
 
-* `KiniroNoCorda_cdar.py`, parse cdvdar (type v2) structure  
+* `corda_cdar.py`, parse cdvdar (type v2) structure  
 (comming soon ...)  
-* `KiniroNoCorda_eboot.py`, patch the eboot for chs support, extend the fontmap and font glphy memory  
-* `KiniroNoCorda_font.py`, parse 4bpp 16X16 font  
+* `corda_eboot.py`, patch the eboot for chs support, extend the fontmap and font glphy memory  
+* `corda_font.py`, parse 4bpp 16X16 font  
 (in processing ...)  
-* `KiniroNoCorda_eventdat.py`, parse event text, export and import  
+* `corda_eventdat.py`, parse event text, export and import  
 
 > 遙かなる時空の中で (psp)
 
-* `Harukanaru_cdar.py`, parse cdvdar (type v4) structure  
+* `haruka_cdar.py`, parse cdvdar (type v4) structure  
 
 ### konami
 
 > ときめきメモリアル Girl's Side: 3rd Story (psp)
 
-* `GS3_scriptEVSC.py`, parse EVSC opcode, export or import text  
+* `gs3_evsc.py`, parse EVSC opcode, export or import text  
 
 ### prototype
 
@@ -61,11 +61,11 @@ Localization util tools are moved to [Localization](https://github.com/YuriSizuk
 
 > Narcissus ナルキッソス～もしも明日があるなら (psp)
 
-* `Narcissus_lzss.py`, parse lzss structure with header  
-* `Narcissus_sn.py`, export or import sn.bin (after decompress)  
-* `Narcissus_sntext.py`, export or import sn.bin (after extract) text  
-* `Narcissus_2bppfont.py`, parse font.bin and make 2bpp font  
-* `Narcissus_lbg.py`, extract and rebuild lbg texture  
+* `narcissus_lzss.py`, parse lzss structure with header  
+* `narcissus_sn.py`, export or import sn.bin (after decompress)  
+* `narcissus_sntext.py`, export or import sn.bin (after extract) text  
+* `narcissus_2bppfont.py`, parse font.bin and make 2bpp font  
+* `narcissus_lbg.py`, extract and rebuild lbg texture  
 
 ### gss (takuyo)
 
@@ -94,10 +94,10 @@ Localization util tools are moved to [Localization](https://github.com/YuriSizuk
 
 (comming soon ...)  
 
-* `KamigamiNoAsobi_nispack.py`, export or import nispack  
-* `KamigamiNoAsobi_story.py`, export or import text in story.dat  
-* `KamigamiNoAsobi_font.py`, analyze the multi page font  
-* `KamigamiNoAsobi_txp.py`, export or import txp picture  
+* `kamigami_nispack.py`, export or import nispack  
+* `kamigami_story.py`, export or import text in story.dat  
+* `kamigami_font.py`, analyze the multi page font  
+* `kamigami_txp.py`, export or import txp picture  
 
 ### if (idea factory)
 
@@ -105,8 +105,8 @@ Localization util tools are moved to [Localization](https://github.com/YuriSizuk
 
 (comming soon ...)  
 
-* `Jewelic_UF.py`,  building the UF tile font,  for`Jewelic Nightmare (ジュエリック・ナイトメア)`  
-* `Jewelic_STCM2L.py`,  converting the `ftext` (by [bintext.py](https://github.com/YuriSizuku/ReverseUtil/blob/master/script/bintext.py)) to STCM2Ltool format (made by [STCM2L_import.py](https://github.com/Yggdrasill-Moe/Helheim/blob/master/%E5%8D%81%E9%AC%BC%E4%B9%8B%E7%BB%8A/STCM2L_import.py)),  for`Jewelic Nightmare (ジュエリック・ナイトメア)`  
+* `jewelic_uf.py`,  building the UF tile font,  for`Jewelic Nightmare (ジュエリック・ナイトメア)`  
+* `jewelic_stcm2l.py`,  converting the `ftext` (by [bintext.py](https://github.com/YuriSizuku/ReverseUtil/blob/master/script/bintext.py)) to STCM2Ltool format (made by [STCM2L_import.py](https://github.com/Yggdrasill-Moe/Helheim/blob/master/%E5%8D%81%E9%AC%BC%E4%B9%8B%E7%BB%8A/STCM2L_import.py)),  for`Jewelic Nightmare (ジュエリック・ナイトメア)`  
 
 ### entergram  
 
@@ -173,9 +173,9 @@ Localization util tools are moved to [Localization](https://github.com/YuriSizuk
 > 天巫女姫
 
 * `amanomiko_patch.c`, add new lzss support and gbk support
-* `AmaNoMikoHime_lzss.py`, parse lzss compress file with header
-* `AmaNoMikoHime_SO4.py`, export or import text in so4 files
-* `AmaNoMikoHime_PT1.py`, parse PT1 image file rgb24 format
+* `amanomiko_lzss.py`, parse lzss compress file with header
+* `amanomiko_SO4.py`, export or import text in so4 files
+* `amanomiko_PT1.py`, parse PT1 image file rgb24 format
 
 ### nvl  
 

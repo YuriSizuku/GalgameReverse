@@ -11,7 +11,7 @@ import numpy as np
 from io import BytesIO
 from PIL import Image
 
-import AmaNoMikoHime_lzss as amalzss
+import amanomiko_lzss as amalzss
 
 class pt1_t(struct.Struct):
     def __init__(self, data):

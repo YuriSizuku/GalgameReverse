@@ -23,8 +23,8 @@ for /f "delims=" %%i in ('dir /b /s workflow2\4.post\sys_gim\*.gim') do (
 echo ## pack gim and compress to spc
 for /f "delims=" %%i in ('dir /b /a:d workflow2\4.post\sys_gim') do (
 	echo %%i
-	python %SRC_DIR%\Narcissus_sn.py i workflow2\4.post\sys_gim\%%i workflow2\2.pre\sys_dec\%%i.dec workflow2\4.post\sys_dec\%%i.dec
-	python %SRC_DIR%\Narcissus_lzss.py e workflow2\4.post\sys_dec\%%i.dec workflow2\4.post\sys\%%i
+	python %SRC_DIR%\narcissus_psp_sn.py i workflow2\4.post\sys_gim\%%i workflow2\2.pre\sys_dec\%%i.dec workflow2\4.post\sys_dec\%%i.dec
+	python %SRC_DIR%\narcissus_psp_lzss.py e workflow2\4.post\sys_dec\%%i.dec workflow2\4.post\sys\%%i
 )
 
 echo ## pack afs

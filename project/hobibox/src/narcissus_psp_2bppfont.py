@@ -270,7 +270,7 @@ def debug():
 def main():
     if len(sys.argv) < 3:
         print("2bppfont e fontpath [outpath]")
-        print("2bppfont c tblpath ttfpath orgfontpath [outdir]")
+        print("2bppfont c932 tblpath ttfpath orgfontpath [outdir]")
         return
     
     colormap = {0: 0, 1:255, 2:192, 3:128}
@@ -280,7 +280,7 @@ def main():
         extract_2bppfont(sys.argv[2], outpath, 
             char_height=16, char_width=16, 
             colormap=colormap)
-    elif sys.argv[1].lower() == 'c':
+    elif sys.argv[1].lower() == 'c932':
         outdir = sys.argv[5] if len(sys.argv) > 5 else "./out"
         chstblpath = os.path.join(outdir, "font_chs.tbl")
         fontimgpath = os.path.join(outdir, "font_rebuild.png")

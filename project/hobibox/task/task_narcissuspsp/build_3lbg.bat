@@ -3,9 +3,9 @@ call _env.bat
 
 for /f "delims=" %%i in ('dir /b workflow2\3.edit\bg_png\*.png') do ( 
 	echo %%i
-	python %SRC_DIR%\narcissus_lbg.py invf workflow2\3.edit\bg_png\%%i workflow2\4.post\bg_png2\%%i
-	python %SRC_DIR%\narcissus_lbg.py i workflow2\4.post\bg_png2\%%i workflow2\2.pre\bg_dec\%%~ni.dec workflow2\4.post\bg_dec\%%~ni.dec
-	python %SRC_DIR%\narcissus_lzss.py e workflow2\4.post\bg_dec\%%~ni.dec workflow2\4.post\bg\%%~ni
+	python %SRC_DIR%\narcissus_psp_lbg.py invf workflow2\3.edit\bg_png\%%i workflow2\4.post\bg_png2\%%i
+	python %SRC_DIR%\narcissus_psp_lbg.py i workflow2\4.post\bg_png2\%%i workflow2\2.pre\bg_dec\%%~ni.dec workflow2\4.post\bg_dec\%%~ni.dec
+	python %SRC_DIR%\narcissus_psp_lzss.py e workflow2\4.post\bg_dec\%%~ni.dec workflow2\4.post\bg\%%~ni
 	echo ##
 )
 

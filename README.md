@@ -53,19 +53,19 @@ Localization util tools are moved to [Localization](https://github.com/YuriSizuk
 
 > 神田アリスも推理スル (switch)
 
-* `kanda_rs4.py`, parse rs4 file for importing text  
-* `kanda_fontmap.c`, build the ConvertGb2312ToUtf16 arm64 binray code to support gb2312  
-* `kanda_fontmap.py`, make the fontmap to gb2312 and patch sjis char check  
+* `kanda_switch_rs4.py`, parse rs4 file for importing text  
+* `kanda_switch_fontmap.c`, build the ConvertGb2312ToUtf16 arm64 binray code to support gb2312  
+* `kanda_switch_fontmap.py`, make the fontmap to gb2312 and patch sjis char check  
 
 ### hobibox
 
 > Narcissus ナルキッソス～もしも明日があるなら (psp)
 
-* `narcissus_lzss.py`, parse lzss structure with header  
-* `narcissus_sn.py`, export or import sn.bin (after decompress)  
-* `narcissus_sntext.py`, export or import sn.bin (after extract) text  
-* `narcissus_2bppfont.py`, parse font.bin and make 2bpp font  
-* `narcissus_lbg.py`, extract and rebuild lbg texture  
+* `narcissus_psp_lzss.py`, parse lzss structure with header  
+* `narcissus_psp_sn.py`, export or import sn.bin (after decompress)  
+* `narcissus_psp_sntext.py`, export or import sn.bin (after extract) text  
+* `narcissus_psp_2bppfont.py`, parse font.bin and make 2bpp font  
+* `narcissus_psp_lbg.py`, extract and rebuild lbg texture  
 
 ### gss (takuyo)
 
@@ -88,16 +88,16 @@ Localization util tools are moved to [Localization](https://github.com/YuriSizuk
 
 > 夜廻3 (switch)
 
-* `yomawari3_nltx.py`, deal with switch swizzle texture in nltx file.
+* `yomawari3_switch_nltx.py`, deal with switch swizzle texture in nltx file.
 
 > 神々の悪戯 (psp)
 
 (comming soon ...)  
 
-* `kamigami_nispack.py`, export or import nispack  
-* `kamigami_story.py`, export or import text in story.dat  
-* `kamigami_font.py`, analyze the multi page font  
-* `kamigami_txp.py`, export or import txp picture  
+* `kamigami_psp_nispack.py`, export or import nispack  
+* `kamigami_psp_story.py`, export or import text in story.dat  
+* `kamigami_psp_font.py`, analyze the multi page font  
+* `kamigami_psp_txp.py`, export or import txp picture  
 
 ### if (idea factory)
 
@@ -105,14 +105,14 @@ Localization util tools are moved to [Localization](https://github.com/YuriSizuk
 
 (comming soon ...)  
 
-* `jewelic_uf.py`,  building the UF tile font,  for`Jewelic Nightmare (ジュエリック・ナイトメア)`  
-* `jewelic_stcm2l.py`,  converting the `ftext` (by [bintext.py](https://github.com/YuriSizuku/ReverseUtil/blob/master/script/bintext.py)) to STCM2Ltool format (made by [STCM2L_import.py](https://github.com/Yggdrasill-Moe/Helheim/blob/master/%E5%8D%81%E9%AC%BC%E4%B9%8B%E7%BB%8A/STCM2L_import.py)),  for`Jewelic Nightmare (ジュエリック・ナイトメア)`  
+* `jewelic_psp_uf.py`,  building the UF tile font,  for`Jewelic Nightmare (ジュエリック・ナイトメア)`  
+* `jewelic_psp_stcm2l.py`,  converting the `ftext` (by [bintext.py](https://github.com/YuriSizuku/ReverseUtil/blob/master/script/bintext.py)) to STCM2Ltool format (made by [STCM2L_import.py](https://github.com/Yggdrasill-Moe/Helheim/blob/master/%E5%8D%81%E9%AC%BC%E4%B9%8B%E7%BB%8A/STCM2L_import.py)),  for`Jewelic Nightmare (ジュエリック・ナイトメア)`  
 
 ### entergram  
 
 > 9 Nine (switch)  // added on 231211  
 
-* `9nine_fnt.py`, extract and insert glphys for fnt font
+* `9nine_switch_fnt.py`, extract and insert glphys for fnt font
 
 ## 2. PC galgame
 

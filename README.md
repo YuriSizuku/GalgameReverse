@@ -30,6 +30,12 @@ Localization util tools are moved to [Localization](https://github.com/YuriSizuk
 
 * `gs3_evsc.py`, parse EVSC opcode, export or import text  
 
+### kid
+
+> 想いのかけら －Close to－ (psp) // 240112 added  
+
+* `kid_psp_bip.py`, decode or encode bip file (implement by pytcc lzss)
+
 ### prototype
 
 > Air (psv)  
@@ -110,7 +116,7 @@ Localization util tools are moved to [Localization](https://github.com/YuriSizuk
 
 ### entergram  
 
-> 9 Nine (switch)  // added on 231211  
+> 9 Nine (switch)  // 231211 added
 
 * `9nine_switch_fnt.py`, extract and insert glphys for fnt font
 
@@ -124,7 +130,6 @@ Localization util tools are moved to [Localization](https://github.com/YuriSizuk
 
 > そらいろ // 230815 added  
 > ルリのかさね ～いもうと物語り // 230822 added  
-  
 > Winter Polaris
 
 * `winterpolaris_hook.js`, dump `mjo` and analyze `majiro` in `winter polaris` game  

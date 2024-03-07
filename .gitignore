@@ -1,4 +1,5 @@
 *.pyc
+*.pyd
 __pycache__
 *.o
 *.obj
@@ -12,5 +13,6 @@ __pycache__
 
 dvfs
 
+tmp/*
 project/**/asset/build
 project/**/task/**/workflow

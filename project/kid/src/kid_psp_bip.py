@@ -1,5 +1,5 @@
 """
-encode or decode bip files (lzss compress)
+encode or decode bip files (lzss compress), using pytcc
   v0.1, developed by devseed
 
   tested games:
@@ -13,9 +13,8 @@ from mmap import mmap, ACCESS_READ, ACCESS_COPY
 from ctypes import *
 from typing import List
 
-g_tcc = pytcc.TCC()
-g_lzsslib = g_tcc.build_to_mem(pytcc.CCode(
-'''
+
+g_lzsscode = '''
 #include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
@@ -331,7 +330,10 @@ uint8_t *lzss_encode(uint8_t *dst, uint32_t dstlen, uint8_t *src, uint32_t srcLe
 	free(sp);
 	return dst;
 }
-'''))
+'''
+
+g_tcc = pytcc.TCC()
+g_lzsslib = g_tcc.build_to_mem(pytcc.CCode(g_lzsscode))
 
 lzss_decode_t = CFUNCTYPE(c_int, c_char_p, c_char_p, c_uint32)
 lzss_encode_t = CFUNCTYPE(POINTER(c_uint8), c_char_p, c_uint32, c_char_p, c_uint32)
@@ -398,3 +400,8 @@ def debug():
 if __name__ == '__main__':
     # debug()
     cli(sys.argv)
+    
+"""
+history
+
+"""

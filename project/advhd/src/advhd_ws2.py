@@ -1,8 +1,12 @@
 # -*- coding: utf-8 -*-
 __description__ = """
 export or import ws2 text for willplus advhd, 
-tested in BlackishHouse (v1.6.2.1), 華は短し、踊れよ乙女 (1.9.9.9)
     v0.2.2, developed by devseed
+
+tested games: 
+    BlackishHouse (v1.6.2.1)
+    華は短し、踊れよ乙女 (1.9.9.9)
+    
 """
 
 __version__ = 220
@@ -14,10 +18,11 @@ from typing import List
 
 sys.path.append(os.path.join(os.path.dirname(__file__), r"compat"))
 try:
-    from compat.libutil_v600 import save_ftext, load_ftext, jtable_t
+    from compat.libutil_v600 import save_ftext, load_ftext, jtable_t, ftext_t
     from compat.libtext_v610 import insert_ftexts
 except ImportError as e:
-    exec("from compat.libutil_v600 import save_ftext, load_ftext, ftext_t")
+    exec("from compat.libutil_v600 import save_ftext, load_ftext, jtable_t, ftext_t")
+    exec("from compat.libtext_v610 import insert_ftexts")
 
 # ws2 functions
 ws2name_t = namedtuple("ws2name_t", ['addr', 'size', 'text'])
@@ -35,36 +40,31 @@ def export_ws2(inpath, outpath="out.txt", encoding='sjis'):
     while True:
         cur = data.find(pattern, cur)
         if cur < 0: break
-        addr = cur
-        size = data.find(b'\x00', addr) - addr
-        text = data[addr: addr+size].decode(encoding)
-        names.append(ws2name_t(addr, size, text))
-        cur +=  size + 1
+        textaddr = cur
+        textsize = data.find(b'\x00', textaddr) - textaddr
+        text = data[textaddr: textaddr+textsize].decode(encoding)
+        names.append(ws2name_t(textaddr, textsize, text))
+        cur +=  textsize + 1
     
     options: List[ws2option_t] = []
-    cur = 0
-    pattern = b'\x0f\x02'
-    while True:
-        oldcur = cur
-        cur = data.find(pattern, cur)
-        if cur < 0: cur = data.find(b'\x0f\x03', oldcur) # hard code fix for option 3
-        if cur < 0: cur = data.find(b'\x0f\x04', oldcur) # hard code fix for option 4
-        if cur < 0 or cur + 2 > len(data) -1: break
-        cur = cur + len(pattern)
-        if data[cur]==0 and data[cur+1]==0: 
-            cur += 2
-            continue
-        while data[cur]!=0xff:
-            rawaddr = cur
-            addr = cur + 2
-            size = data.find(b'\x00', addr) - addr
-            text = data[addr: addr+size].decode(encoding)
-            print(hex(addr), text)
-            rawsize = data.find(b'\x00', addr+size+5)  - rawaddr + 1
-            options.append(ws2option_t(
-                addr, size, text, rawaddr, rawsize))
-            cur += rawsize
-        cur += 1
+    cur = 0 # hard code fix for option 2, 3, 4
+    for pattern in [b'\x00\x00\x0f\x02', b'\x00\x00\x0f\x03', b'\x00\x00\x0f\x04']:
+        cur = 0
+        while cur < len(data) :
+            cur = data.find(pattern, cur)
+            if cur < 0: break
+            cur += len(pattern)
+            if data[cur] == 0 and data[cur+1] == 0:
+                continue
+            while data[cur] != 0xff:
+                rawaddr = cur
+                textaddr = cur + 2
+                textsize = data.find(b'\x00', textaddr) - textaddr
+                text = data[textaddr: textaddr+textsize].decode(encoding)
+                rawsize = data.find(b'\x00', textaddr+textsize+5)  - rawaddr + 1
+                print("option", hex(textaddr), text)
+                options.append(ws2option_t(textaddr, textsize, text, rawaddr, rawsize))
+                cur += rawsize
     
     texts: List[ws2text_t] = []
     cur = 0
@@ -72,22 +72,19 @@ def export_ws2(inpath, outpath="out.txt", encoding='sjis'):
     while True:
         cur = data.find(pattern, cur)
         if cur < 0: break
-        addr = cur + len(pattern)
-        size = data.find(b'\x00', addr) - addr
-        text = data[addr: addr+size].decode(encoding)
-        texts.append(ws2text_t(addr, size, text))
-        cur +=  size + 1
+        textaddr = cur + len(pattern)
+        textsize = data.find(b'\x00', textaddr) - textaddr
+        text = data[textaddr: textaddr+textsize].decode(encoding)
+        texts.append(ws2text_t(textaddr, textsize, text))
+        cur +=  textsize + 1
     
     # merge text to ftext
-    ftexts = []
-    ftexts.extend([{'addr': x.addr, 
-        'size': x.size, 'text': x.text} for x in names]) 
-    ftexts.extend([{'addr': x.addr, 
-        'size': x.size, 'text': x.text} for x in options]) 
-    ftexts.extend([{'addr': x.addr, 
-        'size': x.size, 'text': x.text} for x in texts]) 
-    ftexts.sort(key=lambda x: x['addr'])
-    if outpath!="": save_ftext(ftexts, ftexts, outpath)
+    ftexts: List[ftext_t] = []
+    ftexts.extend([ftext_t(x.addr, x.size, x.text) for x in names]) 
+    ftexts.extend([ftext_t(x.addr, x.size, x.text) for x in options]) 
+    ftexts.extend([ftext_t(x.addr, x.size, x.text) for x in texts]) 
+    ftexts.sort(key=lambda x: x.addr)
+    if outpath: save_ftext(ftexts, ftexts, outpath)
 
     return ftexts
 
@@ -225,31 +222,34 @@ def import_ws2(inpath, orgpath, outpath="out.ws2", encoding="gbk"):
     return data
 
 def debug():
+    cli([__file__, "ecp932", "/home/debian/Local/Make/reverse/BlackishHouse/workflow/2.pre/Rio2/BZkyo_06h.ws2"])
     pass
 
 def cli(argv):
     def cmd_help():
         print(__description__)
-        print("advhd_ws2 e inpath [outpath]")
+        print("advhd_ws2 e[cp932] inpath [outpath]")
         print("advhd_ws2 i[cp936] inpath orgpath [outpath]")
         return
 
     def cmd_extract():
         outpath = argv[3] if len(argv) > 3 else "out.txt"
-        export_ws2(argv[2], outpath)
+        export_ws2(argv[2], outpath, encoding=encoding)
 
     def cmd_insert():
-        encoding = cmdtype[1:]
         outpath = argv[4] if len(argv) > 4 else "out.ws2"
         import_ws2(argv[2], argv[3], outpath, encoding=encoding)  
     
     if len(argv) < 3: cmd_help(); return
     cmdtype = argv[1].lower()
-    if  cmdtype == 'e': cmd_extract()
+    encoding = cmdtype[1:]
+    if encoding == "": encoding = "cp932"
+    if  cmdtype[0] == 'e': cmd_extract()
     elif cmdtype[0] == 'i': cmd_insert()
     else: raise ValueError(f"unknow format {argv[1]}")
 
 if __name__ == '__main__':
+    # debug()
     cli(sys.argv)
 
 """
@@ -257,5 +257,5 @@ history:
 v0.1, initial version for BlackishHouse
 v0.2, support 華は短し、踊れよ乙女 (1.9.9.9)
 v0.2.1, fix some opcode for 華は短し、踊れよ乙女
-v0.2.2, add encoding option in cli and change to libtext v0.6.1
+v0.2.2, add encoding option in cli and change to libtext v0.6.1, fix option bug
 """

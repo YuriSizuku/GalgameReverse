@@ -10,8 +10,27 @@
 # GAME_DIR, game dir for testing
 
 # usage: 
+# at first, put the vairable in _env.sh file
 # in linux, "source ./_env.sh"
 # in windows, "msys2_shell -here -no-start -defterm -full-path" to activate, then "source ./_env.sh"
+
+# _env.sh example
+# export GAME_NAME=BlackishHouse
+# export GAME_ID=vndb-v17853
+# if [ -n "$(uname -a | grep Msys)" ]; then
+#     export BASE_DIR=/d/Downloads/$GAME_NAME
+#     export GAME_EXEC=start
+# else
+#     LOCPATH=~/.wine/locale
+#     # zh_CN.UTF-8 not worked
+#     export BASE_DIR=~/Downloads/$GAME_NAME
+#     export GAME_EXEC=wine
+# fi
+# export GAME_FILE=$BASE_DIR/${GAME_ID}.7z
+# export GAME_DIR=$BASE_DIR/${GAME_ID}_rebuild
+# export WORK_DIR=$BASE_DIR/workflow
+# export SRC_DIR=../../src
+# export TOOL_DIR=../../tool
 
 all: 
 	@echo build BlackishHouse chspatch

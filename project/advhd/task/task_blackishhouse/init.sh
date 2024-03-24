@@ -1,8 +1,9 @@
 extract_pna() {
     indir=$1
     outdir=$2
-    echo "## extract_pna $indir -> $outdir"
+    if [ -z $outdir ]; then outdir=$indir; fi
     
+    echo "## extract_pna $indir -> $outdir"
     for infile in $(ls $indir/*.pna); do
         inname=$(basename -s ".pna" $infile)
         echo $inname.pna
@@ -14,12 +15,13 @@ extract_pna() {
 extract_ws2() {
     indir=$1
     outdir=$2
+    if [ -z $outdir ]; then outdir=$indir; fi
+    
     echo "## extract_ws2 $indir -> $outdir"
-
     for infile in $(ls $indir/*.ws2); do
         inname=$(basename $infile)
         echo $inname
-        python -B ${SRC_DIR}/advhd_ws2.py e $infile $outdir/$inname.txt
+        python -B ${SRC_DIR}/advhd_ws2.py ecp932 $infile $outdir/$inname.txt
     done
 }
 

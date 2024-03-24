@@ -74,7 +74,7 @@ build_4dll() {
 
 build_4exe() {
     echo "## build_4exe"
-    python ${SRC_DIR}/compat/windllin_v321.py -m codecave2 \
+    python -B ${SRC_DIR}/compat/windllin_v321.py -m codecave2 \
         ${WORK_DIR}/1.origin/AdvHD.exe advhd_patch.dll \
         -o ${WORK_DIR}/5.result/AdvHD_chs.exe 1>/dev/null
 

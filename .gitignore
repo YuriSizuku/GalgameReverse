@@ -16,3 +16,4 @@ dvfs
 tmp/*
 project/**/asset/build
 project/**/task/**/workflow
+project/**/task/**/_env.*

@@ -31,6 +31,7 @@
 
 // winpe.h v0.3.5
 #define WINPE_IMPLEMENTATION
+#define WINPE_NOASM
 #ifdef USE_COMPAT
 #include "winpe_v350.h"
 #else

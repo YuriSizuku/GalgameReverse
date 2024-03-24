@@ -1,6 +1,6 @@
 """
 majiro engine, mjil text export import   
-  v0.1.3, developed by devseed
+  v0.1.4, developed by devseed
 　the multi encoding annotation [[cp936]] is for mjotool2 modified by me
 
 tested game: 
@@ -13,105 +13,18 @@ https://github.com/trigger-segfault/majiro-py
 
 """
 
-import re
+import os
 import sys
+import re
 import codecs
 from collections import namedtuple 
 from typing import Union, List, Dict
 
-# util functions
-def dump_ftext(ftexts1:List[Dict[str,Union[int,str]]], 
-    ftexts2: List[Dict[str, Union[int, str]]], 
-    outpath: str="", *, num_width=5, 
-    addr_width=6, size_width=3) -> List[str]:
-    """
-    ftexts1, ftexts2 -> ftext lines
-    text dict is as {'addr':, 'size':, 'text':}
-    :param ftexts1[]: text dict array in '○' line, 
-    :param ftexts2[]: text dict array in '●' line
-    :return: ftext lines
-    """
-
-    if num_width==0:
-        num_width = len(str(len(ftexts1)))
-    if addr_width==0:
-        d = max([t['addr'] for t in ftexts1])
-        addr_width = len(hex(d)) - 2
-    if size_width==0:
-        d = max([t['size'] for t in ftexts1])
-        size_width = len(hex(d)) - 2
-
-    fstr1 = "○{num:0"+ str(num_width) + "d}|{addr:0" + str(addr_width) + "X}|{size:0"+ str(size_width) + "X}○ {text}\n"
-    fstr2 = fstr1.replace('○', '●')
-    lines = []
-
-    length = 0
-    if ftexts1 == None: 
-        length = len(ftexts2)
-        fstr2 += '\n'
-    if ftexts2 == None: 
-        length = len(ftexts1)
-        fstr1 += '\n'
-    if ftexts1 != None and ftexts2 != None : 
-        length = min(len(ftexts1), len(ftexts2))
-        fstr2 += '\n'
-
-    for i in range(length):
-        if ftexts1 != None:
-            t1 = ftexts1[i]
-            lines.append(fstr1.format(
-                num=i,addr=t1['addr'],size=t1['size'],text=t1['text']))
-        if ftexts2 != None:
-            t2 = ftexts2[i]
-            lines.append(fstr2.format(
-                num=i,addr=t2['addr'],size=t2['size'],text=t2['text']))
-
-    if outpath != "":
-        with codecs.open(outpath, 'w', 'utf-8') as fp:
-            fp.writelines(lines)
-    return lines 
-
-def load_ftext(ftextobj: Union[str, List[str]], 
-    only_text = False ) -> List[Dict[str, Union[int, str]]]:
-    """
-    ftext lines  -> ftexts1, ftexts2
-    text dict is as {'addr':, 'size':, 'text':}
-    :param inobj: can be path, or lines[] 
-    :return: ftexts1[]: text dict array in '○' line, 
-             ftexts2[]: text dict array in '●' line
-    """
-
-    ftexts1, ftexts2 = [], []
-    if type(ftextobj) == str: 
-        with codecs.open(ftextobj, 'r', 'utf-8') as fp: 
-            lines = fp.readlines()
-    else: lines = ftextobj
-
-    if only_text == True: # This is used for merge_text
-        re_line1 = re.compile(r"^○(.+?)○[ ](.*)")
-        re_line2 = re.compile(r"^●(.+?)●[ ](.*)")
-        for line in lines:
-            line = line.strip("\n").strip('\r')
-            m = re_line1.match(line)
-            if m is not None:
-                ftexts1.append({'addr':0,'size':0,'text': m.group(2)})
-            m = re_line2.match(line)
-            if m is not None:
-                ftexts2.append({'addr':0,'size':0,'text': m.group(2)})
-    else:
-        re_line1 = re.compile(r"^○(\d*)\|(.+?)\|(.+?)○[ ](.*)")
-        re_line2 = re.compile(r"^●(\d*)\|(.+?)\|(.+?)●[ ](.*)")
-        for line in lines:
-            line = line.strip("\n").strip('\r')
-            m = re_line1.match(line)
-            if m is not None:
-                ftexts1.append({'addr':int(m.group(2),16),
-                'size':int(m.group(3),16),'text': m.group(4)})
-            m = re_line2.match(line)
-            if m is not None:
-                ftexts2.append({'addr':int(m.group(2),16),
-                'size':int(m.group(3),16),'text': m.group(4)})
-    return ftexts1, ftexts2
+sys.path.append(os.path.join(os.path.dirname(__file__), r"compat"))
+try:
+    from compat.libutil_v600 import save_ftext, load_ftext, ftext_t
+except ImportError as e:
+    exec("from compat.libutil_v600 import save_ftext, load_ftext, ftext_t")
 
 # mjil functions
 mjil_pattern = re.compile(r'(\S+): (\S+)\s*(.+?)[\r\n]+')
@@ -135,11 +48,10 @@ def export_mjiltext(inpath, outpath="out.txt"):
     mjils = [load_mjil(line) for line in lines]
     mjils = list(filter(lambda x: x!=None, mjils))
     
-    ftexts = []
+    ftexts:  List[ftext_t] = []
     for i, mjil in enumerate(mjils):
         if mjil.opcode == "text": # normal text
-            ftexts.append({"addr": mjil.addr, "size": 0, 
-                "text": mjil.operand.strip('"')})
+            ftexts.append(ftext_t(mjil.addr, 0, mjil.operand.strip('"')))
             
         elif mjil.opcode == "call": # call text
             m = re.search(mjil_call_option_pattern, mjil.operand)
@@ -147,16 +59,16 @@ def export_mjiltext(inpath, outpath="out.txt"):
                 n = int(m.group(1))
                 for j in range(n-2):
                     if mjils[i-n+j].opcode != "ldstr": continue
-                    ftexts.append({"addr": mjils[i-n+j].addr, "size": 0, 
-                        "text": mjils[i-n+j].operand.strip('"')})
+                    ftexts.append(ftext_t(mjils[i-n+j].addr, 0, 
+                                          mjils[i-n+j].operand.strip('"')))
                 continue
             m = re.search(mjil_call_selectmenu_pattern, mjil.operand)
             if m: # select menu
                 n = int(m.group(1))
                 for j in range(n):
                     if mjils[i-n+j].opcode != "ldstr": continue
-                    ftexts.append({"addr": mjils[i-n+j].addr, "size": 0, 
-                        "text": mjils[i-n+j].operand.strip('"')})
+                    ftexts.append(ftext_t(mjils[i-n+j].addr, 0, 
+                                          mjils[i-n+j].operand.strip('"')))
                 continue
 
         elif  mjil.opcode == "callp": # callp text
@@ -166,11 +78,11 @@ def export_mjiltext(inpath, outpath="out.txt"):
                 n = int(m.group(1))
                 for j in range(n):
                     if mjils[i-n+j].opcode != "ldstr": continue
-                    ftexts.append({"addr": mjils[i-n+j].addr, "size": 0, 
-                        "text": mjils[i-n+j].operand.strip('"')})
+                    ftexts.append(ftext_t(mjils[i-n+j].addr, 0, 
+                                          mjils[i-n+j].operand.strip('"')))
                 continue
-                
-    return dump_ftext(ftexts, ftexts, outpath)
+    
+    return save_ftext(ftexts, ftexts, outpath)
 
 def import_mjiltext(inpath, orgpath, outpath="out.mjil", 
         encoding="", replace_map = None):
@@ -189,15 +101,14 @@ def import_mjiltext(inpath, orgpath, outpath="out.mjil",
     
     ftexts1, ftexts2 = load_ftext(inpath)
     assert(len(ftexts1)==len(ftexts2))
-    for ftext1, ftext2 in zip(ftexts1, ftexts2):
-        assert(ftext1['addr'] == ftext2['addr'])
-        addr = ftext2['addr']
-        text = prefix + ftext2['text']
-        for k, v in replace_map.items():
-            text = text.replace(k, v)
+    for t1, t2 in zip(ftexts1, ftexts2):
+        assert(t1.addr == t2.addr)
+        addr = t2.addr
+        text = prefix + t2.text
+        for k, v in replace_map.items(): text = text.replace(k, v)
         if addr not in mjils_map: continue
         idx = mjils_map[addr]
-        textorg = ftext1['text']
+        textorg = t1.text
         lines[idx] = lines[idx].replace(textorg, text)
 
     with codecs.open(outpath, 'w', 'utf8') as fp:
@@ -229,7 +140,8 @@ if __name__ == '__main__':
 
 """
 history:
-  v0.1, initial version
-  v0.1.2, add mjil_call_selectmenu_pattern
-  v0.1.3, add mjil_callp_ruby_pattern
+v0.1, initial version
+v0.1.2, add mjil_call_selectmenu_pattern
+v0.1.3, add mjil_callp_ruby_pattern
+v0.1.4, change ftext to libutil v0.6
 """

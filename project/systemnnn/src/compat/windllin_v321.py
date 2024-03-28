@@ -1,7 +1,8 @@
-"""
+# -*- coding: utf-8 -*-
+__description__ = """
 modify windows pe with dll injected for hooking
 only support for x86 and x64 architecture, no arm support now
-    v0.3.2, developed by devseed
+    v0.3.2.1, developed by devseed
 """
 
 import sys
@@ -10,7 +11,7 @@ import argparse
 import lief
 from keystone import Ks, KS_ARCH_X86, KS_MODE_32, KS_MODE_64
 
-WINDLLIN_VERSION = 320
+__version__ = 321
 
 def injectdll_iat(exepath, dllpath, outpath="out.exe"): 
     """
@@ -227,12 +228,12 @@ def injectdll_codecave2(exepath, dllpath, outpath="out.exe", aslr=False):
 
     # inject code
     section_loader = lief.PE.Section(payload, ".loader", 
-        lief.PE.SECTION_CHARACTERISTICS.MEM_EXECUTE)
+        lief.PE.Section.CHARACTERISTICS.MEM_EXECUTE)
     section_loader = pe.add_section(section_loader, 
         lief.PE.SECTION_TYPES.TEXT)
     pe_oph.addressof_entrypoint = section_loader.virtual_address
     if not aslr:
-        pe_oph.remove(lief.PE.DLL_CHARACTERISTICS.DYNAMIC_BASE)
+        pe_oph.remove(lief.PE.OptionalHeader.DLL_CHARACTERISTICS.DYNAMIC_BASE)
     builder = lief.PE.Builder(pe)
     builder.build()
     builder.write(outpath)
@@ -469,9 +470,6 @@ def injectdll_mem(exepath, dllpath, outpath="out.exe", aslr=False):
     builder.build()
     builder.write(outpath)
 
-def debug():
-    pass
-
 def main():
     if len(sys.argv) < 3:
         print("windllin exepath dllpath [-m|method iat|codecave(default)|codecave2|mem] [-o outpath]")
@@ -493,20 +491,18 @@ def main():
         injectdll_codecave2(args.exepath, args.dllpath, args.outpath, aslr=args.aslr)
     elif args.method.lower() == 'mem':
         injectdll_mem(args.exepath, args.dllpath, outpath=args.outpath, aslr=args.aslr)
-    else:
-        raise NotImplementedError()    
+    else: raise NotImplementedError()    
     
 if __name__ == "__main__":
-    # debug()
     main()
-    pass
 
 """
 history:
-v0.1 injectdll by adding iat entry
-v0.2 add codecave method using dynamiclly LoadLibraryA from iat,
+v0.1, injectdll by adding iat entry
+v0.2, add codecave method using dynamiclly LoadLibraryA from iat,
         to avoid windows defender assuming this as virus
-v0.3 add codecave2 method using PEB to get LoadLibraryA
-v0.3.1 support aslr for codecave2 method
-v0.3.2 add mem module
+v0.3, add codecave2 method using PEB to get LoadLibraryA
+v0.3.1, support aslr for codecave2 method
+v0.3.2, add mem module
+v0.3.2.1, fix the name with lief change
 """

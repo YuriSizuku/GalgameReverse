@@ -69,7 +69,7 @@ build_4dll() {
     else
         if [ -z "$CC" ]; then CC=clang; fi
     fi
-    make -C ${SRC_DIR}/../ -f advhd.mk CC=$CC BUILD_DIR=${WORK_DIR}/5.result DEBUG=1 
+    make -C ${SRC_DIR}/../ -f advhd.mk CC=$CC BUILD_DIR=${WORK_DIR}/5.result DEBUG=1
 }
 
 build_4exe() {

@@ -53,12 +53,15 @@ build_2arc() {
 
 build_3dll() {
     echo "## build_3dll"
-    if [ -n "$(uname -a | grep Linux)" ]; then
-        if [ -z "$CC" ]; then CC=i686-w64-mingw32-gcc; fi
-    else
-        if [ -z "$CC" ]; then CC=clang; fi
+    if [ -z "$CC" ]; then
+        if [ -z "$(uname -a | grep Linux)" ]; then
+            CC=clang
+        else
+            CC=i686-w64-mingw32-gcc
+        fi
     fi
-    make -C ${SRC_DIR}/../ -f majiro.mk CC=$CC BUILD_DIR=${WORK_DIR}/5.result DEBUG=1
+    make -C ${SRC_DIR}/../ -f majiro.mk \
+        CC=$CC BUILD_DIR=${WORK_DIR}/5.result DEBUG=1
 }
 
 build_3exe() {

@@ -21,20 +21,15 @@
 #include <shlwapi.h>
 #include <locale.h>
 
-// winhook.h v0.3
 #define WINHOOK_IMPLEMENTATION
-#ifdef USE_COMPAT
-#include "winhook_v310.h"
-#else
-#include "winhook.h"
-#endif
-
-// winpe.h v0.3.5
+#define MINHOOK_IMPLEMENTATION
 #define WINPE_IMPLEMENTATION
 #define WINPE_NOASM
-#ifdef USE_COMPAT
-#include "winpe_v350.h"
+#ifdef USECOMPAT
+#include "winhook_v330.h"
+#include "winpe_v370.h"
 #else
+#include "winhook.h"
 #include "winpe.h"
 #endif
 
@@ -96,7 +91,7 @@ LPWSTR _RedirectFileW(LPCWSTR path)
 {
     static WCHAR tmppath[MAX_PATH] = {0};
     tmppath[0] = 0;
-    wcscat(tmppath, REDIRECT_DIRA L"\\");
+    wcscat(tmppath, REDIRECT_DIRW L"\\");
     LPCWSTR name = wcsstr(path, L"\\");
     if(!name) name = path;
     

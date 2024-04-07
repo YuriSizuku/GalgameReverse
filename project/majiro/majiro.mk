@@ -1,7 +1,6 @@
 CC:=clang
-BUILD_DIR:=./asset/build
-INCS:=-I./src/compat
-LIBDIRS:=-L./compat
+BUILD_DIR:=asset/build
+INCS:=-Isrc/compat
 LIBS:=-luser32 -lgdi32 -lshlwapi -ladvapi32 -lpsapi
 CFLAGS:=-ffunction-sections -fdata-sections
 LDFLAGS:=
@@ -28,11 +27,15 @@ CFLAGS+=-target i686-pc-windows-msvc -D _CRT_SECURE_NO_DEPRECATE
 LDFLAGS+=-Wl,/OPT:REF # for llvm
 endif
 
-all: majiro_patch
+all: prepare majiro_patch
+
+prepare:
+	@mkdir -p $(BUILD_DIR)
 
 majiro_patch: src/majiro_patch.c
+	@echo "## $@"
 	$(CC) -shared  $^ -o $(BUILD_DIR)/$@.dll \
-	    -D USE_COMPAT \
+	    -D USECOMPAT \
 		$(INCS) $(LIBDIRS) $(LIBS) $(CFLAGS) $(LDFLAGS) 
 	@rm -rf $(BUILD_DIR)/$@.exp
 	@rm -rf $(BUILD_DIR)/$@.lib

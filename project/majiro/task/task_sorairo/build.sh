@@ -60,8 +60,7 @@ build_3dll() {
             CC=i686-w64-mingw32-gcc
         fi
     fi
-    make -C ${SRC_DIR}/../ -f majiro.mk \
-        CC=$CC BUILD_DIR=${WORK_DIR}/5.result DEBUG=1
+    make -C ${SRC_DIR}/../ -f majiro.mk CC=$CC BUILD_DIR=${WORK_DIR}/5.result DEBUG=1
 }
 
 build_3exe() {

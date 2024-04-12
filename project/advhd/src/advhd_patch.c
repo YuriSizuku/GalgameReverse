@@ -1,18 +1,18 @@
 /**
  *  for AdvHD v1 and v2  
  *  translation support and redirect arc file
- *      v0.2.4, developed by devseed
+ *      v0.2.5, developed by devseed
  * 
  *  tested game: 
  *    あやかしごはん (v1.0.1.0)
  *    BlackishHouse (v1.6.2.1) 
  *    華は短し、踊れよ乙女 (1.9.9.9)
  *  
- * override/config.ini, codepage charset
- *   codepage=932
- *   charset=128
- *   font=simhei // font name encoding is by codepage
- *   _ismbclegal=rva
+ *  override/config.ini, codepage charset
+ *    codepage=932
+ *    charset=128
+ *    font=simhei // font name encoding is by codepage
+ *    _ismbclegal=rva
 */
 
 #include <stdio.h>
@@ -20,8 +20,9 @@
 #include <shlwapi.h>
 #include <locale.h>
 #define WINHOOK_IMPLEMENTATION
-#ifdef USE_COMPAT
-#include "winhook_v310.h"
+#define MINHOOK_IMPLEMENTATION
+#ifdef USECOMPAT
+#include "winhook_v330.h"
 #else
 #include "winhook.h"
 #endif
@@ -357,7 +358,7 @@ void install_console()
     freopen("CONOUT$", "w", stdout);
     system("chcp 936");
     setlocale(LC_ALL, "chs");
-    printf("advhd_patch v0.2.4, developed by devseed\n");
+    printf("advhd_patch v0.2.5, developed by devseed\n");
     wprintf(L"advhd v1v2 版本通用汉化补丁, build in 220823\n");
 }
 
@@ -451,11 +452,13 @@ BOOL WINAPI DllMain(
     return TRUE;
 }
 
-/* history
-* v0.1, support advhd.exe v2 version
-* v0.2, add support to advhd v1
-* V0.2.1, add config file for redirect
-* v0.2.2, add _ismbclegal hook and rva config for other codepage
-* v0.2.3, add automaticly search _ismbclegal
-* v0.2.4, add kernelbase createfile redirect, and mutex for multi thread
+/**
+ * history
+ * v0.1 support advhd.exe v2 version
+ * v0.2 add support to advhd v1
+ * V0.2.1 add config file for redirect
+ * v0.2.2 add _ismbclegal hook and rva config for other codepage
+ * v0.2.3, add automaticly search _ismbclegal
+ * v0.2.4, add kernelbase createfile redirect, and mutex for multi thread
+ * v0.2.5, update to winhook v0.3
 */

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 __description__ = """
 export or import ws2 text for willplus advhd, 
-    v0.2.2, developed by devseed
+    v0.2.4, developed by devseed
 
 tested games: 
     BlackishHouse (v1.6.2.1)
@@ -19,10 +19,10 @@ from typing import List
 sys.path.append(os.path.join(os.path.dirname(__file__), r"compat"))
 try:
     from compat.libutil_v600 import save_ftext, load_ftext, jtable_t, ftext_t
-    from compat.libtext_v610 import insert_ftexts
+    from compat.libtext_v620 import insert_ftexts
 except ImportError as e:
     exec("from compat.libutil_v600 import save_ftext, load_ftext, jtable_t, ftext_t")
-    exec("from compat.libtext_v610 import insert_ftexts")
+    exec("from compat.libtext_v620 import insert_ftexts")
 
 # ws2 functions
 ws2name_t = namedtuple("ws2name_t", ['addr', 'size', 'text'])
@@ -34,6 +34,7 @@ def export_ws2(inpath, outpath="out.txt", encoding='sjis'):
         data = bytearray(fp.read())
     
     # find text to extract
+    # should consider about the overlap with name char %LC, and filter this
     names: List[ws2name_t] = []
     cur = 0
     pattern = b'%LC'
@@ -43,7 +44,8 @@ def export_ws2(inpath, outpath="out.txt", encoding='sjis'):
         textaddr = cur
         textsize = data.find(b'\x00', textaddr) - textaddr
         text = data[textaddr: textaddr+textsize].decode(encoding)
-        names.append(ws2name_t(textaddr, textsize, text))
+        if not (cur > 5 and data[cur-5: cur] == b"char\0"):
+            names.append(ws2name_t(textaddr, textsize, text))
         cur +=  textsize + 1
     
     options: List[ws2option_t] = []
@@ -54,15 +56,16 @@ def export_ws2(inpath, outpath="out.txt", encoding='sjis'):
             cur = data.find(pattern, cur)
             if cur < 0: break
             cur += len(pattern)
+            noption = pattern[-1]
             if data[cur] == 0 and data[cur+1] == 0:
                 continue
-            while data[cur] != 0xff:
+            for i in range(noption):
                 rawaddr = cur
                 textaddr = cur + 2
                 textsize = data.find(b'\x00', textaddr) - textaddr
                 text = data[textaddr: textaddr+textsize].decode(encoding)
                 rawsize = data.find(b'\x00', textaddr+textsize+5)  - rawaddr + 1
-                print("option", hex(textaddr), text)
+                print("option %d/%d"%(i+1, noption), hex(textaddr), text)
                 options.append(ws2option_t(textaddr, textsize, text, rawaddr, rawsize))
                 cur += rawsize
     
@@ -101,7 +104,7 @@ def import_ws2(inpath, orgpath, outpath="out.ws2", encoding="gbk"):
 
     def _add_BlackishHouse_jumptable():
         cur = 0
-        pattern = b'\x7F\x00\x00\x00\x80\x3F\x00\x00\x00\x00'
+        pattern = bytes.fromhex("7F 00 00 00 80 3F 00 00 00 00")
         while True:
             cur = data.find(pattern, cur)
             if cur < 0: break
@@ -125,6 +128,19 @@ def import_ws2(inpath, orgpath, outpath="out.ws2", encoding="gbk"):
             _addjumpentry(addr)
             cur = addr + 4
 
+        cur = 0 # fix BZKyo_06g.ws2 branch
+        pattern = b'\x01\x80'
+        while True:
+            cur = data.find(pattern, cur)
+            if cur < 0: break
+            addr = cur + len(pattern) + 0xa
+            _addjumpentry(addr)
+            cur = addr + 4
+            if cur + 0xc < len(data) and data[cur: cur+2] == b'\x01\x02':
+                addr = cur + 0xc
+                _addjumpentry(addr)
+                cur = addr + 4
+
         cur = 0
         pattern = b'\x05\x00\x00\x00\x00\x00\x00\x00\x00'
         while True:
@@ -133,7 +149,6 @@ def import_ws2(inpath, orgpath, outpath="out.ws2", encoding="gbk"):
             addr = cur + len(pattern)
             _addjumpentry(addr)
             cur = addr + 4
-        pass
 
     def _add_Hanaoto_jumptable():
         # (15 00)|32|04|02 00 E6 // +0, +4 
@@ -222,8 +237,13 @@ def import_ws2(inpath, orgpath, outpath="out.ws2", encoding="gbk"):
     return data
 
 def debug():
-    cli([__file__, "ecp932", "/home/debian/Local/Make/reverse/BlackishHouse/workflow/2.pre/Rio2/BZkyo_06h.ws2"])
-    pass
+    workflow = "D:/Make/reverse/BlackishHouse/workflow"
+    target = "BZhal_32.ws2"
+    cli([__file__, "ecp932", 
+         os.path.join(workflow, "2.pre/Rio2", target)])
+    # cli([__file__, "icp936", 
+    #     os.path.join(workflow, "3.edit/Rio2_ftext", target + ".txt"), 
+    #     os.path.join(workflow, "2.pre/Rio2", target )])
 
 def cli(argv):
     def cmd_help():
@@ -258,4 +278,6 @@ v0.1, initial version for BlackishHouse
 v0.2, support 華は短し、踊れよ乙女 (1.9.9.9)
 v0.2.1, fix some opcode for 華は短し、踊れよ乙女
 v0.2.2, add encoding option in cli and change to libtext v0.6.1, fix option bug
+v0.2.3, makes name and text disjoint, fix BZKyo_06g.ws2 branch b'\x01\x81'
+v0.2.4, fix option to "00 00 0F 02 FF" for BZhal_32.ws2
 """

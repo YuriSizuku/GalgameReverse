@@ -15,7 +15,7 @@ try:
 except ImportError:
     exec("from libutil_v600 import writelines, writebytes, filter_loadfiles, ftext_t, tbl_t, jtable_t, msg_t, load_batch, save_ftext, load_ftext, load_tbl")
 
-__version__  = 610
+__version__  = 620
 
 # text basic functions
 def iscjk(c: str): 
@@ -502,9 +502,12 @@ def check_ftexts(linesobj: Union[str, Tuple[List[ftext_t], List[ftext_t]]], outp
         encoding='utf-8', tblobj: Union[str, List[tbl_t]]=None, *, 
         text_noeval=False, text_replace: Dict[bytes, bytes]=None,
         bytes_fallback: bytes = None, insert_longer=False, 
-        referobj: Union[str, bytes]=None) -> List[msg_t]:
+        referobj: Union[str, bytes]=None, referencoding=None, refertblobj=None) -> List[msg_t]:
     """
     check the ftexts including format and charactors
+    :param referobj: origin raw reference file
+    :param referencoding: reference file encoding
+    :param refertblobj: reference file tbl
     """
     
     msgs: List[msg_t] = []
@@ -522,10 +525,13 @@ def check_ftexts(linesobj: Union[str, Tuple[List[ftext_t], List[ftext_t]]], outp
         msgs.append(msg)
     
     for i, (t1, t2) in enumerate(zip(ftexts1, ftexts2)):
-        # check org now match
+        # check org now match and overlap
+        addr_set = set()
         err = ""
+        if t2.addr in addr_set: err += f"overlaped ftext, "
         if t1.addr != t2.addr: err += f"addr not match 0x{t1.addr:x}!=0x{t2.addr:x}, "
         if t1.size != t2.size: err += f"size not match 0x{t1.size:x}!=0x{t2.size:x} "
+        addr_set.add(t2.addr)
         if len(err) > 0:
             msg = msg_t(t1.addr, err + f"[○●no={i+1} addr=0x{t1.addr} text='{t1.text}']", logging.WARNING)
             logging.warning(f"{msg.msg}")
@@ -533,7 +539,16 @@ def check_ftexts(linesobj: Union[str, Tuple[List[ftext_t], List[ftext_t]]], outp
         
         # check src data
         if refdata:
-            encbytes = encode_extend(t1.text, enc, enc_error, text_noeval)
+            if referencoding is None and refertblobj is None: 
+                referenc = enc
+            else:
+                refertbl = load_tbl(refertblobj)
+                referenc = refertbl if refertbl else referencoding
+            try:
+                encbytes = None
+                encbytes = encode_extend(t1.text, referenc, enc_error, text_noeval)
+            except ValueError as e:
+                print(e)
             if encbytes != refdata[t1.addr: t1.addr + t1.size]:
                 msg = msg_t(t1.addr, f"text not match [○no{i+1} addr=0x{t1.addr} text='{t1.text}']", logging.WARNING)
                 logging.warning(f"{msg.msg}")
@@ -628,7 +643,8 @@ def cli(cmdstr=None):
         for i, (ftextpath, outpath, referpath) in enumerate(zip(ftextpaths, outpaths, referpaths)):
             if args.batch: logging.info(f"batch {i+1}/{n} [ftextpath={ftextpath} referpath={referpath} outpath={outpath}]")
             check_ftexts(ftextpath, outpath,  
-                encoding=args.encoding, tblobj=args.tbl, referobj=referpath, 
+                encoding=args.encoding, tblobj=args.tbl, 
+                referobj=referpath, referencoding=args.referencoding, refertblobj=args.refertbl,
                 text_replace=text_replace, text_noeval=args.text_noeval,
                 bytes_fallback=bytes_fallback, insert_longer=args.insert_longer)
 
@@ -667,6 +683,8 @@ def cli(cmdstr=None):
     p_check.set_defaults(handler=cmd_check)
     p_check.add_argument("ftextpath")
     p_check.add_argument("--refer", dest="referpath", help="binfile path")
+    p_check.add_argument("--refer_encoding", dest="referencoding", default=None, help="org data encoding")
+    p_check.add_argument("--refer_tbl", dest="refertbl", default=None, help="org data tbl")
     p_check.add_argument("--text_noeval", action="store_true",  help="disable eval like {{b'\x00'}}")
     p_check.add_argument("-r", "--text_replace", type=str, default=None, 
         metavar=('src', 'dst'), nargs=2, action='append', help="replace bytes after encoding ")
@@ -689,4 +707,5 @@ v0.1, initial version with utf-8 support
 ... 
 v0.6, remake to increase speed and simplify functions
 v0.6.1, add batch mode on extract, insert to optimize performance
+v0.6.2, add referencoding, refertbl
 """

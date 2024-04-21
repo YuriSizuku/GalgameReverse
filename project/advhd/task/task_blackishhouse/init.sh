@@ -28,13 +28,30 @@ extract_ws2() {
 extract_lua() {
     indir=$1
     outdir=$2
-    echo "## extract_lua $indir -> $outdir"
+    if [ -z $outdir ]; then outdir=$indir; fi
 
+    echo "## extract_lua $indir -> $outdir"
     for infile in $(ls $indir/*.lua); do
         inname=$(basename $infile)
         echo $inname
-        python -B ${SRC_DIR}/compat/libtext_v610.py extract \
+        python -B ${SRC_DIR}/compat/libtext_v620.py extract \
              $infile -o $outdir/$inname.txt -e sjis --has_cjk --min_len 2
+    done    
+}
+
+check_ftext() {
+    indir=$1 # ftextdir 
+    refdir=$2 # ws2 dir
+    outdir=$3 # outdir
+    if [ -z $outdir ]; then outdir=$indir; fi
+    echo "## check_ftext $indir -> $outdir"
+
+    for infile in $(ls $indir/*.txt); do
+        inname=$(basename $infile ".txt")
+        echo $inname
+        python -B ${SRC_DIR}/compat/libtext_v620.py check \
+             $infile --refer $refdir/${inname} -o $outdir/${inname}_check.txt \
+             -e gbk --insert_longer --refer_encoding sjis
     done    
 }
 

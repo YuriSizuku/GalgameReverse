@@ -19,7 +19,7 @@ build_1ws2() {
             for infile in $(ls ${WORK_DIR}/3.edit/${rio}_ftext2/*.txt); do
                 inname=$(basename $infile .txt)
                 echo ${rio}/$inname # .ws2
-                python -B ${SRC_DIR}/compat/libtext_v610.py insert \
+                python -B ${SRC_DIR}/compat/libtext_v620.py insert \
                     ${WORK_DIR}/2.pre/${rio}/$inname $infile \
                     -o ${WORK_DIR}/4.post/${rio}/$inname -e gbk --bytes_padding 20
             done
@@ -33,7 +33,7 @@ build_1lua() {
     for infile in $(ls ${WORK_DIR}/3.edit/Script_ftext/*.txt); do
         inname=$(basename $infile .txt)
         echo $inname
-        python -B ${SRC_DIR}/compat/libtext_v610.py insert \
+        python -B ${SRC_DIR}/compat/libtext_v620.py insert \
             ${WORK_DIR}/2.pre/Script/$inname $infile \
             -o ${WORK_DIR}/4.post/Script/$inname -e gbk --bytes_padding 20
     done

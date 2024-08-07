@@ -1,5 +1,5 @@
 """
-A tool to parse EVSC opcode, export or import text
+A tool to parsing EVSC opcode, export of import text
 for psp game  ときめきメモリアル Girl's Side 3rd Story
     v0.2.1, developed by devseeds
 """
@@ -13,7 +13,7 @@ from io import BytesIO
 
 sys.path.append(r".\..\..\util\script")
 try:
-    import zbintext_v053 as bintext
+    import zzbintext as bintext
 except:
     import bintext
 
@@ -120,21 +120,14 @@ def import_evsctext(evscpath, ftextpath, outpath=""):
         _textbytes = _text.encode('utf-16-le')
         _sizerebuid = len(_textbytes)
         
-        if  _sizerebuid <= _size:
-            _textbytes += b'\x20\x00' * ((_size - _sizerebuid) // 2)
+        if _sizerebuid <= _size:
+            _textbytes += b'\x00\x00' * ((_size - _sizerebuid) // 2)
             if len(_textbytes)!= _size:
                 raise ValueError(f"_textbytes buffer {len(_textbytes):x}!= {_size:x}")
-        else: # for 0x4 align
-            _end = _addr + shift + _size
-            while _end < len(content): 
-                if content[_end]==0 and content[_end+1]==0: 
-                    _end += 2
-                else:
-                    break
-            _end += _sizerebuid - _size
-            if _end % 4: 
-                _textbytes += b'\x00'*(4 - _end%4)
-
+        else: # for 0x4 align in every text start, increase must be 0x4
+            if (_sizerebuid - _size) % 4 > 0:
+                _textbytes += b'\x00' * (4 - (_sizerebuid - _size)%4)
+               
         content[_addr+shift: _addr+shift+_size] = _textbytes
         if len(_textbytes) - _size > 0:
             shift += len(_textbytes) - _size
@@ -181,8 +174,8 @@ def import_evsctext(evscpath, ftextpath, outpath=""):
     return _bufio.getbuffer()
 
 def debug():
-    evscpath = r"D:\Make\Reverse\TokimekiMemorialGS3_psp\test\script_test\(0001)_A02_01_000.evd.decompressed"
-    ftextpath = r"D:\Make\Reverse\TokimekiMemorialGS3_psp\intermediate\script_ftext\(0001)_A02_01_000.evd.txt"
+    evscpath = r"build/intermediate/OFS3/EXTRACTED_jp/EXTRACTED_scp095/(0000)_D01_06_001.evd.decompressed"
+    ftextpath = r"build/intermediate/script_ftext/(0000)_D01_06_001.evd.txt"
 
     # test parse
     with open(evscpath, "rb") as fp:
@@ -210,7 +203,7 @@ def main():
     else: raise ValueError(f"{sys.argv[1]} not support!")
 
 if __name__ == "__main__":
-    #debug()
+    # debug()
     main()
     pass
 

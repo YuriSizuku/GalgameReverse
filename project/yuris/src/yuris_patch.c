@@ -1,14 +1,16 @@
-/*	
-    for universe yuris chs support
-	v0.1, developed by devseed
-*/
+/**
+ * universe yuris chs support
+ *  v0.2.1, developed by devseed
+ *  
+*/	
+
 #include<stdint.h>
 #include<stdio.h>
 #include<string.h>
 #include<windows.h>
-#ifdef USE_WINDVFS
+#ifdef USEWINDVFS
 #define WINDVFS_IMPLEMENTATION
-#include "dvfs/windvfs_v301.h"
+#include "dvfs/windvfs_v320.h"
 #endif
 
 __declspec(dllexport) void dummy()
@@ -215,15 +217,17 @@ void install_sjistablehook()
 
 void install_hooks()
 {
-#ifdef _DEBUG
-    AllocConsole();
-    //MessageBoxA(0, "debug install", "debug", 0);
-    freopen("CONOUT$", "w", stdout);
-    printf("install yuris_patch, v0.2, build 220504\n");
-#endif
+    FILE *fp = fopen("yuris_patch_console", "rb");
+    if(fp)
+    {
+        AllocConsole();
+        freopen("CONOUT$", "w", stdout);
+        fclose(fp);
+    }
+    printf("install yuris_patch, v0.2.1, build 240818\n");
     install_fonthook();
     install_sjistablehook();
-#ifdef USE_WINDVFS
+#ifdef USEWINDVFS
     windvfs_install();
 #endif
 }
@@ -250,4 +254,5 @@ BOOL APIENTRY DllMain( HMODULE hModule,
 history:
 v0.1 initial version, add search memory for sjis table
 v0.2 compatible with gcc, tcc
+v0.2.1 add file log and yuris_patch_debug file to enable console
 */

@@ -38,12 +38,8 @@ build_2dwq() {
 
 build_3dll() {
     echo "## build_3dll"
-    if [ -n "$(uname -a | grep Linux)" ]; then
-        if [ -z "$CC" ]; then CC=i686-w64-mingw32-gcc; fi
-    else
-        if [ -z "$CC" ]; then CC=clang; fi
-    fi
-    make -C ${SRC_DIR}/../ -f systemnnn.mk CC=$CC BUILD_DIR=${WORK_DIR}/5.result DEBUG=1
+    if [ -z "$CC" ]; then CC=$MINGWSDK/bin/i686-w64-mingw32-clang; fi
+    make -C ${SRC_DIR}/../ -f systemnnn.mk CC=$CC BUILD_DIR=${WORK_DIR}/5.result
 }
 
 build_3exe() {

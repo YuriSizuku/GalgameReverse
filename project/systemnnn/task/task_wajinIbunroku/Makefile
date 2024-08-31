@@ -8,6 +8,7 @@
 # GAME_EXEC, use which command to launch game
 # GAME_FILE, origin game package path
 # GAME_DIR, game dir for testing
+# MINGWSDK, llvm-mingw path
 
 # usage: 
 # in linux, "source ./_env.sh"
@@ -19,6 +20,7 @@
 # if [ -n "$(uname -a | grep Msys)" ]; then
 #     export BASE_DIR=/d/Downloads/$GAME_NAME
 #     export GAME_EXEC=start
+#     export MINGWSDK=/d/Software/env/llvm-mingw
 # else
 #     LOCPATH=~/.wine/locale
 #     if ! [ -d $LOCPATH/zh_CN.UTF-8 ]; then
@@ -27,6 +29,7 @@
 #     fi
 #     export BASE_DIR=~/Downloads/$GAME_NAME
 #     export GAME_EXEC=LOCPATH=$LOCPATH\ LANG=zh_CN.UTF-8\ wine
+#     export MINGWSDK=/opt/llvm-mingw
 # fi
 # export GAME_FILE=$BASE_DIR/${GAME_ID}.7z
 # export GAME_DIR=$BASE_DIR/${GAME_ID}_rebuild
@@ -50,9 +53,9 @@ link:
 unlink:
 	@rm -rf workflow
 	
-init_workdir init_gamedir:
+init_workdir init_gamedir init_mingwsdk:
 	@./init.sh $@
-
+	
 build_1txt build_1spt build_2dwq build_3dll build_3exe: init_workdir
 	@./build.sh $@
 
@@ -96,6 +99,6 @@ clean:
 	@rm -rf ${WORK_DIR}/5.result
 
 .PHONY: all link unlink \
-	init_workdir init_gamedir \
+	init_workdir init_gamedir init_mingwsdk \
 	build_1txt build_1spt build_2dwq build_3dll build_3exe \
 	release_patch run run_gdbserver send test clean

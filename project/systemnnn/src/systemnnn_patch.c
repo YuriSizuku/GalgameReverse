@@ -1,7 +1,7 @@
 /**
  * systemNNN engine 
  * localization support, redirect file, loadpng in dib
- *   v0.2, developed by devseed
+ *   v0.2.1, developed by devseed
  * 
  * tested game: 
  *   倭人異聞録～あさき、ゆめみし～ 
@@ -178,11 +178,16 @@ void install_hooks()
 
 void install_console()
 {
-    AllocConsole();
-    freopen("CONOUT$", "w", stdout);
+    FILE *fp = fopen("systemnnn_patch_console", "rb");
+    if(fp)
+    {
+        AllocConsole();
+        freopen("CONOUT$", "w", stdout);
+        fclose(fp);
+    }
     system("chcp 936");
     setlocale(LC_ALL, "chs");
-    printf("systemnnn_patch v0.2, developed by devseed\n");
+    printf("systemnnn_patch v0.2.1, build240831, developed by devseed\n");
 }
 
 void read_config(const char *path)
@@ -242,9 +247,7 @@ BOOL WINAPI DllMain(
     switch( fdwReason ) 
     { 
         case DLL_PROCESS_ATTACH:
-#ifdef _DEBUG
             install_console();
-#endif
             read_config(CONFIG_PATH);
             install_hooks();
             break;
@@ -261,4 +264,5 @@ BOOL WINAPI DllMain(
 /** history
  * v0.1, initial version, support sjis chcp, range patch, redirect file
  * v0.2, support dwq dib replace
+ * v0.2.1, add systemnnn_patch_console file exist detect for allocconsole
 */

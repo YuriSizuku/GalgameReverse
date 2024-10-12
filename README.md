@@ -227,6 +227,12 @@ Localization util tools are moved to [Localization](https://github.com/YuriSizuk
 
 * `sorairo_patch.c`, support for gbk enconding text in dll
 
+### hunex
+
+> 明治東亰恋伽 // 241012 added
+
+* `meikoi_hook.js`, dynamicly dump script_dialog text
+
 ## 3. Cross galgame
 
 ### onscripter

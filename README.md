@@ -231,7 +231,8 @@ Localization util tools are moved to [Localization](https://github.com/YuriSizuk
 
 > 明治東亰恋伽 // 241012 added
 
-* `meikoi_hook.js`, dynamicly dump script_dialog text
+* `meikoi_dump.js`, invoke il2cpp func to dump script_dialog to text
+* `meikoi_dump.c`, invoke il2cpp func to dump hpb(hph) to unityfs
 
 ## 3. Cross galgame
 

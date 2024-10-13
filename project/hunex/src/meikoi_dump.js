@@ -1,5 +1,6 @@
 /**
- * for decompress and extract game 明治東亰恋伽
+ * An experiment for invoking il2cpp function
+ * to dump script_dialog_xx.hdlg in 明治東亰恋伽
  *   v0.1, devloped by devseed
  * 
  *  usage:

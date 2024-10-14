@@ -229,6 +229,9 @@ Localization util tools are moved to [Localization](https://github.com/YuriSizuk
 
 ### hunex
 
+* `hunex_hlzs.py`, decode hlzs format file
+* `hunex_hpb.py`, extract hpb(hph) format file
+
 > 明治東亰恋伽 // 241012 added
 
 * `meikoi_dump.js`, invoke il2cpp func to dump script_dialog to text

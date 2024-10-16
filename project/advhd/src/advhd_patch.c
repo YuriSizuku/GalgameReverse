@@ -22,8 +22,10 @@
 #define WINHOOK_IMPLEMENTATION
 #define MINHOOK_IMPLEMENTATION
 #ifdef USECOMPAT
+#include "stb_minhook_v1332.h"
 #include "winhook_v330.h"
 #else
+#include "stb_minhook.h"
 #include "winhook.h"
 #endif
 
@@ -295,9 +297,19 @@ void install_inlinehooks()
     g_mutexs[CreateFileW_IDX] = CreateMutexA(NULL, FALSE, NULL);
 
     // make inline hook
-    winhook_inlinehooks(g_pfnTargets, 
-        g_pfnNews, g_pfnOlds, 
-        sizeof(g_pfnTargets)/sizeof(PVOID));
+    MH_STATUS status = MH_Initialize();
+    if(status!=MH_OK) LOGe("MH_Initialize %s\n", MH_StatusToString(status));
+    int n = sizeof(g_pfnTargets)/sizeof(void*);
+    for(int i=0; i< n; i++)
+    {
+        void *ptarget = g_pfnTargets[i];
+        void *pnew = g_pfnNews[i];
+        if(!ptarget) continue;
+        status = MH_CreateHook(ptarget, pnew, &g_pfnOlds[i]);
+        if(status!=MH_OK) LOGe("MH_CreateHook %d %p %s\n", i, ptarget, MH_StatusToString(status));
+        status = MH_EnableHook(ptarget);
+        if(status!=MH_OK)  LOGe("MH_EnableHook %d %p %s\n", i, ptarget, MH_StatusToString(status));
+    }
 }
 
 void install_iathooksv1()

@@ -7,7 +7,6 @@
  *    WINHOOK_SHARED, make function export
  *    WINHOOK_STATIC, make function static
  *    WINHOOK_NOINLINE, don't use inline function
- *    WINHOOK_NO3RDLIB, don't use 3rd lib for inlinehook 
  *    WINHOOK_USEDYNBIND, use dynamic binding for winapi api
 */
 
@@ -689,45 +688,6 @@ BOOL winhook_iathookpe(LPCSTR targetDllName, void* mempe, PROC pfnOrg, PROC pfnN
     return FALSE;
 }
 
-#ifndef WINHOOK_NO3RDLIB
-#ifndef MINHOOK_IMPLEMENTATION
-#define MINHOOK_IMPLEMENTATION
-#define MINHOOK_STATIC
-#endif // MINHOOK_IMPLEMENTATION
-#ifdef USECOMPAT
-#include "stb_minhook_v1331.h"
-#else
-#include "stb_minhook.h"
-#endif
-
-int winhook_inlinehooks(PVOID pfnTargets[], PVOID pfnNews[], PVOID pfnOlds[], int n)
-{
-    int i;
-    MH_Initialize();
-    for(i=0; i<n ;i++)
-    {
-        MH_STATUS status;
-        if(!pfnNews[i] || !pfnTargets[i]) continue;
-        status = MH_CreateHook(pfnTargets[i], pfnNews[i], &pfnOlds[i]);
-        if(status!= MH_OK) return i;
-        status = MH_EnableHook(pfnTargets[i]);
-        if(status!= MH_OK) return i;
-    }
-    return i;
-}
-
-int winhook_inlineunhooks(PVOID pfnTargets[], PVOID pfnNews[], PVOID pfnOlds[], int n)
-{
-    int i;
-    for(i=0; i<n ;i++)
-    {
-        if(!pfnNews[i] || !pfnTargets[i]) continue;
-        MH_DisableHook(pfnTargets[i]);
-    }
-    if(MH_Uninitialize() != MH_OK) return 0;
-    return i;
-}
-#endif // WINHOOK_NO3RDLIB
 #endif // MINHOOK_IMPLEMENTATION
 
 #ifdef __cplusplus
@@ -749,5 +709,5 @@ int winhook_inlineunhooks(PVOID pfnTargets[], PVOID pfnNews[], PVOID pfnOlds[], 
  * v0.3, use javadoc style, add winhook_patchmemorypattern
  * v0.3.1, add winhook_patchmemory1337, winhook_patchmemoryips
  * v0.3.2, improve macro style, chaneg some of macro to function
- * v0.3.3, seperate some macro to commdef
+ * v0.3.3, seperate some macro to commdef, remove winhook_inlinehook, use stb_minhook directly
 */

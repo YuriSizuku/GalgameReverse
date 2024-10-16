@@ -12,7 +12,7 @@ CFLAGS+=-Os
 endif
 
 ifneq (,$(findstring clang, $(CC))) # for llvm-mingw
-CFLAGS+=-m32 -gcodeview -Wl,--pdb=$(BUILD_DIR)/majiro_patch.pdb 
+CFLAGS+=-m32 -gcodeview -Wl,--pdb=$(BUILD_DIR)/advhd_patch.pdb 
 LDFLAGS+= -Wl,--gc-sections
 else ifneq (,$(findstring gcc, $(CC))) # for mingw-w64
 CFLAGS+=-m32

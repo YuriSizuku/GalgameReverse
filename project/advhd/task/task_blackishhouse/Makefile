@@ -49,7 +49,7 @@ link:
 unlink:
 	@rm -rf workflow
 	
-init_workdir init_gamedir:
+init_workdir init_gamedir init_mingwsdk:
 	@./init.sh $@
 
 build_1ws2 build_1lua build_2pna build_3arcv2 build_4dll build_4exe: init_workdir

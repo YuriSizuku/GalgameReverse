@@ -1,12 +1,38 @@
+// single header file composed by devseed
+// see https://github.com/YuriSizuku/alter-MinhookStb
+
 #ifndef _MINHOOK_H
 #define _MINHOOK_H
-#define STB_MINHOOK_VERSION 1331
+#define MINHOOK_VERSION 1332 
 
+#if defined(_MSC_VER) || defined(__TINYC__)
+#ifndef EXPORT
+#define EXPORT __declspec(dllexport)
+#endif
+#else
+#ifndef EXPORT 
+#define EXPORT __attribute__((visibility("default")))
+#endif
+#endif // _MSC_VER
+#ifndef MINHOOK_API
+#ifdef MINHOOK_STATIC
+#define MINHOOK_API_DEF static
+#else
+#define MINHOOK_API_DEF extern
+#endif // MINHOOK_STATIC
+#ifdef MINHOOK_SHARED
+#define MINHOOK_API_EXPORT EXPORT
+#else  
+#define MINHOOK_API_EXPORT
+#endif // MINHOOK_SHARED
+#define MINHOOK_API MINHOOK_API_DEF MINHOOK_API_EXPORT
+#endif // MINHOOK_API
+ 
+#if 1 // minhook_decl
 /*
  *  MinHook - The Minimalistic API Hooking Library for x64/x86
  *  Copyright (C) 2009-2017 Tsuda Kageyu.
  *  All rights reserved.
- *  single file library composed by devseed
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -31,61 +57,58 @@
  *  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef MINHOOKDEF
-#ifdef MINHOOK_STATIC
-#define MINHOOKDEF static
-#else
-#define MINHOOKDEF extern
-#endif
-#endif
-
-#ifndef MINHOOK_SHARED
-#define MINHOOK_EXPORT
-#else
-#ifdef _WIN32
-#define MINHOOK_EXPORT __declspec(dllexport)
-#else
-#define MINHOOK_EXPORT __attribute__((visibility("default")))
-#endif
-#endif
+#pragma once
 
 #if !(defined _M_IX86) && !(defined _M_X64) && !(defined __i386__) && !(defined __x86_64__)
-#error MinHook supports only x86 and x64 systems.
+    #error MinHook supports only x86 and x64 systems.
 #endif
 
 #include <windows.h>
 
- // MinHook Error Codes.
+// MinHook Error Codes.
 typedef enum MH_STATUS
 {
     // Unknown error. Should not be returned.
     MH_UNKNOWN = -1,
+
     // Successful.
     MH_OK = 0,
+
     // MinHook is already initialized.
     MH_ERROR_ALREADY_INITIALIZED,
+
     // MinHook is not initialized yet, or already uninitialized.
     MH_ERROR_NOT_INITIALIZED,
+
     // The hook for the specified target function is already created.
     MH_ERROR_ALREADY_CREATED,
+
     // The hook for the specified target function is not created yet.
     MH_ERROR_NOT_CREATED,
+
     // The hook for the specified target function is already enabled.
     MH_ERROR_ENABLED,
+
     // The hook for the specified target function is not enabled yet, or already
     // disabled.
     MH_ERROR_DISABLED,
+
     // The specified pointer is invalid. It points the address of non-allocated
     // and/or non-executable region.
     MH_ERROR_NOT_EXECUTABLE,
+
     // The specified target function cannot be hooked.
     MH_ERROR_UNSUPPORTED_FUNCTION,
+
     // Failed to allocate memory.
     MH_ERROR_MEMORY_ALLOC,
+
     // Failed to change the memory protection.
     MH_ERROR_MEMORY_PROTECT,
+
     // The specified module is not loaded.
     MH_ERROR_MODULE_NOT_FOUND,
+
     // The specified function is not found.
     MH_ERROR_FUNCTION_NOT_FOUND
 }
@@ -99,120 +122,115 @@ MH_STATUS;
 extern "C" {
 #endif
 
-// Initialize the MinHook library. You must call this function EXACTLY ONCE
-// at the beginning of your program.
-MINHOOKDEF MINHOOK_EXPORT
-MH_STATUS MH_Initialize(VOID);
+    // Initialize the MinHook library. You must call this function EXACTLY ONCE
+    // at the beginning of your program.
+MINHOOK_API MH_STATUS WINAPI MH_Initialize(VOID);
 
-// Uninitialize the MinHook library. You must call this function EXACTLY
-// ONCE at the end of your program.
-MINHOOKDEF MINHOOK_EXPORT
-MH_STATUS MH_Uninitialize(VOID);
+    // Uninitialize the MinHook library. You must call this function EXACTLY
+    // ONCE at the end of your program.
+MINHOOK_API MH_STATUS WINAPI MH_Uninitialize(VOID);
 
-// Creates a hook for the specified target function, in disabled state.
-// Parameters:
-//   pTarget     [in]  A pointer to the target function, which will be
-//                     overridden by the detour function.
-//   pDetour     [in]  A pointer to the detour function, which will override
-//                     the target function.
-//   ppOriginal  [out] A pointer to the trampoline function, which will be
-//                     used to call the original target function.
-//                     This parameter can be NULL.
-MINHOOKDEF MINHOOK_EXPORT
-MH_STATUS MH_CreateHook(LPVOID pTarget, LPVOID pDetour, LPVOID* ppOriginal);
+    // Creates a hook for the specified target function, in disabled state.
+    // Parameters:
+    //   pTarget     [in]  A pointer to the target function, which will be
+    //                     overridden by the detour function.
+    //   pDetour     [in]  A pointer to the detour function, which will override
+    //                     the target function.
+    //   ppOriginal  [out] A pointer to the trampoline function, which will be
+    //                     used to call the original target function.
+    //                     This parameter can be NULL.
+MINHOOK_API MH_STATUS WINAPI MH_CreateHook(LPVOID pTarget, LPVOID pDetour, LPVOID *ppOriginal);
 
-// Creates a hook for the specified API function, in disabled state.
-// Parameters:
-//   pszModule   [in]  A pointer to the loaded module name which contains the
-//                     target function.
-//   pszProcName [in]  A pointer to the target function name, which will be
-//                     overridden by the detour function.
-//   pDetour     [in]  A pointer to the detour function, which will override
-//                     the target function.
-//   ppOriginal  [out] A pointer to the trampoline function, which will be
-//                     used to call the original target function.
-//                     This parameter can be NULL.
-MINHOOKDEF MINHOOK_EXPORT
-MH_STATUS MH_CreateHookApi(
-    LPCWSTR pszModule, LPCSTR pszProcName, LPVOID pDetour, LPVOID* ppOriginal);
+    // Creates a hook for the specified API function, in disabled state.
+    // Parameters:
+    //   pszModule   [in]  A pointer to the loaded module name which contains the
+    //                     target function.
+    //   pszProcName [in]  A pointer to the target function name, which will be
+    //                     overridden by the detour function.
+    //   pDetour     [in]  A pointer to the detour function, which will override
+    //                     the target function.
+    //   ppOriginal  [out] A pointer to the trampoline function, which will be
+    //                     used to call the original target function.
+    //                     This parameter can be NULL.
+MINHOOK_API MH_STATUS WINAPI MH_CreateHookApi(
+        LPCWSTR pszModule, LPCSTR pszProcName, LPVOID pDetour, LPVOID *ppOriginal);
 
-// Creates a hook for the specified API function, in disabled state.
-// Parameters:
-//   pszModule   [in]  A pointer to the loaded module name which contains the
-//                     target function.
-//   pszProcName [in]  A pointer to the target function name, which will be
-//                     overridden by the detour function.
-//   pDetour     [in]  A pointer to the detour function, which will override
-//                     the target function.
-//   ppOriginal  [out] A pointer to the trampoline function, which will be
-//                     used to call the original target function.
-//                     This parameter can be NULL.
-//   ppTarget    [out] A pointer to the target function, which will be used
-//                     with other functions.
-//                     This parameter can be NULL.
-MINHOOKDEF MINHOOK_EXPORT
-MH_STATUS MH_CreateHookApiEx(
-    LPCWSTR pszModule, LPCSTR pszProcName, LPVOID pDetour, LPVOID* ppOriginal, LPVOID* ppTarget);
+    // Creates a hook for the specified API function, in disabled state.
+    // Parameters:
+    //   pszModule   [in]  A pointer to the loaded module name which contains the
+    //                     target function.
+    //   pszProcName [in]  A pointer to the target function name, which will be
+    //                     overridden by the detour function.
+    //   pDetour     [in]  A pointer to the detour function, which will override
+    //                     the target function.
+    //   ppOriginal  [out] A pointer to the trampoline function, which will be
+    //                     used to call the original target function.
+    //                     This parameter can be NULL.
+    //   ppTarget    [out] A pointer to the target function, which will be used
+    //                     with other functions.
+    //                     This parameter can be NULL.
+MINHOOK_API MH_STATUS WINAPI MH_CreateHookApiEx(
+        LPCWSTR pszModule, LPCSTR pszProcName, LPVOID pDetour, LPVOID *ppOriginal, LPVOID *ppTarget);
 
-// Removes an already created hook.
-// Parameters:
-//   pTarget [in] A pointer to the target function.
-MINHOOKDEF MINHOOK_EXPORT
-MH_STATUS MH_RemoveHook(LPVOID pTarget);
+    // Removes an already created hook.
+    // Parameters:
+    //   pTarget [in] A pointer to the target function.
+MINHOOK_API MH_STATUS WINAPI MH_RemoveHook(LPVOID pTarget);
 
-// Enables an already created hook.
-// Parameters:
-//   pTarget [in] A pointer to the target function.
-//                If this parameter is MH_ALL_HOOKS, all created hooks are
-//                enabled in one go.
-MINHOOKDEF MINHOOK_EXPORT
-MH_STATUS MH_EnableHook(LPVOID pTarget);
+    // Enables an already created hook.
+    // Parameters:
+    //   pTarget [in] A pointer to the target function.
+    //                If this parameter is MH_ALL_HOOKS, all created hooks are
+    //                enabled in one go.
+MINHOOK_API MH_STATUS WINAPI MH_EnableHook(LPVOID pTarget);
 
-// Disables an already created hook.
-// Parameters:
-//   pTarget [in] A pointer to the target function.
-//                If this parameter is MH_ALL_HOOKS, all created hooks are
-//                disabled in one go.
-MINHOOKDEF MINHOOK_EXPORT
-MH_STATUS MH_DisableHook(LPVOID pTarget);
+    // Disables an already created hook.
+    // Parameters:
+    //   pTarget [in] A pointer to the target function.
+    //                If this parameter is MH_ALL_HOOKS, all created hooks are
+    //                disabled in one go.
+MINHOOK_API MH_STATUS WINAPI MH_DisableHook(LPVOID pTarget);
 
-// Queues to enable an already created hook.
-// Parameters:
-//   pTarget [in] A pointer to the target function.
-//                If this parameter is MH_ALL_HOOKS, all created hooks are
-//                queued to be enabled.
-MINHOOKDEF MINHOOK_EXPORT
-MH_STATUS MH_QueueEnableHook(LPVOID pTarget);
+    // Queues to enable an already created hook.
+    // Parameters:
+    //   pTarget [in] A pointer to the target function.
+    //                If this parameter is MH_ALL_HOOKS, all created hooks are
+    //                queued to be enabled.
+MINHOOK_API MH_STATUS WINAPI MH_QueueEnableHook(LPVOID pTarget);
 
-// Queues to disable an already created hook.
-// Parameters:
-//   pTarget [in] A pointer to the target function.
-//                If this parameter is MH_ALL_HOOKS, all created hooks are
-//                queued to be disabled.
-MINHOOKDEF MINHOOK_EXPORT
-MH_STATUS MH_QueueDisableHook(LPVOID pTarget);
+    // Queues to disable an already created hook.
+    // Parameters:
+    //   pTarget [in] A pointer to the target function.
+    //                If this parameter is MH_ALL_HOOKS, all created hooks are
+    //                queued to be disabled.
+MINHOOK_API MH_STATUS WINAPI MH_QueueDisableHook(LPVOID pTarget);
 
-// Applies all queued changes in one go.
-MINHOOKDEF MINHOOK_EXPORT
-MH_STATUS MH_ApplyQueued(VOID);
+    // Applies all queued changes in one go.
+MINHOOK_API MH_STATUS WINAPI MH_ApplyQueued(VOID);
 
-// Translates the MH_STATUS to its name as a string.
-MINHOOKDEF MINHOOK_EXPORT
-const char* MH_StatusToString(MH_STATUS status);
+    // Translates the MH_STATUS to its name as a string.
+MINHOOK_API const char* WINAPI MH_StatusToString(MH_STATUS status);
 
 #ifdef __cplusplus
 }
 #endif
 
-#ifdef MINHOOK_IMPLEMENTATION
+#endif
 
-/*---------------------buffer---------------------*/
-#if 1 // buffer
+#ifdef MINHOOK_IMPLEMENTATION 
+#if 1 // buffer_impl
+
+
+#include <windows.h>
+
+
+#pragma once
+
 // Size of each memory slot.
 #if defined(_M_X64) || defined(__x86_64__)
-#define MEMORY_SLOT_SIZE 64
+    #define MEMORY_SLOT_SIZE 64
 #else
-#define MEMORY_SLOT_SIZE 32
+    #define MEMORY_SLOT_SIZE 32
 #endif
 
 static VOID   InitializeBuffer(VOID);
@@ -220,6 +238,7 @@ static VOID   UninitializeBuffer(VOID);
 static LPVOID AllocateBuffer(LPVOID pOrigin);
 static VOID   FreeBuffer(LPVOID pBuffer);
 static BOOL   IsExecutableAddress(LPVOID pAddress);
+
 
 // Size of each memory block. (= page size of VirtualAlloc)
 #define MEMORY_BLOCK_SIZE 0x1000
@@ -236,34 +255,34 @@ typedef struct _MEMORY_SLOT
 {
     union
     {
-        struct _MEMORY_SLOT* pNext;
+        struct _MEMORY_SLOT *pNext;
         UINT8 buffer[MEMORY_SLOT_SIZE];
     };
-} MEMORY_SLOT, * PMEMORY_SLOT;
+} MEMORY_SLOT, *PMEMORY_SLOT;
 
 // Memory block info. Placed at the head of each block.
 typedef struct _MEMORY_BLOCK
 {
-    struct _MEMORY_BLOCK* pNext;
+    struct _MEMORY_BLOCK *pNext;
     PMEMORY_SLOT pFree;         // First element of the free slot list.
     UINT usedCount;
-} MEMORY_BLOCK, * PMEMORY_BLOCK;
+} MEMORY_BLOCK, *PMEMORY_BLOCK;
 
 //-------------------------------------------------------------------------
 // Global Variables:
 //-------------------------------------------------------------------------
 
 // First element of the memory block list.
-static PMEMORY_BLOCK g_pMemoryBlocks;
+PMEMORY_BLOCK g_pMemoryBlocks;
 
 //-------------------------------------------------------------------------
-static VOID InitializeBuffer(VOID)
+VOID InitializeBuffer(VOID)
 {
     // Nothing to do for now.
 }
 
 //-------------------------------------------------------------------------
-static VOID UninitializeBuffer(VOID)
+VOID UninitializeBuffer(VOID)
 {
     PMEMORY_BLOCK pBlock = g_pMemoryBlocks;
     g_pMemoryBlocks = NULL;
@@ -307,6 +326,7 @@ static LPVOID FindPrevFreeRegion(LPVOID pAddress, LPVOID pMinAddr, DWORD dwAlloc
 }
 #endif
 
+//-------------------------------------------------------------------------
 #if defined(_M_X64) || defined(__x86_64__)
 static LPVOID FindNextFreeRegion(LPVOID pAddress, LPVOID pMaxAddr, DWORD dwAllocationGranularity)
 {
@@ -435,7 +455,7 @@ static PMEMORY_BLOCK GetMemoryBlock(LPVOID pOrigin)
 }
 
 //-------------------------------------------------------------------------
-static LPVOID AllocateBuffer(LPVOID pOrigin)
+LPVOID AllocateBuffer(LPVOID pOrigin)
 {
     PMEMORY_SLOT  pSlot;
     PMEMORY_BLOCK pBlock = GetMemoryBlock(pOrigin);
@@ -454,7 +474,7 @@ static LPVOID AllocateBuffer(LPVOID pOrigin)
 }
 
 //-------------------------------------------------------------------------
-static VOID FreeBuffer(LPVOID pBuffer)
+VOID FreeBuffer(LPVOID pBuffer)
 {
     PMEMORY_BLOCK pBlock = g_pMemoryBlocks;
     PMEMORY_BLOCK pPrev = NULL;
@@ -494,17 +514,23 @@ static VOID FreeBuffer(LPVOID pBuffer)
 }
 
 //-------------------------------------------------------------------------
-static BOOL IsExecutableAddress(LPVOID pAddress)
+BOOL IsExecutableAddress(LPVOID pAddress)
 {
     MEMORY_BASIC_INFORMATION mi;
     VirtualQuery(pAddress, &mi, sizeof(mi));
 
     return (mi.State == MEM_COMMIT && (mi.Protect & PAGE_EXECUTE_FLAGS));
 }
-#endif // buffer
 
-/*----------------------hde------------------------*/
-#if 1 // hde32, hde64
+#endif 
+#if 1 // trampoline_impl
+
+
+#pragma once
+
+#include <windows.h>
+
+// Integer types for HDE.
 typedef INT8   int8_t;
 typedef INT16  int16_t;
 typedef INT32  int32_t;
@@ -514,8 +540,52 @@ typedef UINT16 uint16_t;
 typedef UINT32 uint32_t;
 typedef UINT64 uint64_t;
 
+
+#include <windows.h>
+
+#if defined(_MSC_VER) && !defined(MINHOOK_DISABLE_INTRINSICS)
+    #define ALLOW_INTRINSICS
+    #include <intrin.h>
+#endif
+
+#ifndef ARRAYSIZE
+    #define ARRAYSIZE(A) (sizeof(A)/sizeof((A)[0]))
+#endif
+
 #if defined(_M_X64) || defined(__x86_64__)
-/*----------------------hde64------------------------*/
+    /*
+ * Hacker Disassembler Engine 64 C
+ * Copyright (c) 2008-2009, Vyacheslav Patkov.
+ * All rights reserved.
+ *
+ */
+
+#if defined(_M_X64) || defined(__x86_64__)
+
+#include <string.h>
+/*
+ * Hacker Disassembler Engine 64
+ * Copyright (c) 2008-2009, Vyacheslav Patkov.
+ * All rights reserved.
+ *
+ * hde64.h: C/C++ header file
+ *
+ */
+
+#ifndef _HDE64_H_
+#define _HDE64_H_
+
+/* stdint.h - C99 standard header
+ * http://en.wikipedia.org/wiki/stdint.h
+ *
+ * if your compiler doesn't contain "stdint.h" header (for
+ * example, Microsoft Visual C++), you can download file:
+ *   http://www.azillionmonkeys.com/qed/pstdint.h
+ * and change next line to:
+ *   //#include "pstdint.h"
+ */
+//#include "pstdint.h"
+
 #define F_MODRM         0x00000001
 #define F_SIB           0x00000002
 #define F_IMM8          0x00000004
@@ -554,6 +624,7 @@ typedef UINT64 uint64_t;
 #define PREFIX_ADDRESS_SIZE 0x67
 
 #pragma pack(push,1)
+
 typedef struct {
     uint8_t len;
     uint8_t p_rep;
@@ -589,11 +660,28 @@ typedef struct {
     } disp;
     uint32_t flags;
 } hde64s;
+
 #pragma pack(pop)
 
-static unsigned int hde64_disasm(const void* code, hde64s* hs);
-typedef hde64s HDE;
-#define HDE_DISASM(code, hs) hde64_disasm(code, hs)
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/* __cdecl */
+static unsigned int hde64_disasm(const void *code, hde64s *hs);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* _HDE64_H_ */
+
+/*
+ * Hacker Disassembler Engine 64 C
+ * Copyright (c) 2008-2009, Vyacheslav Patkov.
+ * All rights reserved.
+ *
+ */
 
 #define C_NONE    0x00
 #define C_MODRM   0x01
@@ -624,7 +712,7 @@ typedef hde64s HDE;
 #define DELTA_OP_ONLY_MEM  0x1d8
 #define DELTA_OP2_ONLY_MEM 0x1e7
 
-static unsigned char hde64_table[] = {
+unsigned char hde64_table[] = {
   0xa5,0xaa,0xa5,0xb8,0xa5,0xaa,0xa5,0xaa,0xa5,0xb8,0xa5,0xb8,0xa5,0xb8,0xa5,
   0xb8,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0xac,0xc0,0xcc,0xc0,0xa1,0xa1,
   0xa1,0xa1,0xb1,0xa5,0xa5,0xa6,0xc0,0xc0,0xd7,0xda,0xe0,0xc0,0xe4,0xc0,0xea,
@@ -663,46 +751,46 @@ static unsigned char hde64_table[] = {
   0x00,0xf0,0x02,0x00
 };
 
-#include <string.h>
-static unsigned int hde64_disasm(const void* code, hde64s* hs)
+
+unsigned int hde64_disasm(const void *code, hde64s *hs)
 {
-    uint8_t x, c, * p = (uint8_t*)code, cflags, opcode, pref = 0;
-    uint8_t* ht = hde64_table, m_mod, m_reg, m_rm, disp_size = 0;
+    uint8_t x, c, *p = (uint8_t *)code, cflags, opcode, pref = 0;
+    uint8_t *ht = hde64_table, m_mod, m_reg, m_rm, disp_size = 0;
     uint8_t op64 = 0;
 
     memset(hs, 0, sizeof(hde64s));
 
     for (x = 16; x; x--)
         switch (c = *p++) {
-        case 0xf3:
-            hs->p_rep = c;
-            pref |= PRE_F3;
-            break;
-        case 0xf2:
-            hs->p_rep = c;
-            pref |= PRE_F2;
-            break;
-        case 0xf0:
-            hs->p_lock = c;
-            pref |= PRE_LOCK;
-            break;
-        case 0x26: case 0x2e: case 0x36:
-        case 0x3e: case 0x64: case 0x65:
-            hs->p_seg = c;
-            pref |= PRE_SEG;
-            break;
-        case 0x66:
-            hs->p_66 = c;
-            pref |= PRE_66;
-            break;
-        case 0x67:
-            hs->p_67 = c;
-            pref |= PRE_67;
-            break;
-        default:
-            goto pref_done;
+            case 0xf3:
+                hs->p_rep = c;
+                pref |= PRE_F3;
+                break;
+            case 0xf2:
+                hs->p_rep = c;
+                pref |= PRE_F2;
+                break;
+            case 0xf0:
+                hs->p_lock = c;
+                pref |= PRE_LOCK;
+                break;
+            case 0x26: case 0x2e: case 0x36:
+            case 0x3e: case 0x64: case 0x65:
+                hs->p_seg = c;
+                pref |= PRE_SEG;
+                break;
+            case 0x66:
+                hs->p_66 = c;
+                pref |= PRE_66;
+                break;
+            case 0x67:
+                hs->p_67 = c;
+                pref |= PRE_67;
+                break;
+            default:
+                goto pref_done;
         }
-pref_done:
+  pref_done:
 
     hs->flags = (uint32_t)pref << 23;
 
@@ -725,8 +813,7 @@ pref_done:
     if ((hs->opcode = c) == 0x0f) {
         hs->opcode2 = c = *p++;
         ht += DELTA_OPCODES;
-    }
-    else if (c >= 0xa0 && c <= 0xa3) {
+    } else if (c >= 0xa0 && c <= 0xa3) {
         op64++;
         if (pref & PRE_67)
             pref |= PRE_66;
@@ -738,7 +825,7 @@ pref_done:
     cflags = ht[ht[opcode / 4] + (opcode % 4)];
 
     if (cflags == C_ERROR) {
-    error_opcode:
+      error_opcode:
         hs->flags |= F_ERROR | F_ERROR_OPCODE;
         cflags = 0;
         if ((opcode & -3) == 0x24)
@@ -748,7 +835,7 @@ pref_done:
     x = 0;
     if (cflags & C_GROUP) {
         uint16_t t;
-        t = *(uint16_t*)(ht + (cflags & 0x7f));
+        t = *(uint16_t *)(ht + (cflags & 0x7f));
         cflags = (uint8_t)t;
         x = (uint8_t)(t >> 8);
     }
@@ -772,10 +859,9 @@ pref_done:
         if (!hs->opcode2 && opcode >= 0xd9 && opcode <= 0xdf) {
             uint8_t t = opcode - 0xd9;
             if (m_mod == 3) {
-                ht = hde64_table + DELTA_FPU_MODRM + t * 8;
+                ht = hde64_table + DELTA_FPU_MODRM + t*8;
                 t = ht[m_reg] << m_rm;
-            }
-            else {
+            } else {
                 ht = hde64_table + DELTA_FPU_REG;
                 t = ht[t] << m_reg;
             }
@@ -786,14 +872,12 @@ pref_done:
         if (pref & PRE_LOCK) {
             if (m_mod == 3) {
                 hs->flags |= F_ERROR | F_ERROR_LOCK;
-            }
-            else {
-                uint8_t* table_end, op = opcode;
+            } else {
+                uint8_t *table_end, op = opcode;
                 if (hs->opcode2) {
                     ht = hde64_table + DELTA_OP2_LOCK_OK;
                     table_end = ht + DELTA_OP_ONLY_MEM - DELTA_OP2_LOCK_OK;
-                }
-                else {
+                } else {
                     ht = hde64_table + DELTA_OP_LOCK_OK;
                     table_end = ht + DELTA_OP2_LOCK_OK - DELTA_OP_LOCK_OK;
                     op &= -2;
@@ -806,82 +890,78 @@ pref_done:
                             break;
                     }
                 hs->flags |= F_ERROR | F_ERROR_LOCK;
-            no_lock_error:
+              no_lock_error:
                 ;
             }
         }
 
         if (hs->opcode2) {
             switch (opcode) {
-            case 0x20: case 0x22:
-                m_mod = 3;
-                if (m_reg > 4 || m_reg == 1)
-                    goto error_operand;
-                else
-                    goto no_error_operand;
-            case 0x21: case 0x23:
-                m_mod = 3;
-                if (m_reg == 4 || m_reg == 5)
-                    goto error_operand;
-                else
-                    goto no_error_operand;
+                case 0x20: case 0x22:
+                    m_mod = 3;
+                    if (m_reg > 4 || m_reg == 1)
+                        goto error_operand;
+                    else
+                        goto no_error_operand;
+                case 0x21: case 0x23:
+                    m_mod = 3;
+                    if (m_reg == 4 || m_reg == 5)
+                        goto error_operand;
+                    else
+                        goto no_error_operand;
             }
-        }
-        else {
+        } else {
             switch (opcode) {
-            case 0x8c:
-                if (m_reg > 5)
-                    goto error_operand;
-                else
-                    goto no_error_operand;
-            case 0x8e:
-                if (m_reg == 1 || m_reg > 5)
-                    goto error_operand;
-                else
-                    goto no_error_operand;
+                case 0x8c:
+                    if (m_reg > 5)
+                        goto error_operand;
+                    else
+                        goto no_error_operand;
+                case 0x8e:
+                    if (m_reg == 1 || m_reg > 5)
+                        goto error_operand;
+                    else
+                        goto no_error_operand;
             }
         }
 
         if (m_mod == 3) {
-            uint8_t* table_end;
+            uint8_t *table_end;
             if (hs->opcode2) {
                 ht = hde64_table + DELTA_OP2_ONLY_MEM;
                 table_end = ht + sizeof(hde64_table) - DELTA_OP2_ONLY_MEM;
-            }
-            else {
+            } else {
                 ht = hde64_table + DELTA_OP_ONLY_MEM;
                 table_end = ht + DELTA_OP2_ONLY_MEM - DELTA_OP_ONLY_MEM;
             }
             for (; ht != table_end; ht += 2)
                 if (*ht++ == opcode) {
-                    if (*ht++ & pref && !((*ht << m_reg) & 0x80))
+                    if ((*ht++ & pref) && !((*ht << m_reg) & 0x80))
                         goto error_operand;
                     else
                         break;
                 }
             goto no_error_operand;
-        }
-        else if (hs->opcode2) {
+        } else if (hs->opcode2) {
             switch (opcode) {
-            case 0x50: case 0xd7: case 0xf7:
-                if (pref & (PRE_NONE | PRE_66))
+                case 0x50: case 0xd7: case 0xf7:
+                    if (pref & (PRE_NONE | PRE_66))
+                        goto error_operand;
+                    break;
+                case 0xd6:
+                    if (pref & (PRE_F2 | PRE_F3))
+                        goto error_operand;
+                    break;
+                case 0xc5:
                     goto error_operand;
-                break;
-            case 0xd6:
-                if (pref & (PRE_F2 | PRE_F3))
-                    goto error_operand;
-                break;
-            case 0xc5:
-                goto error_operand;
             }
             goto no_error_operand;
-        }
-        else
+        } else
             goto no_error_operand;
 
-    error_operand:
+      error_operand:
         hs->flags |= F_ERROR | F_ERROR_OPERAND;
-    no_error_operand:
+      no_error_operand:
 
         c = *p++;
         if (m_reg <= 1) {
@@ -892,22 +972,22 @@ pref_done:
         }
 
         switch (m_mod) {
-        case 0:
-            if (pref & PRE_67) {
-                if (m_rm == 6)
-                    disp_size = 2;
-            }
-            else
-                if (m_rm == 5)
-                    disp_size = 4;
-            break;
-        case 1:
-            disp_size = 1;
-            break;
-        case 2:
-            disp_size = 2;
-            if (!(pref & PRE_67))
-                disp_size <<= 1;
+            case 0:
+                if (pref & PRE_67) {
+                    if (m_rm == 6)
+                        disp_size = 2;
+                } else
+                    if (m_rm == 5)
+                        disp_size = 4;
+                break;
+            case 1:
+                disp_size = 1;
+                break;
+            case 2:
+                disp_size = 2;
+                if (!(pref & PRE_67))
+                    disp_size <<= 1;
+                break;
         }
 
         if (m_mod != 3 && m_rm == 4) {
@@ -922,28 +1002,28 @@ pref_done:
 
         p--;
         switch (disp_size) {
-        case 1:
-            hs->flags |= F_DISP8;
-            hs->disp.disp8 = *p;
-            break;
-        case 2:
-            hs->flags |= F_DISP16;
-            hs->disp.disp16 = *(uint16_t*)p;
-            break;
-        case 4:
-            hs->flags |= F_DISP32;
-            hs->disp.disp32 = *(uint32_t*)p;
+            case 1:
+                hs->flags |= F_DISP8;
+                hs->disp.disp8 = *p;
+                break;
+            case 2:
+                hs->flags |= F_DISP16;
+                hs->disp.disp16 = *(uint16_t *)p;
+                break;
+            case 4:
+                hs->flags |= F_DISP32;
+                hs->disp.disp32 = *(uint32_t *)p;
+                break;
         }
         p += disp_size;
-    }
-    else if (pref & PRE_LOCK)
+    } else if (pref & PRE_LOCK)
         hs->flags |= F_ERROR | F_ERROR_LOCK;
 
     if (cflags & C_IMM_P66) {
         if (cflags & C_REL32) {
             if (pref & PRE_66) {
                 hs->flags |= F_IMM16 | F_RELATIVE;
-                hs->imm.imm16 = *(uint16_t*)p;
+                hs->imm.imm16 = *(uint16_t *)p;
                 p += 2;
                 goto disasm_done;
             }
@@ -951,23 +1031,21 @@ pref_done:
         }
         if (op64) {
             hs->flags |= F_IMM64;
-            hs->imm.imm64 = *(uint64_t*)p;
+            hs->imm.imm64 = *(uint64_t *)p;
             p += 8;
-        }
-        else if (!(pref & PRE_66)) {
+        } else if (!(pref & PRE_66)) {
             hs->flags |= F_IMM32;
-            hs->imm.imm32 = *(uint32_t*)p;
+            hs->imm.imm32 = *(uint32_t *)p;
             p += 4;
-        }
-        else
+        } else
             goto imm16_ok;
     }
 
 
     if (cflags & C_IMM16) {
-    imm16_ok:
+      imm16_ok:
         hs->flags |= F_IMM16;
-        hs->imm.imm16 = *(uint16_t*)p;
+        hs->imm.imm16 = *(uint16_t *)p;
         p += 2;
     }
     if (cflags & C_IMM8) {
@@ -976,19 +1054,18 @@ pref_done:
     }
 
     if (cflags & C_REL32) {
-    rel32_ok:
+      rel32_ok:
         hs->flags |= F_IMM32 | F_RELATIVE;
-        hs->imm.imm32 = *(uint32_t*)p;
+        hs->imm.imm32 = *(uint32_t *)p;
         p += 4;
-    }
-    else if (cflags & C_REL8) {
+    } else if (cflags & C_REL8) {
         hs->flags |= F_IMM8 | F_RELATIVE;
         hs->imm.imm8 = *p++;
     }
 
-disasm_done:
+  disasm_done:
 
-    if ((hs->len = (uint8_t)(p - (uint8_t*)code)) > 15) {
+    if ((hs->len = (uint8_t)(p-(uint8_t *)code)) > 15) {
         hs->flags |= F_ERROR | F_ERROR_LENGTH;
         hs->len = 15;
     }
@@ -996,74 +1073,43 @@ disasm_done:
     return (unsigned int)hs->len;
 }
 
+#endif // defined(_M_X64) || defined(__x86_64__)
+
+    typedef hde64s HDE;
+    #define HDE_DISASM(code, hs) hde64_disasm(code, hs)
 #else
-/*----------------------hde32------------------------*/
-#define C_NONE    0x00
-#define C_MODRM   0x01
-#define C_IMM8    0x02
-#define C_IMM16   0x04
-#define C_IMM_P66 0x10
-#define C_REL8    0x20
-#define C_REL32   0x40
-#define C_GROUP   0x80
-#define C_ERROR   0xff
+    /*
+ * Hacker Disassembler Engine 32 C
+ * Copyright (c) 2008-2009, Vyacheslav Patkov.
+ * All rights reserved.
+ *
+ */
 
-#define PRE_ANY  0x00
-#define PRE_NONE 0x01
-#define PRE_F2   0x02
-#define PRE_F3   0x04
-#define PRE_66   0x08
-#define PRE_67   0x10
-#define PRE_LOCK 0x20
-#define PRE_SEG  0x40
-#define PRE_ALL  0xff
+#if defined(_M_IX86) || defined(__i386__)
 
-#define DELTA_OPCODES      0x4a
-#define DELTA_FPU_REG      0xf1
-#define DELTA_FPU_MODRM    0xf8
-#define DELTA_PREFIXES     0x130
-#define DELTA_OP_LOCK_OK   0x1a1
-#define DELTA_OP2_LOCK_OK  0x1b9
-#define DELTA_OP_ONLY_MEM  0x1cb
-#define DELTA_OP2_ONLY_MEM 0x1da
+#include <string.h>
+/*
+ * Hacker Disassembler Engine 32
+ * Copyright (c) 2006-2009, Vyacheslav Patkov.
+ * All rights reserved.
+ *
+ * hde32.h: C/C++ header file
+ *
+ */
 
-static unsigned char hde32_table[] = {
-  0xa3,0xa8,0xa3,0xa8,0xa3,0xa8,0xa3,0xa8,0xa3,0xa8,0xa3,0xa8,0xa3,0xa8,0xa3,
-  0xa8,0xaa,0xaa,0xaa,0xaa,0xaa,0xaa,0xaa,0xaa,0xac,0xaa,0xb2,0xaa,0x9f,0x9f,
-  0x9f,0x9f,0xb5,0xa3,0xa3,0xa4,0xaa,0xaa,0xba,0xaa,0x96,0xaa,0xa8,0xaa,0xc3,
-  0xc3,0x96,0x96,0xb7,0xae,0xd6,0xbd,0xa3,0xc5,0xa3,0xa3,0x9f,0xc3,0x9c,0xaa,
-  0xaa,0xac,0xaa,0xbf,0x03,0x7f,0x11,0x7f,0x01,0x7f,0x01,0x3f,0x01,0x01,0x90,
-  0x82,0x7d,0x97,0x59,0x59,0x59,0x59,0x59,0x7f,0x59,0x59,0x60,0x7d,0x7f,0x7f,
-  0x59,0x59,0x59,0x59,0x59,0x59,0x59,0x59,0x59,0x59,0x59,0x59,0x9a,0x88,0x7d,
-  0x59,0x50,0x50,0x50,0x50,0x59,0x59,0x59,0x59,0x61,0x94,0x61,0x9e,0x59,0x59,
-  0x85,0x59,0x92,0xa3,0x60,0x60,0x59,0x59,0x59,0x59,0x59,0x59,0x59,0x59,0x59,
-  0x59,0x59,0x9f,0x01,0x03,0x01,0x04,0x03,0xd5,0x03,0xcc,0x01,0xbc,0x03,0xf0,
-  0x10,0x10,0x10,0x10,0x50,0x50,0x50,0x50,0x14,0x20,0x20,0x20,0x20,0x01,0x01,
-  0x01,0x01,0xc4,0x02,0x10,0x00,0x00,0x00,0x00,0x01,0x01,0xc0,0xc2,0x10,0x11,
-  0x02,0x03,0x11,0x03,0x03,0x04,0x00,0x00,0x14,0x00,0x02,0x00,0x00,0xc6,0xc8,
-  0x02,0x02,0x02,0x02,0x00,0x00,0xff,0xff,0xff,0xff,0x00,0x00,0x00,0xff,0xca,
-  0x01,0x01,0x01,0x00,0x06,0x00,0x04,0x00,0xc0,0xc2,0x01,0x01,0x03,0x01,0xff,
-  0xff,0x01,0x00,0x03,0xc4,0xc4,0xc6,0x03,0x01,0x01,0x01,0xff,0x03,0x03,0x03,
-  0xc8,0x40,0x00,0x0a,0x00,0x04,0x00,0x00,0x00,0x00,0x7f,0x00,0x33,0x01,0x00,
-  0x00,0x00,0x00,0x00,0x00,0xff,0xbf,0xff,0xff,0x00,0x00,0x00,0x00,0x07,0x00,
-  0x00,0xff,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-  0x00,0xff,0xff,0x00,0x00,0x00,0xbf,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-  0x7f,0x00,0x00,0xff,0x4a,0x4a,0x4a,0x4a,0x4b,0x52,0x4a,0x4a,0x4a,0x4a,0x4f,
-  0x4c,0x4a,0x4a,0x4a,0x4a,0x4a,0x4a,0x4a,0x4a,0x55,0x45,0x40,0x4a,0x4a,0x4a,
-  0x45,0x59,0x4d,0x46,0x4a,0x5d,0x4a,0x4a,0x4a,0x4a,0x4a,0x4a,0x4a,0x4a,0x4a,
-  0x4a,0x4a,0x4a,0x4a,0x4a,0x61,0x63,0x67,0x4e,0x4a,0x4a,0x6b,0x6d,0x4a,0x4a,
-  0x45,0x6d,0x4a,0x4a,0x44,0x45,0x4a,0x4a,0x00,0x00,0x00,0x02,0x0d,0x06,0x06,
-  0x06,0x06,0x0e,0x00,0x00,0x00,0x00,0x06,0x06,0x06,0x00,0x06,0x06,0x02,0x06,
-  0x00,0x0a,0x0a,0x07,0x07,0x06,0x02,0x05,0x05,0x02,0x02,0x00,0x00,0x04,0x04,
-  0x04,0x04,0x00,0x00,0x00,0x0e,0x05,0x06,0x06,0x06,0x01,0x06,0x00,0x00,0x08,
-  0x00,0x10,0x00,0x18,0x00,0x20,0x00,0x28,0x00,0x30,0x00,0x80,0x01,0x82,0x01,
-  0x86,0x00,0xf6,0xcf,0xfe,0x3f,0xab,0x00,0xb0,0x00,0xb1,0x00,0xb3,0x00,0xba,
-  0xf8,0xbb,0x00,0xc0,0x00,0xc1,0x00,0xc7,0xbf,0x62,0xff,0x00,0x8d,0xff,0x00,
-  0xc4,0xff,0x00,0xc5,0xff,0x00,0xff,0xff,0xeb,0x01,0xff,0x0e,0x12,0x08,0x00,
-  0x13,0x09,0x00,0x16,0x08,0x00,0x17,0x09,0x00,0x2b,0x09,0x00,0xae,0xff,0x07,
-  0xb2,0xff,0x00,0xb4,0xff,0x00,0xb5,0xff,0x00,0xc3,0x01,0x00,0xc7,0xff,0xbf,
-  0xe7,0x08,0x00,0xf0,0x02,0x00
-};
+#ifndef _HDE32_H_
+#define _HDE32_H_
+
+/* stdint.h - C99 standard header
+ * http://en.wikipedia.org/wiki/stdint.h
+ *
+ * if your compiler doesn't contain "stdint.h" header (for
+ * example, Microsoft Visual C++), you can download file:
+ *   http://www.azillionmonkeys.com/qed/pstdint.h
+ * and change next line to:
+ *   //#include "pstdint.h"
+ */
+//#include "pstdint.h"
 
 #define F_MODRM         0x00000001
 #define F_SIB           0x00000002
@@ -1102,6 +1148,7 @@ static unsigned char hde32_table[] = {
 #define PREFIX_ADDRESS_SIZE 0x67
 
 #pragma pack(push,1)
+
 typedef struct {
     uint8_t len;
     uint8_t p_rep;
@@ -1131,51 +1178,135 @@ typedef struct {
     } disp;
     uint32_t flags;
 } hde32s;
+
 #pragma pack(pop)
 
-static unsigned int hde32_disasm(const void* code, hde32s* hs);
-typedef hde32s HDE;
-#define HDE_DISASM(code, hs) hde32_disasm(code, hs)
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-#include <string.h>
-static unsigned int hde32_disasm(const void* code, hde32s* hs)
+/* __cdecl */
+static unsigned int hde32_disasm(const void *code, hde32s *hs);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* _HDE32_H_ */
+
+/*
+ * Hacker Disassembler Engine 32 C
+ * Copyright (c) 2008-2009, Vyacheslav Patkov.
+ * All rights reserved.
+ *
+ */
+
+#define C_NONE    0x00
+#define C_MODRM   0x01
+#define C_IMM8    0x02
+#define C_IMM16   0x04
+#define C_IMM_P66 0x10
+#define C_REL8    0x20
+#define C_REL32   0x40
+#define C_GROUP   0x80
+#define C_ERROR   0xff
+
+#define PRE_ANY  0x00
+#define PRE_NONE 0x01
+#define PRE_F2   0x02
+#define PRE_F3   0x04
+#define PRE_66   0x08
+#define PRE_67   0x10
+#define PRE_LOCK 0x20
+#define PRE_SEG  0x40
+#define PRE_ALL  0xff
+
+#define DELTA_OPCODES      0x4a
+#define DELTA_FPU_REG      0xf1
+#define DELTA_FPU_MODRM    0xf8
+#define DELTA_PREFIXES     0x130
+#define DELTA_OP_LOCK_OK   0x1a1
+#define DELTA_OP2_LOCK_OK  0x1b9
+#define DELTA_OP_ONLY_MEM  0x1cb
+#define DELTA_OP2_ONLY_MEM 0x1da
+
+unsigned char hde32_table[] = {
+  0xa3,0xa8,0xa3,0xa8,0xa3,0xa8,0xa3,0xa8,0xa3,0xa8,0xa3,0xa8,0xa3,0xa8,0xa3,
+  0xa8,0xaa,0xaa,0xaa,0xaa,0xaa,0xaa,0xaa,0xaa,0xac,0xaa,0xb2,0xaa,0x9f,0x9f,
+  0x9f,0x9f,0xb5,0xa3,0xa3,0xa4,0xaa,0xaa,0xba,0xaa,0x96,0xaa,0xa8,0xaa,0xc3,
+  0xc3,0x96,0x96,0xb7,0xae,0xd6,0xbd,0xa3,0xc5,0xa3,0xa3,0x9f,0xc3,0x9c,0xaa,
+  0xaa,0xac,0xaa,0xbf,0x03,0x7f,0x11,0x7f,0x01,0x7f,0x01,0x3f,0x01,0x01,0x90,
+  0x82,0x7d,0x97,0x59,0x59,0x59,0x59,0x59,0x7f,0x59,0x59,0x60,0x7d,0x7f,0x7f,
+  0x59,0x59,0x59,0x59,0x59,0x59,0x59,0x59,0x59,0x59,0x59,0x59,0x9a,0x88,0x7d,
+  0x59,0x50,0x50,0x50,0x50,0x59,0x59,0x59,0x59,0x61,0x94,0x61,0x9e,0x59,0x59,
+  0x85,0x59,0x92,0xa3,0x60,0x60,0x59,0x59,0x59,0x59,0x59,0x59,0x59,0x59,0x59,
+  0x59,0x59,0x9f,0x01,0x03,0x01,0x04,0x03,0xd5,0x03,0xcc,0x01,0xbc,0x03,0xf0,
+  0x10,0x10,0x10,0x10,0x50,0x50,0x50,0x50,0x14,0x20,0x20,0x20,0x20,0x01,0x01,
+  0x01,0x01,0xc4,0x02,0x10,0x00,0x00,0x00,0x00,0x01,0x01,0xc0,0xc2,0x10,0x11,
+  0x02,0x03,0x11,0x03,0x03,0x04,0x00,0x00,0x14,0x00,0x02,0x00,0x00,0xc6,0xc8,
+  0x02,0x02,0x02,0x02,0x00,0x00,0xff,0xff,0xff,0xff,0x00,0x00,0x00,0xff,0xca,
+  0x01,0x01,0x01,0x00,0x06,0x00,0x04,0x00,0xc0,0xc2,0x01,0x01,0x03,0x01,0xff,
+  0xff,0x01,0x00,0x03,0xc4,0xc4,0xc6,0x03,0x01,0x01,0x01,0xff,0x03,0x03,0x03,
+  0xc8,0x40,0x00,0x0a,0x00,0x04,0x00,0x00,0x00,0x00,0x7f,0x00,0x33,0x01,0x00,
+  0x00,0x00,0x00,0x00,0x00,0xff,0xbf,0xff,0xff,0x00,0x00,0x00,0x00,0x07,0x00,
+  0x00,0xff,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+  0x00,0xff,0xff,0x00,0x00,0x00,0xbf,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+  0x7f,0x00,0x00,0xff,0x4a,0x4a,0x4a,0x4a,0x4b,0x52,0x4a,0x4a,0x4a,0x4a,0x4f,
+  0x4c,0x4a,0x4a,0x4a,0x4a,0x4a,0x4a,0x4a,0x4a,0x55,0x45,0x40,0x4a,0x4a,0x4a,
+  0x45,0x59,0x4d,0x46,0x4a,0x5d,0x4a,0x4a,0x4a,0x4a,0x4a,0x4a,0x4a,0x4a,0x4a,
+  0x4a,0x4a,0x4a,0x4a,0x4a,0x61,0x63,0x67,0x4e,0x4a,0x4a,0x6b,0x6d,0x4a,0x4a,
+  0x45,0x6d,0x4a,0x4a,0x44,0x45,0x4a,0x4a,0x00,0x00,0x00,0x02,0x0d,0x06,0x06,
+  0x06,0x06,0x0e,0x00,0x00,0x00,0x00,0x06,0x06,0x06,0x00,0x06,0x06,0x02,0x06,
+  0x00,0x0a,0x0a,0x07,0x07,0x06,0x02,0x05,0x05,0x02,0x02,0x00,0x00,0x04,0x04,
+  0x04,0x04,0x00,0x00,0x00,0x0e,0x05,0x06,0x06,0x06,0x01,0x06,0x00,0x00,0x08,
+  0x00,0x10,0x00,0x18,0x00,0x20,0x00,0x28,0x00,0x30,0x00,0x80,0x01,0x82,0x01,
+  0x86,0x00,0xf6,0xcf,0xfe,0x3f,0xab,0x00,0xb0,0x00,0xb1,0x00,0xb3,0x00,0xba,
+  0xf8,0xbb,0x00,0xc0,0x00,0xc1,0x00,0xc7,0xbf,0x62,0xff,0x00,0x8d,0xff,0x00,
+  0xc4,0xff,0x00,0xc5,0xff,0x00,0xff,0xff,0xeb,0x01,0xff,0x0e,0x12,0x08,0x00,
+  0x13,0x09,0x00,0x16,0x08,0x00,0x17,0x09,0x00,0x2b,0x09,0x00,0xae,0xff,0x07,
+  0xb2,0xff,0x00,0xb4,0xff,0x00,0xb5,0xff,0x00,0xc3,0x01,0x00,0xc7,0xff,0xbf,
+  0xe7,0x08,0x00,0xf0,0x02,0x00
+};
+
+
+unsigned int hde32_disasm(const void *code, hde32s *hs)
 {
-    uint8_t x, c, * p = (uint8_t*)code, cflags, opcode, pref = 0;
-    uint8_t* ht = hde32_table, m_mod, m_reg, m_rm, disp_size = 0;
+    uint8_t x, c, *p = (uint8_t *)code, cflags, opcode, pref = 0;
+    uint8_t *ht = hde32_table, m_mod, m_reg, m_rm, disp_size = 0;
 
     memset(hs, 0, sizeof(hde32s));
 
     for (x = 16; x; x--)
         switch (c = *p++) {
-        case 0xf3:
-            hs->p_rep = c;
-            pref |= PRE_F3;
-            break;
-        case 0xf2:
-            hs->p_rep = c;
-            pref |= PRE_F2;
-            break;
-        case 0xf0:
-            hs->p_lock = c;
-            pref |= PRE_LOCK;
-            break;
-        case 0x26: case 0x2e: case 0x36:
-        case 0x3e: case 0x64: case 0x65:
-            hs->p_seg = c;
-            pref |= PRE_SEG;
-            break;
-        case 0x66:
-            hs->p_66 = c;
-            pref |= PRE_66;
-            break;
-        case 0x67:
-            hs->p_67 = c;
-            pref |= PRE_67;
-            break;
-        default:
-            goto pref_done;
+            case 0xf3:
+                hs->p_rep = c;
+                pref |= PRE_F3;
+                break;
+            case 0xf2:
+                hs->p_rep = c;
+                pref |= PRE_F2;
+                break;
+            case 0xf0:
+                hs->p_lock = c;
+                pref |= PRE_LOCK;
+                break;
+            case 0x26: case 0x2e: case 0x36:
+            case 0x3e: case 0x64: case 0x65:
+                hs->p_seg = c;
+                pref |= PRE_SEG;
+                break;
+            case 0x66:
+                hs->p_66 = c;
+                pref |= PRE_66;
+                break;
+            case 0x67:
+                hs->p_67 = c;
+                pref |= PRE_67;
+                break;
+            default:
+                goto pref_done;
         }
-pref_done:
+  pref_done:
 
     hs->flags = (uint32_t)pref << 23;
 
@@ -1185,8 +1316,7 @@ pref_done:
     if ((hs->opcode = c) == 0x0f) {
         hs->opcode2 = c = *p++;
         ht += DELTA_OPCODES;
-    }
-    else if (c >= 0xa0 && c <= 0xa3) {
+    } else if (c >= 0xa0 && c <= 0xa3) {
         if (pref & PRE_67)
             pref |= PRE_66;
         else
@@ -1206,7 +1336,7 @@ pref_done:
     x = 0;
     if (cflags & C_GROUP) {
         uint16_t t;
-        t = *(uint16_t*)(ht + (cflags & 0x7f));
+        t = *(uint16_t *)(ht + (cflags & 0x7f));
         cflags = (uint8_t)t;
         x = (uint8_t)(t >> 8);
     }
@@ -1230,10 +1360,9 @@ pref_done:
         if (!hs->opcode2 && opcode >= 0xd9 && opcode <= 0xdf) {
             uint8_t t = opcode - 0xd9;
             if (m_mod == 3) {
-                ht = hde32_table + DELTA_FPU_MODRM + t * 8;
+                ht = hde32_table + DELTA_FPU_MODRM + t*8;
                 t = ht[m_reg] << m_rm;
-            }
-            else {
+            } else {
                 ht = hde32_table + DELTA_FPU_REG;
                 t = ht[t] << m_reg;
             }
@@ -1244,14 +1373,12 @@ pref_done:
         if (pref & PRE_LOCK) {
             if (m_mod == 3) {
                 hs->flags |= F_ERROR | F_ERROR_LOCK;
-            }
-            else {
-                uint8_t* table_end, op = opcode;
+            } else {
+                uint8_t *table_end, op = opcode;
                 if (hs->opcode2) {
                     ht = hde32_table + DELTA_OP2_LOCK_OK;
                     table_end = ht + DELTA_OP_ONLY_MEM - DELTA_OP2_LOCK_OK;
-                }
-                else {
+                } else {
                     ht = hde32_table + DELTA_OP_LOCK_OK;
                     table_end = ht + DELTA_OP2_LOCK_OK - DELTA_OP_LOCK_OK;
                     op &= -2;
@@ -1264,49 +1391,47 @@ pref_done:
                             break;
                     }
                 hs->flags |= F_ERROR | F_ERROR_LOCK;
-            no_lock_error:
+              no_lock_error:
                 ;
             }
         }
 
         if (hs->opcode2) {
             switch (opcode) {
-            case 0x20: case 0x22:
-                m_mod = 3;
-                if (m_reg > 4 || m_reg == 1)
-                    goto error_operand;
-                else
-                    goto no_error_operand;
-            case 0x21: case 0x23:
-                m_mod = 3;
-                if (m_reg == 4 || m_reg == 5)
-                    goto error_operand;
-                else
-                    goto no_error_operand;
+                case 0x20: case 0x22:
+                    m_mod = 3;
+                    if (m_reg > 4 || m_reg == 1)
+                        goto error_operand;
+                    else
+                        goto no_error_operand;
+                case 0x21: case 0x23:
+                    m_mod = 3;
+                    if (m_reg == 4 || m_reg == 5)
+                        goto error_operand;
+                    else
+                        goto no_error_operand;
             }
-        }
-        else {
+        } else {
             switch (opcode) {
-            case 0x8c:
-                if (m_reg > 5)
-                    goto error_operand;
-                else
-                    goto no_error_operand;
-            case 0x8e:
-                if (m_reg == 1 || m_reg > 5)
-                    goto error_operand;
-                else
-                    goto no_error_operand;
+                case 0x8c:
+                    if (m_reg > 5)
+                        goto error_operand;
+                    else
+                        goto no_error_operand;
+                case 0x8e:
+                    if (m_reg == 1 || m_reg > 5)
+                        goto error_operand;
+                    else
+                        goto no_error_operand;
             }
         }
 
         if (m_mod == 3) {
-            uint8_t* table_end;
+            uint8_t *table_end;
             if (hs->opcode2) {
                 ht = hde32_table + DELTA_OP2_ONLY_MEM;
                 table_end = ht + sizeof(hde32_table) - DELTA_OP2_ONLY_MEM;
-            }
-            else {
+            } else {
                 ht = hde32_table + DELTA_OP_ONLY_MEM;
                 table_end = ht + DELTA_OP2_ONLY_MEM - DELTA_OP_ONLY_MEM;
             }
@@ -1318,28 +1443,26 @@ pref_done:
                         break;
                 }
             goto no_error_operand;
-        }
-        else if (hs->opcode2) {
+        } else if (hs->opcode2) {
             switch (opcode) {
-            case 0x50: case 0xd7: case 0xf7:
-                if (pref & (PRE_NONE | PRE_66))
+                case 0x50: case 0xd7: case 0xf7:
+                    if (pref & (PRE_NONE | PRE_66))
+                        goto error_operand;
+                    break;
+                case 0xd6:
+                    if (pref & (PRE_F2 | PRE_F3))
+                        goto error_operand;
+                    break;
+                case 0xc5:
                     goto error_operand;
-                break;
-            case 0xd6:
-                if (pref & (PRE_F2 | PRE_F3))
-                    goto error_operand;
-                break;
-            case 0xc5:
-                goto error_operand;
             }
             goto no_error_operand;
-        }
-        else
+        } else
             goto no_error_operand;
 
-    error_operand:
+      error_operand:
         hs->flags |= F_ERROR | F_ERROR_OPERAND;
-    no_error_operand:
+      no_error_operand:
 
         c = *p++;
         if (m_reg <= 1) {
@@ -1350,23 +1473,22 @@ pref_done:
         }
 
         switch (m_mod) {
-        case 0:
-            if (pref & PRE_67) {
-                if (m_rm == 6)
-                    disp_size = 2;
-            }
-            else
-                if (m_rm == 5)
-                    disp_size = 4;
-            break;
-        case 1:
-            disp_size = 1;
-            break;
-        case 2:
-            disp_size = 2;
-            if (!(pref & PRE_67))
-                disp_size <<= 1;
-            break;
+            case 0:
+                if (pref & PRE_67) {
+                    if (m_rm == 6)
+                        disp_size = 2;
+                } else
+                    if (m_rm == 5)
+                        disp_size = 4;
+                break;
+            case 1:
+                disp_size = 1;
+                break;
+            case 2:
+                disp_size = 2;
+                if (!(pref & PRE_67))
+                    disp_size <<= 1;
+                break;
         }
 
         if (m_mod != 3 && m_rm == 4 && !(pref & PRE_67)) {
@@ -1381,29 +1503,28 @@ pref_done:
 
         p--;
         switch (disp_size) {
-        case 1:
-            hs->flags |= F_DISP8;
-            hs->disp.disp8 = *p;
-            break;
-        case 2:
-            hs->flags |= F_DISP16;
-            hs->disp.disp16 = *(uint16_t*)p;
-            break;
-        case 4:
-            hs->flags |= F_DISP32;
-            hs->disp.disp32 = *(uint32_t*)p;
-            break;
+            case 1:
+                hs->flags |= F_DISP8;
+                hs->disp.disp8 = *p;
+                break;
+            case 2:
+                hs->flags |= F_DISP16;
+                hs->disp.disp16 = *(uint16_t *)p;
+                break;
+            case 4:
+                hs->flags |= F_DISP32;
+                hs->disp.disp32 = *(uint32_t *)p;
+                break;
         }
         p += disp_size;
-    }
-    else if (pref & PRE_LOCK)
+    } else if (pref & PRE_LOCK)
         hs->flags |= F_ERROR | F_ERROR_LOCK;
 
     if (cflags & C_IMM_P66) {
         if (cflags & C_REL32) {
             if (pref & PRE_66) {
                 hs->flags |= F_IMM16 | F_RELATIVE;
-                hs->imm.imm16 = *(uint16_t*)p;
+                hs->imm.imm16 = *(uint16_t *)p;
                 p += 2;
                 goto disasm_done;
             }
@@ -1411,12 +1532,11 @@ pref_done:
         }
         if (pref & PRE_66) {
             hs->flags |= F_IMM16;
-            hs->imm.imm16 = *(uint16_t*)p;
+            hs->imm.imm16 = *(uint16_t *)p;
             p += 2;
-        }
-        else {
+        } else {
             hs->flags |= F_IMM32;
-            hs->imm.imm32 = *(uint32_t*)p;
+            hs->imm.imm32 = *(uint32_t *)p;
             p += 4;
         }
     }
@@ -1424,15 +1544,13 @@ pref_done:
     if (cflags & C_IMM16) {
         if (hs->flags & F_IMM32) {
             hs->flags |= F_IMM16;
-            hs->disp.disp16 = *(uint16_t*)p;
-        }
-        else if (hs->flags & F_IMM16) {
+            hs->disp.disp16 = *(uint16_t *)p;
+        } else if (hs->flags & F_IMM16) {
             hs->flags |= F_2IMM16;
-            hs->disp.disp16 = *(uint16_t*)p;
-        }
-        else {
+            hs->disp.disp16 = *(uint16_t *)p;
+        } else {
             hs->flags |= F_IMM16;
-            hs->imm.imm16 = *(uint16_t*)p;
+            hs->imm.imm16 = *(uint16_t *)p;
         }
         p += 2;
     }
@@ -1442,46 +1560,52 @@ pref_done:
     }
 
     if (cflags & C_REL32) {
-    rel32_ok:
+      rel32_ok:
         hs->flags |= F_IMM32 | F_RELATIVE;
-        hs->imm.imm32 = *(uint32_t*)p;
+        hs->imm.imm32 = *(uint32_t *)p;
         p += 4;
-    }
-    else if (cflags & C_REL8) {
+    } else if (cflags & C_REL8) {
         hs->flags |= F_IMM8 | F_RELATIVE;
         hs->imm.imm8 = *p++;
     }
 
-disasm_done:
+  disasm_done:
 
-    if ((hs->len = (uint8_t)(p - (uint8_t*)code)) > 15) {
+    if ((hs->len = (uint8_t)(p-(uint8_t *)code)) > 15) {
         hs->flags |= F_ERROR | F_ERROR_LENGTH;
         hs->len = 15;
     }
 
     return (unsigned int)hs->len;
 }
+
+#endif // defined(_M_IX86) || defined(__i386__)
+
+    typedef hde32s HDE;
+    #define HDE_DISASM(code, hs) hde32_disasm(code, hs)
 #endif
-#endif // hde32, hde64
 
-/*--------------------trampoline-------------------*/
-#if 1 // trampoline
+
+
+#pragma once
+
 #pragma pack(push, 1)
- // Structs for writing x86/x64 instructions.
 
- // 8-bit relative jump.
+// Structs for writing x86/x64 instructions.
+
+// 8-bit relative jump.
 typedef struct _JMP_REL_SHORT
 {
     UINT8  opcode;      // EB xx: JMP +2+xx
     UINT8  operand;
-} JMP_REL_SHORT, * PJMP_REL_SHORT;
+} JMP_REL_SHORT, *PJMP_REL_SHORT;
 
 // 32-bit direct relative jump/call.
 typedef struct _JMP_REL
 {
     UINT8  opcode;      // E9/E8 xxxxxxxx: JMP/CALL +5+xxxxxxxx
     UINT32 operand;     // Relative destination address
-} JMP_REL, * PJMP_REL, CALL_REL;
+} JMP_REL, *PJMP_REL, CALL_REL;
 
 // 64-bit indirect absolute jump.
 typedef struct _JMP_ABS
@@ -1490,7 +1614,7 @@ typedef struct _JMP_ABS
     UINT8  opcode1;
     UINT32 dummy;
     UINT64 address;     // Absolute destination address
-} JMP_ABS, * PJMP_ABS;
+} JMP_ABS, *PJMP_ABS;
 
 // 64-bit indirect absolute call.
 typedef struct _CALL_ABS
@@ -1537,14 +1661,17 @@ typedef struct _TRAMPOLINE
     UINT   nIP;             // [Out] Number of the instruction boundaries.
     UINT8  oldIPs[8];       // [Out] Instruction boundaries of the target function.
     UINT8  newIPs[8];       // [Out] Instruction boundaries of the trampoline function.
-} TRAMPOLINE, * PTRAMPOLINE;
+} TRAMPOLINE, *PTRAMPOLINE;
 
 static BOOL CreateTrampolineFunction(PTRAMPOLINE ct);
+
+//#include "buffer.h"
+
 // Maximum size of a trampoline function.
 #if defined(_M_X64) || defined(__x86_64__)
-#define TRAMPOLINE_MAX_SIZE (MEMORY_SLOT_SIZE - sizeof(JMP_ABS))
+    #define TRAMPOLINE_MAX_SIZE (MEMORY_SLOT_SIZE - sizeof(JMP_ABS))
 #else
-#define TRAMPOLINE_MAX_SIZE MEMORY_SLOT_SIZE
+    #define TRAMPOLINE_MAX_SIZE MEMORY_SLOT_SIZE
 #endif
 
 //-------------------------------------------------------------------------
@@ -1564,7 +1691,7 @@ static BOOL IsCodePadding(LPBYTE pInst, UINT size)
 }
 
 //-------------------------------------------------------------------------
-static BOOL CreateTrampolineFunction(PTRAMPOLINE ct)
+BOOL CreateTrampolineFunction(PTRAMPOLINE ct)
 {
 #if defined(_M_X64) || defined(__x86_64__)
     CALL_ABS call = {
@@ -1596,23 +1723,23 @@ static BOOL CreateTrampolineFunction(PTRAMPOLINE ct)
     };
 #endif
 
-    UINT8     oldPos = 0;
-    UINT8     newPos = 0;
-    ULONG_PTR jmpDest = 0;     // Destination address of an internal jump.
+    UINT8     oldPos   = 0;
+    UINT8     newPos   = 0;
+    ULONG_PTR jmpDest  = 0;     // Destination address of an internal jump.
     BOOL      finished = FALSE; // Is the function completed?
 #if defined(_M_X64) || defined(__x86_64__)
     UINT8     instBuf[16];
 #endif
 
     ct->patchAbove = FALSE;
-    ct->nIP = 0;
+    ct->nIP        = 0;
 
     do
     {
         HDE       hs;
         UINT      copySize;
         LPVOID    pCopySrc;
-        ULONG_PTR pOldInst = (ULONG_PTR)ct->pTarget + oldPos;
+        ULONG_PTR pOldInst = (ULONG_PTR)ct->pTarget     + oldPos;
         ULONG_PTR pNewInst = (ULONG_PTR)ct->pTrampoline + newPos;
 
         copySize = HDE_DISASM((LPVOID)pOldInst, &hs);
@@ -1643,8 +1770,11 @@ static BOOL CreateTrampolineFunction(PTRAMPOLINE ct)
             PUINT32 pRelAddr;
 
             // Avoid using memcpy to reduce the footprint.
+#ifndef ALLOW_INTRINSICS
             memcpy(instBuf, (LPBYTE)pOldInst, copySize);
-
+#else
+            __movsb(instBuf, (LPBYTE)pOldInst, copySize);
+#endif
             pCopySrc = instBuf;
 
             // Relative address is stored at (instruction length - immediate value length - 4).
@@ -1730,7 +1860,7 @@ static BOOL CreateTrampolineFunction(PTRAMPOLINE ct)
                 UINT8 cond = ((hs.opcode != 0x0F ? hs.opcode : hs.opcode2) & 0x0F);
 #if defined(_M_X64) || defined(__x86_64__)
                 // Invert the condition in x64 mode to simplify the conditional jump logic.
-                jcc.opcode = 0x71 ^ cond;
+                jcc.opcode  = 0x71 ^ cond;
                 jcc.address = dest;
 #else
                 jcc.opcode1 = 0x80 | cond;
@@ -1765,7 +1895,11 @@ static BOOL CreateTrampolineFunction(PTRAMPOLINE ct)
         ct->nIP++;
 
         // Avoid using memcpy to reduce the footprint.
+#ifndef ALLOW_INTRINSICS
         memcpy((LPBYTE)ct->pTrampoline + newPos, pCopySrc, copySize);
+#else
+        __movsb((LPBYTE)ct->pTrampoline + newPos, (LPBYTE)pCopySrc, copySize);
+#endif
         newPos += copySize;
         oldPos += hs.len;
     } while (!finished);
@@ -1801,19 +1935,24 @@ static BOOL CreateTrampolineFunction(PTRAMPOLINE ct)
 
     return TRUE;
 }
-#endif // trampoline
 
-/*----------------------hook-----------------------*/
-#if 1 // hook
+#endif
+#if 1 // hook_impl
+
+
 #include <windows.h>
 #include <tlhelp32.h>
 #include <limits.h>
 
+//#include "../include/MinHook.h"
+//#include "buffer.h"
+//#include "trampoline.h"
+
 #ifndef ARRAYSIZE
-#define ARRAYSIZE(A) (sizeof(A)/sizeof((A)[0]))
+    #define ARRAYSIZE(A) (sizeof(A)/sizeof((A)[0]))
 #endif
 
- // Initial capacity of the HOOK_ENTRY buffer.
+// Initial capacity of the HOOK_ENTRY buffer.
 #define INITIAL_HOOK_CAPACITY   32
 
 // Initial capacity of the thread IDs buffer.
@@ -1840,14 +1979,14 @@ typedef struct _HOOK_ENTRY
     LPVOID pTrampoline;         // Address of the trampoline function.
     UINT8  backup[8];           // Original prologue of the target function.
 
-    UINT8  patchAbove : 1;     // Uses the hot patch area.
-    UINT8  isEnabled : 1;     // Enabled.
+    UINT8  patchAbove  : 1;     // Uses the hot patch area.
+    UINT8  isEnabled   : 1;     // Enabled.
     UINT8  queueEnable : 1;     // Queued for enabling/disabling when != isEnabled.
 
     UINT   nIP : 4;             // Count of the instruction boundaries.
     UINT8  oldIPs[8];           // Instruction boundaries of the target function.
     UINT8  newIPs[8];           // Instruction boundaries of the trampoline function.
-} HOOK_ENTRY, * PHOOK_ENTRY;
+} HOOK_ENTRY, *PHOOK_ENTRY;
 
 // Suspended threads for Freeze()/Unfreeze().
 typedef struct _FROZEN_THREADS
@@ -1855,20 +1994,20 @@ typedef struct _FROZEN_THREADS
     LPDWORD pItems;         // Data heap
     UINT    capacity;       // Size of allocated data heap, items
     UINT    size;           // Actual number of data items
-} FROZEN_THREADS, * PFROZEN_THREADS;
+} FROZEN_THREADS, *PFROZEN_THREADS;
 
 //-------------------------------------------------------------------------
 // Global Variables:
 //-------------------------------------------------------------------------
 
 // Spin lock flag for EnterSpinLock()/LeaveSpinLock().
-static volatile LONG g_isLocked = FALSE;
+volatile LONG g_isLocked = FALSE;
 
 // Private heap handle. If not NULL, this library is initialized.
-static HANDLE g_hHeap = NULL;
+HANDLE g_hHeap = NULL;
 
 // Hook entries.
-static struct
+struct
 {
     PHOOK_ENTRY pItems;     // Data heap
     UINT        capacity;   // Size of allocated data heap, items
@@ -1978,9 +2117,9 @@ static VOID ProcessThreadIPs(HANDLE hThread, UINT pos, UINT action)
 
     CONTEXT c;
 #if defined(_M_X64) || defined(__x86_64__)
-    DWORD64* pIP = &c.Rip;
+    DWORD64 *pIP = &c.Rip;
 #else
-    DWORD* pIP = &c.Eip;
+    DWORD   *pIP = &c.Eip;
 #endif
     UINT count;
 
@@ -2066,8 +2205,9 @@ static BOOL EnumerateThreads(PFROZEN_THREADS pThreads)
                     }
                     else if (pThreads->size >= pThreads->capacity)
                     {
+                        LPDWORD p;
                         pThreads->capacity *= 2;
-                        LPDWORD p = (LPDWORD)HeapReAlloc(
+                        p = (LPDWORD)HeapReAlloc(
                             g_hHeap, 0, pThreads->pItems, pThreads->capacity * sizeof(DWORD));
                         if (p == NULL)
                         {
@@ -2103,9 +2243,9 @@ static MH_STATUS Freeze(PFROZEN_THREADS pThreads, UINT pos, UINT action)
 {
     MH_STATUS status = MH_OK;
 
-    pThreads->pItems = NULL;
+    pThreads->pItems   = NULL;
     pThreads->capacity = 0;
-    pThreads->size = 0;
+    pThreads->size     = 0;
     if (!EnumerateThreads(pThreads))
     {
         status = MH_ERROR_MEMORY_ALLOC;
@@ -2116,11 +2256,22 @@ static MH_STATUS Freeze(PFROZEN_THREADS pThreads, UINT pos, UINT action)
         for (i = 0; i < pThreads->size; ++i)
         {
             HANDLE hThread = OpenThread(THREAD_ACCESS, FALSE, pThreads->pItems[i]);
+            BOOL suspended = FALSE;
             if (hThread != NULL)
             {
-                SuspendThread(hThread);
-                ProcessThreadIPs(hThread, pos, action);
+                DWORD result = SuspendThread(hThread);
+                if (result != 0xFFFFFFFF)
+                {
+                    suspended = TRUE;
+                    ProcessThreadIPs(hThread, pos, action);
+                }
                 CloseHandle(hThread);
+            }
+
+            if (!suspended)
+            {
+                // Mark thread as not suspended, so it's not resumed later on.
+                pThreads->pItems[i] = 0;
             }
         }
     }
@@ -2136,11 +2287,15 @@ static VOID Unfreeze(PFROZEN_THREADS pThreads)
         UINT i;
         for (i = 0; i < pThreads->size; ++i)
         {
-            HANDLE hThread = OpenThread(THREAD_ACCESS, FALSE, pThreads->pItems[i]);
-            if (hThread != NULL)
+            DWORD threadId = pThreads->pItems[i];
+            if (threadId != 0)
             {
-                ResumeThread(hThread);
-                CloseHandle(hThread);
+                HANDLE hThread = OpenThread(THREAD_ACCESS, FALSE, threadId);
+                if (hThread != NULL)
+                {
+                    ResumeThread(hThread);
+                    CloseHandle(hThread);
+                }
             }
         }
 
@@ -2153,13 +2308,13 @@ static MH_STATUS EnableHookLL(UINT pos, BOOL enable)
 {
     PHOOK_ENTRY pHook = &g_hooks.pItems[pos];
     DWORD  oldProtect;
-    SIZE_T patchSize = sizeof(JMP_REL);
+    SIZE_T patchSize    = sizeof(JMP_REL);
     LPBYTE pPatchTarget = (LPBYTE)pHook->pTarget;
 
     if (pHook->patchAbove)
     {
         pPatchTarget -= sizeof(JMP_REL);
-        patchSize += sizeof(JMP_REL_SHORT);
+        patchSize    += sizeof(JMP_REL_SHORT);
     }
 
     if (!VirtualProtect(pPatchTarget, patchSize, PAGE_EXECUTE_READWRITE, &oldProtect))
@@ -2191,7 +2346,7 @@ static MH_STATUS EnableHookLL(UINT pos, BOOL enable)
     // Just-in-case measure.
     FlushInstructionCache(GetCurrentProcess(), pPatchTarget, patchSize);
 
-    pHook->isEnabled = enable;
+    pHook->isEnabled   = enable;
     pHook->queueEnable = enable;
 
     return MH_OK;
@@ -2266,8 +2421,7 @@ static VOID LeaveSpinLock(VOID)
 }
 
 //-------------------------------------------------------------------------
-MINHOOKDEF MINHOOK_EXPORT
-MH_STATUS MH_Initialize(VOID)
+MH_STATUS WINAPI MH_Initialize(VOID)
 {
     MH_STATUS status = MH_OK;
 
@@ -2297,8 +2451,7 @@ MH_STATUS MH_Initialize(VOID)
 }
 
 //-------------------------------------------------------------------------
-MINHOOKDEF MINHOOK_EXPORT
-MH_STATUS MH_Uninitialize(VOID)
+MH_STATUS WINAPI MH_Uninitialize(VOID)
 {
     MH_STATUS status = MH_OK;
 
@@ -2321,9 +2474,9 @@ MH_STATUS MH_Uninitialize(VOID)
 
             g_hHeap = NULL;
 
-            g_hooks.pItems = NULL;
+            g_hooks.pItems   = NULL;
             g_hooks.capacity = 0;
-            g_hooks.size = 0;
+            g_hooks.size     = 0;
         }
     }
     else
@@ -2337,8 +2490,7 @@ MH_STATUS MH_Uninitialize(VOID)
 }
 
 //-------------------------------------------------------------------------
-MINHOOKDEF MINHOOK_EXPORT
-MH_STATUS MH_CreateHook(LPVOID pTarget, LPVOID pDetour, LPVOID* ppOriginal)
+MH_STATUS WINAPI MH_CreateHook(LPVOID pTarget, LPVOID pDetour, LPVOID *ppOriginal)
 {
     MH_STATUS status = MH_OK;
 
@@ -2356,25 +2508,25 @@ MH_STATUS MH_CreateHook(LPVOID pTarget, LPVOID pDetour, LPVOID* ppOriginal)
                 {
                     TRAMPOLINE ct;
 
-                    ct.pTarget = pTarget;
-                    ct.pDetour = pDetour;
+                    ct.pTarget     = pTarget;
+                    ct.pDetour     = pDetour;
                     ct.pTrampoline = pBuffer;
                     if (CreateTrampolineFunction(&ct))
                     {
                         PHOOK_ENTRY pHook = AddHookEntry();
                         if (pHook != NULL)
                         {
-                            pHook->pTarget = ct.pTarget;
+                            pHook->pTarget     = ct.pTarget;
 #if defined(_M_X64) || defined(__x86_64__)
-                            pHook->pDetour = ct.pRelay;
+                            pHook->pDetour     = ct.pRelay;
 #else
-                            pHook->pDetour = ct.pDetour;
+                            pHook->pDetour     = ct.pDetour;
 #endif
                             pHook->pTrampoline = ct.pTrampoline;
-                            pHook->patchAbove = ct.patchAbove;
-                            pHook->isEnabled = FALSE;
+                            pHook->patchAbove  = ct.patchAbove;
+                            pHook->isEnabled   = FALSE;
                             pHook->queueEnable = FALSE;
-                            pHook->nIP = ct.nIP;
+                            pHook->nIP         = ct.nIP;
                             memcpy(pHook->oldIPs, ct.oldIPs, ARRAYSIZE(ct.oldIPs));
                             memcpy(pHook->newIPs, ct.newIPs, ARRAYSIZE(ct.newIPs));
 
@@ -2436,8 +2588,7 @@ MH_STATUS MH_CreateHook(LPVOID pTarget, LPVOID pDetour, LPVOID* ppOriginal)
 }
 
 //-------------------------------------------------------------------------
-MINHOOKDEF MINHOOK_EXPORT
-MH_STATUS MH_RemoveHook(LPVOID pTarget)
+MH_STATUS WINAPI MH_RemoveHook(LPVOID pTarget)
 {
     MH_STATUS status = MH_OK;
 
@@ -2532,15 +2683,13 @@ static MH_STATUS EnableHook(LPVOID pTarget, BOOL enable)
 }
 
 //-------------------------------------------------------------------------
-MINHOOKDEF MINHOOK_EXPORT
-MH_STATUS MH_EnableHook(LPVOID pTarget)
+MH_STATUS WINAPI MH_EnableHook(LPVOID pTarget)
 {
     return EnableHook(pTarget, TRUE);
 }
 
 //-------------------------------------------------------------------------
-MINHOOKDEF MINHOOK_EXPORT
-MH_STATUS MH_DisableHook(LPVOID pTarget)
+MH_STATUS WINAPI MH_DisableHook(LPVOID pTarget)
 {
     return EnableHook(pTarget, FALSE);
 }
@@ -2584,22 +2733,19 @@ static MH_STATUS QueueHook(LPVOID pTarget, BOOL queueEnable)
 }
 
 //-------------------------------------------------------------------------
-MINHOOKDEF MINHOOK_EXPORT
-MH_STATUS MH_QueueEnableHook(LPVOID pTarget)
+MH_STATUS WINAPI MH_QueueEnableHook(LPVOID pTarget)
 {
     return QueueHook(pTarget, TRUE);
 }
 
 //-------------------------------------------------------------------------
-MINHOOKDEF MINHOOK_EXPORT
-MH_STATUS MH_QueueDisableHook(LPVOID pTarget)
+MH_STATUS WINAPI MH_QueueDisableHook(LPVOID pTarget)
 {
     return QueueHook(pTarget, FALSE);
 }
 
 //-------------------------------------------------------------------------
-MINHOOKDEF MINHOOK_EXPORT
-MH_STATUS MH_ApplyQueued(VOID)
+MH_STATUS WINAPI MH_ApplyQueued(VOID)
 {
     MH_STATUS status = MH_OK;
     UINT i, first = INVALID_HOOK_POS;
@@ -2649,10 +2795,9 @@ MH_STATUS MH_ApplyQueued(VOID)
 }
 
 //-------------------------------------------------------------------------
-MINHOOKDEF MINHOOK_EXPORT
-MH_STATUS MH_CreateHookApiEx(
+MH_STATUS WINAPI MH_CreateHookApiEx(
     LPCWSTR pszModule, LPCSTR pszProcName, LPVOID pDetour,
-    LPVOID* ppOriginal, LPVOID* ppTarget)
+    LPVOID *ppOriginal, LPVOID *ppTarget)
 {
     HMODULE hModule;
     LPVOID  pTarget;
@@ -2672,16 +2817,14 @@ MH_STATUS MH_CreateHookApiEx(
 }
 
 //-------------------------------------------------------------------------
-MINHOOKDEF MINHOOK_EXPORT
-MH_STATUS MH_CreateHookApi(
-    LPCWSTR pszModule, LPCSTR pszProcName, LPVOID pDetour, LPVOID* ppOriginal)
+MH_STATUS WINAPI MH_CreateHookApi(
+    LPCWSTR pszModule, LPCSTR pszProcName, LPVOID pDetour, LPVOID *ppOriginal)
 {
     return MH_CreateHookApiEx(pszModule, pszProcName, pDetour, ppOriginal, NULL);
 }
 
 //-------------------------------------------------------------------------
-MINHOOKDEF MINHOOK_EXPORT
-const char* MH_StatusToString(MH_STATUS status)
+const char *WINAPI MH_StatusToString(MH_STATUS status)
 {
 #define MH_ST2STR(x)    \
     case x:             \
@@ -2689,26 +2832,26 @@ const char* MH_StatusToString(MH_STATUS status)
 
     switch (status) {
         MH_ST2STR(MH_UNKNOWN)
-            MH_ST2STR(MH_OK)
-            MH_ST2STR(MH_ERROR_ALREADY_INITIALIZED)
-            MH_ST2STR(MH_ERROR_NOT_INITIALIZED)
-            MH_ST2STR(MH_ERROR_ALREADY_CREATED)
-            MH_ST2STR(MH_ERROR_NOT_CREATED)
-            MH_ST2STR(MH_ERROR_ENABLED)
-            MH_ST2STR(MH_ERROR_DISABLED)
-            MH_ST2STR(MH_ERROR_NOT_EXECUTABLE)
-            MH_ST2STR(MH_ERROR_UNSUPPORTED_FUNCTION)
-            MH_ST2STR(MH_ERROR_MEMORY_ALLOC)
-            MH_ST2STR(MH_ERROR_MEMORY_PROTECT)
-            MH_ST2STR(MH_ERROR_MODULE_NOT_FOUND)
-            MH_ST2STR(MH_ERROR_FUNCTION_NOT_FOUND)
+        MH_ST2STR(MH_OK)
+        MH_ST2STR(MH_ERROR_ALREADY_INITIALIZED)
+        MH_ST2STR(MH_ERROR_NOT_INITIALIZED)
+        MH_ST2STR(MH_ERROR_ALREADY_CREATED)
+        MH_ST2STR(MH_ERROR_NOT_CREATED)
+        MH_ST2STR(MH_ERROR_ENABLED)
+        MH_ST2STR(MH_ERROR_DISABLED)
+        MH_ST2STR(MH_ERROR_NOT_EXECUTABLE)
+        MH_ST2STR(MH_ERROR_UNSUPPORTED_FUNCTION)
+        MH_ST2STR(MH_ERROR_MEMORY_ALLOC)
+        MH_ST2STR(MH_ERROR_MEMORY_PROTECT)
+        MH_ST2STR(MH_ERROR_MODULE_NOT_FOUND)
+        MH_ST2STR(MH_ERROR_FUNCTION_NOT_FOUND)
     }
 
 #undef MH_ST2STR
 
     return "(unknown)";
 }
-#endif // hook
 
+#endif
 #endif // MINHOOK_IMPLEMENTATION
-#endif // _MINHOOK_H
+#endif // _MINHOOK_H" 

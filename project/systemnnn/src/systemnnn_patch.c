@@ -23,10 +23,12 @@
 // winhook.h v0.3
 #define WINHOOK_IMPLEMENTATION
 #define MINHOOK_IMPLEMENTATION
-#ifdef USE_COMPAT
-#include "winhook_v310.h"
+#ifdef USECOMPAT
+#include "winhook_v330.h"
+#include "stb_minhook_v1332.h"
 #else
 #include "winhook.h"
+#include "stb_minhook.h"
 #endif
 
 // stb_image.h v2.27
@@ -35,7 +37,7 @@
 #ifdef __TINYC__
 #define STBI_NO_SIMD 
 #endif
-#ifdef USE_COMPAT
+#ifdef USECOMPAT
 #include "stb_image_v2270.h"
 #else
 #include "stb_image.h"
@@ -169,11 +171,24 @@ void install_hooks()
     // 0043DC11 | 81BD ACFEFFFF A0000000 | cmp dword ptr ss:[ebp-154],A0
     winhook_patchmemorypattern(g_systemnnncfg.patch);
 
+
+    // make inline hook
     // replace dwq dib buffer hook
     g_pfnTargets[CPicture_LoadDWQ_IDX] = (void*)g_systemnnncfg.CPicture_LoadDWQ;
     g_pfnNews[CPicture_LoadDWQ_IDX] = (void*) CPicture_LoadDWQ_hook;
-    winhook_inlinehooks(g_pfnTargets, g_pfnNews, g_pfnOlds, 
-        sizeof(g_pfnTargets)/sizeof(PVOID));
+    MH_STATUS status = MH_Initialize();
+    if(status!=MH_OK) LOGe("MH_Initialize %s\n", MH_StatusToString(status));
+    int n = sizeof(g_pfnTargets)/sizeof(void*);
+    for(int i=0; i< n; i++)
+    {
+        void *ptarget = g_pfnTargets[i];
+        void *pnew = g_pfnNews[i];
+        if(!ptarget) continue;
+        status = MH_CreateHook(ptarget, pnew, &g_pfnOlds[i]);
+        if(status!=MH_OK) LOGe("MH_CreateHook %d %p %s\n", i, ptarget, MH_StatusToString(status));
+        status = MH_EnableHook(ptarget);
+        if(status!=MH_OK)  LOGe("MH_EnableHook %d %p %s\n", i, ptarget, MH_StatusToString(status));
+    }
 }
 
 void install_console()

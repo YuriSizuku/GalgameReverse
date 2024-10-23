@@ -1,7 +1,7 @@
 /**
  *  for AdvHD v1 and v2  
  *  translation support and redirect arc file
- *      v0.2.5, developed by devseed
+ *      v0.2.6, developed by devseed
  * 
  *  tested game: 
  *    あやかしごはん (v1.0.1.0)
@@ -13,6 +13,7 @@
  *    charset=128
  *    font=simhei // font name encoding is by codepage
  *    _ismbclegal=rva
+ *    ucharmap=38021:9834, // '钅':'♪'
 */
 
 #include <stdio.h>
@@ -32,15 +33,25 @@
 #define CONFIG_PATH "override\\config.ini"
 #define REDIRECT_DIRA "override"
 #define REDIRECT_DIRW L"override"
-char g_font[MAX_PATH] = "simhei";
-int g_codepage = 936;
-int g_charset = GB2312_CHARSET;
+#define MAX_UCHARMAP 5
+struct advhd_cfg_t
+{
+    char font[MAX_PATH];
+    int codepage;
+    int charset;
+    UINT ucharmap[MAX_UCHARMAP][2];
+};
+
+struct advhd_cfg_t g_advhdcfg = {
+    .font="simhei", .codepage=936, .charset=GB2312_CHARSET, .ucharmap={0}
+};
 
 #if 1// advhd inline hooks
-PVOID g_pfnTargets[3] = {NULL};
-PVOID g_pfnNews[3] = {NULL}; 
-PVOID g_pfnOlds[3] = {NULL};
-HANDLE g_mutexs[3] = {NULL};
+#define MAX_INLHOOK 3
+PVOID g_pfnTargets[MAX_INLHOOK] = {NULL};
+PVOID g_pfnNews[MAX_INLHOOK] = {NULL}; 
+PVOID g_pfnOlds[MAX_INLHOOK] = {NULL};
+HANDLE g_mutexs[MAX_INLHOOK] = {NULL};
 #define CreateFileA_IDX 0
 #define CreateFileW_IDX 1
 #define _ismbclegal_IDX 2
@@ -62,6 +73,15 @@ typedef HANDLE (WINAPI *PFN_CreateFileW)(
     IN DWORD dwCreationDisposition,
     IN DWORD dwFlagsAndAttributes,
     IN OPTIONAL HANDLE hTemplateFile);
+
+typedef DWORD (WINAPI *PFN_GetGlyphOutlineW_hook)(
+  IN  HDC            hdc,
+  IN  UINT           uChar,
+  IN  UINT           fuFormat,
+  OUT LPGLYPHMETRICS lpgm,
+  IN  DWORD          cjBuffer,
+  OUT LPVOID         pvBuffer,
+  IN  const MAT2     *lpmat2);
 
 LPSTR _RedirectArcA(LPSTR lpFileName)
 {
@@ -119,9 +139,8 @@ HANDLE WINAPI CreateFileA_hook(
     WaitForSingleObject(g_mutexs[CreateFileA_IDX], INFINITE);
     LPSTR targetpath = _RedirectArcA(lpFileName);
     if(!targetpath) targetpath = lpFileName;
-    PFN_CreateFileA pfnCreateFileA = 
-        (PFN_CreateFileA)g_pfnOlds[CreateFileA_IDX];
-    HANDLE res = pfnCreateFileA(targetpath, dwDesiredAccess, dwShareMode, 
+    PFN_CreateFileA pfn = (PFN_CreateFileA)g_pfnOlds[CreateFileA_IDX];
+    HANDLE res = pfn(targetpath, dwDesiredAccess, dwShareMode, 
         lpSecurityAttributes, dwCreationDisposition, 
         dwFlagsAndAttributes, hTemplateFile);
     ReleaseMutex(g_mutexs[CreateFileA_IDX]);
@@ -140,9 +159,8 @@ HANDLE WINAPI CreateFileW_hook(
     WaitForSingleObject(g_mutexs[CreateFileW_IDX], INFINITE);
     LPWSTR targetpath = _RedirectArcW(lpFileName);
     if(!targetpath) targetpath = lpFileName;
-    PFN_CreateFileW pfnCreateFileW = 
-        (PFN_CreateFileW)g_pfnOlds[CreateFileW_IDX];
-    HANDLE res = pfnCreateFileW(targetpath, dwDesiredAccess, dwShareMode, 
+    PFN_CreateFileW pfn = (PFN_CreateFileW)g_pfnOlds[CreateFileW_IDX];
+    HANDLE res = pfn(targetpath, dwDesiredAccess, dwShareMode, 
         lpSecurityAttributes, dwCreationDisposition, 
         dwFlagsAndAttributes, hTemplateFile);
     ReleaseMutex(g_mutexs[CreateFileW_IDX]);
@@ -155,7 +173,6 @@ int __cdecl _ismbclegal_hook(unsigned int c)
     int low = c&0xff;
     return (high >= 0x80) && (low >=0x40);
 }
-
 #endif
 
 #if 1 // advhd v1 iat hooks
@@ -212,11 +229,10 @@ LCID WINAPI GetSystemDefaultLCID_hook(void)
 
 HFONT WINAPI CreateFontIndirectA_hook(IN LOGFONTA *lplf)
 {
-    lplf->lfCharSet = g_charset;
-    strcpy(lplf->lfFaceName, g_font);
+    lplf->lfCharSet = g_advhdcfg.charset;
+    strcpy(lplf->lfFaceName, g_advhdcfg.font);
     return CreateFontIndirectA(lplf);    
 }
-
 #endif
 
 #if 1 // advhd v2 iat hooks
@@ -228,7 +244,7 @@ int WINAPI MultiByteToWideChar_hook(
     OUT LPWSTR lpWideCharStr,
     IN int cchWideChar)
 {
-    UINT cp = g_codepage;
+    UINT cp = g_advhdcfg.codepage;
     // PNA
     if(strstr(lpMultiByteStr,"\x2e\x50\x4e\x41"))
     {
@@ -252,47 +268,61 @@ int WINAPI WideCharToMultiByte_hook(
     IN OPTIONAL LPCCH lpDefaultChar,
     OUT OPTIONAL LPBOOL lpUsedDefaultChar)
 {
-    int ret = WideCharToMultiByte(g_codepage, dwFlags, 
-        lpWideCharStr, cchWideChar, 
-        lpMultiByteStr, cbMultiByte, 
-        lpDefaultChar, lpUsedDefaultChar);
+    int ret = WideCharToMultiByte(g_advhdcfg.codepage, dwFlags, 
+        lpWideCharStr, cchWideChar, lpMultiByteStr, cbMultiByte, lpDefaultChar, lpUsedDefaultChar);
     // wprintf(L"wctmb %ls\n", lpWideCharStr);
     return ret;
 }
 
 HFONT WINAPI CreateFontIndirectW_hook(IN LOGFONTW *lplf)
 {
-    lplf->lfCharSet = g_charset;
-    MultiByteToWideChar(g_codepage, MB_COMPOSITE, 
-        g_font, strlen(g_font) + 1, 
-        lplf->lfFaceName, sizeof(lplf->lfFaceName));
+    lplf->lfCharSet = g_advhdcfg.charset;
+    MultiByteToWideChar(g_advhdcfg.codepage, MB_COMPOSITE, g_advhdcfg.font, 
+        strlen(g_advhdcfg.font) + 1, lplf->lfFaceName, sizeof(lplf->lfFaceName));
     return CreateFontIndirectW(lplf);
+}
+
+DWORD WINAPI GetGlyphOutlineW_hook(
+    IN  HDC            hdc,
+    IN  UINT           uChar,
+    IN  UINT           fuFormat,
+    OUT LPGLYPHMETRICS lpgm,
+    IN  DWORD          cjBuffer,
+    OUT LPVOID         pvBuffer,
+    IN  const MAT2     *lpmat2)
+{
+    UINT target_uchar = uChar;
+    for(int i=0; g_advhdcfg.ucharmap[i][0]; i++)
+    {
+        if (uChar == g_advhdcfg.ucharmap[i][0])
+        {
+            target_uchar = g_advhdcfg.ucharmap[i][1];
+            break;
+        }
+    }
+    return GetGlyphOutlineW(hdc, target_uchar, fuFormat, lpgm, cjBuffer, pvBuffer, lpmat2);
 }
 #endif
 
 void install_inlinehooks()
 {
     // get kernel32 or kernelbase
-    PVOID kernel =  GetModuleHandleA("Kernelbase.dll");; 
-    if(kernel)
+    PVOID kernel32 =  GetModuleHandleA("Kernelbase.dll");
+    if(kernel32)
     {
         printf("using kernelbase.dll for inline hook\n");
     }
     else
-    {   kernel = GetModuleHandleA("Kernel32.dll");
+    {   kernel32 = GetModuleHandleA("Kernel32.dll");
         printf("using kernel32.dll for inline hook\n");
     }
 
     // init each function
-    g_pfnTargets[CreateFileA_IDX] =  
-        (PVOID)GetProcAddress(kernel, "CreateFileA"),
+    g_pfnTargets[CreateFileA_IDX] =  (PVOID)GetProcAddress(kernel32, "CreateFileA"),
+    g_pfnTargets[CreateFileW_IDX] =  (PVOID)GetProcAddress(kernel32, "CreateFileW"),
     g_pfnNews[CreateFileA_IDX] = (PVOID)CreateFileA_hook;
-    g_pfnTargets[CreateFileW_IDX] =  
-        (PVOID)GetProcAddress(kernel, "CreateFileW"),
     g_pfnNews[CreateFileW_IDX] = (PVOID)CreateFileW_hook;
     g_pfnNews[_ismbclegal_IDX] = (PVOID)_ismbclegal_hook;
-
-    // init mutex
     g_mutexs[CreateFileA_IDX] = CreateMutexA(NULL, FALSE, NULL);
     g_mutexs[CreateFileW_IDX] = CreateMutexA(NULL, FALSE, NULL);
 
@@ -362,23 +392,12 @@ void install_iathooksv2()
     {
         printf("CreateFontIndirectW not fount!\n");
     }
-}
-
-void install_console()
-{
-    AllocConsole();
-    freopen("CONOUT$", "w", stdout);
-    system("chcp 936");
-    setlocale(LC_ALL, "chs");
-    printf("advhd_patch v0.2.5, developed by devseed\n");
-    wprintf(L"advhd v1v2 版本通用汉化补丁, build in 220823\n");
-}
-
-void install_hooks()
-{
-    install_inlinehooks();
-    install_iathooksv1();
-    install_iathooksv2();
+    if(!winhook_iathook("Gdi32.dll", 
+        GetProcAddress(GetModuleHandleA("Gdi32.dll"), 
+        "GetGlyphOutlineW"), (PROC)GetGlyphOutlineW_hook))
+    {
+        printf("GetGlyphOutlineW not fount!\n");
+    }
 }
 
 size_t get_imagesize(void *pe)
@@ -416,20 +435,39 @@ void read_config(const char *path)
             printf("read config %s=%s\n", k, v);
             if(!_stricmp(k, "codepage"))
             {
-                g_codepage = atoi(v);
+                g_advhdcfg.codepage = atoi(v);
             }
             else if(!_stricmp(k, "charset"))
             {
-                g_charset = atoi(v);
+                g_advhdcfg.charset = atoi(v);
             }
             else if(!_stricmp(k, "font"))
             {
-                strcpy(g_font, v);
+                strcpy(g_advhdcfg.font, v);
             }
             else if(!_stricmp(k, "_ismbclegal"))
             {
                 size_t rva = (size_t)strtol(v, NULL, 16);
                 g_pfnTargets[_ismbclegal_IDX] = (void*)(base+rva);
+            }
+            else if(!_stricmp(k, "ucharmap"))
+            {
+                int ucharmap_count = 0;
+                char *entry = v;
+                while(*entry)
+                {
+                    char *u1 = entry;
+                    char *u2 = entry;
+                    do { u2++; } while(*u2 != ':');
+                    *u2 ++ = '\0';
+                    entry = u2;
+                    do { entry++; } while(*entry != ',' && *entry);
+                    if(*entry==',') *entry++ = '\0';
+                        
+                    g_advhdcfg.ucharmap[ucharmap_count][0] = atoi(u1);
+                    g_advhdcfg.ucharmap[ucharmap_count][1] = atoi(u2);
+                    ucharmap_count ++; 
+                }
             }
         }
         fclose(fp);
@@ -440,6 +478,26 @@ void read_config(const char *path)
     }
 }
 
+void install_hooks()
+{
+    FILE *fp = fopen("advhd_patch_console", "rb");
+    if(fp)
+    {
+        AllocConsole();
+        freopen("CONOUT$", "w", stdout);
+        fclose(fp);
+    }
+    system("chcp 936");
+    setlocale(LC_ALL, "chs");
+    printf("advhd_patch v0.2.6, developed by devseed\n");
+    wprintf(L"advhd v1v2 版本通用汉化补丁, build in 241024\n");
+
+    read_config(CONFIG_PATH);
+    install_inlinehooks();
+    install_iathooksv1();
+    install_iathooksv2();
+}
+
 BOOL WINAPI DllMain(
     HINSTANCE hinstDLL,  // handle to DLL module
     DWORD fdwReason,     // reason for calling function
@@ -448,10 +506,6 @@ BOOL WINAPI DllMain(
     switch( fdwReason ) 
     { 
         case DLL_PROCESS_ATTACH:
-#ifdef _DEBUG
-            install_console();
-#endif
-            read_config(CONFIG_PATH);
             install_hooks();
             break;
         case DLL_THREAD_ATTACH:
@@ -473,4 +527,5 @@ BOOL WINAPI DllMain(
  * v0.2.3, add automaticly search _ismbclegal
  * v0.2.4, add kernelbase createfile redirect, and mutex for multi thread
  * v0.2.5, update to winhook v0.3
+ * v0.2.6, add redirect char to render some sjis char like
 */

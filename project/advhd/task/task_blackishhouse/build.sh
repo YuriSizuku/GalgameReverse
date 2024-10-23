@@ -77,10 +77,14 @@ build_4exe() {
     python -B ${SRC_DIR}/compat/windllin_v321.py -m codecave2 \
         ${WORK_DIR}/1.origin/AdvHD.exe advhd_patch.dll \
         -o ${WORK_DIR}/5.result/AdvHD_chs.exe 1>/dev/null
+    
+    echo  "AdvHD_chs.exe | tee advhd_patch.log" > "${WORK_DIR}/5.result/AdvHD_chs_debug.cmd"
 
+    # echo -e should be used in bash
     echo "codepage=936" > ${WORK_DIR}/5.result/override/config.ini
     echo "charset=134" >> ${WORK_DIR}/5.result/override/config.ini
-    echo "font=simhei" >> ${WORK_DIR}/5.result/override/config.ini
+    echo -e "font=\xce\xa2\xc8\xed\xd1\xc5\xba\xda" >> ${WORK_DIR}/5.result/override/config.ini
+    echo "ucharmap=38021:9834" >> ${WORK_DIR}/5.result/override/config.ini
 }
 
 release_patch() {

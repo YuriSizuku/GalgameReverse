@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 __description__ = """
 export or import ws2 text for willplus advhd, 
-    v0.2.4, developed by devseed
+    v0.2.5, developed by devseed
 
 tested games: 
     BlackishHouse (v1.6.2.1)
@@ -182,7 +182,7 @@ def import_ws2(inpath, orgpath, outpath="out.ws2", encoding="gbk"):
         
         cur = 0 # bgm
         pattern = b'\x1F\x62\x67\x6D'
-        while True:
+        while False: # this might not be addr 
             cur = data.find(pattern, cur)
             if cur < 0: break
             addr = cur - 0x4
@@ -212,7 +212,7 @@ def import_ws2(inpath, orgpath, outpath="out.ws2", encoding="gbk"):
 
     # import text
     jump_table.sort(key=lambda x: x.addr)
-    text_replace = {'〜':'~', '−':'-', '･':'.', '♪':'#', 
+    text_replace = {'〜':'~', '−':'-', '･':'.', '♪':'钅', 
         '・':'.', 'ｷ':'#', 'ﾀ':'#',  
         'ｧ':'#', '⇒':'-', '≫':'-', '・':'.'}
     data = insert_ftexts(data, (ftexts1, ftexts2), 
@@ -238,12 +238,12 @@ def import_ws2(inpath, orgpath, outpath="out.ws2", encoding="gbk"):
 
 def debug():
     workflow = "D:/Make/reverse/BlackishHouse/workflow"
-    target = "BZhal_32.ws2"
-    cli([__file__, "ecp932", 
-         os.path.join(workflow, "2.pre/Rio2", target)])
-    # cli([__file__, "icp936", 
-    #     os.path.join(workflow, "3.edit/Rio2_ftext", target + ".txt"), 
-    #     os.path.join(workflow, "2.pre/Rio2", target )])
+    target = "BZkyo_02c.ws2"
+    # cli([__file__, "ecp932", 
+    #      os.path.join(workflow, "2.pre/Rio2", target)])
+    cli([__file__, "icp936", 
+        os.path.join(workflow, "3.edit/Rio2_ftext", target + ".txt"), 
+        os.path.join(workflow, "2.pre/Rio2", target )])
 
 def cli(argv):
     def cmd_help():
@@ -280,4 +280,5 @@ v0.2.1, fix some opcode for 華は短し、踊れよ乙女
 v0.2.2, add encoding option in cli and change to libtext v0.6.1, fix option bug
 v0.2.3, makes name and text disjoint, fix BZKyo_06g.ws2 branch b'\x01\x81'
 v0.2.4, fix option to "00 00 0F 02 FF" for BZhal_32.ws2
+v0.2.5, fix \x1f bgm01 opcode pre addr wrong,  make some text not render in  BZkyo_02c.ws2
 """

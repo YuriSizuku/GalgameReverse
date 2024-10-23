@@ -32,6 +32,8 @@
 # export SRC_DIR=../../src
 # export TOOL_DIR=../../tool
 
+SHELL := /bin/bash
+
 all: 
 	@echo build BlackishHouse chspatch
 	@make build_1ws2

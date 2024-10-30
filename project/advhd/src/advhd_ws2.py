@@ -128,6 +128,15 @@ def import_ws2(inpath, orgpath, outpath="out.ws2", encoding="gbk"):
             _addjumpentry(addr)
             cur = addr + 4
 
+        cur = 0 # fix BZkyo_06.ws2 option
+        pattern = bytes.fromhex("03 00 00 00 00 00 00 00 00")
+        while True:
+            cur = data.find(pattern, cur)
+            if cur < 0: break
+            addr = cur + len(pattern)
+            _addjumpentry(addr)
+            cur = addr + 4
+
         cur = 0 # fix BZKyo_06g.ws2 branch
         pattern = b'\x01\x80'
         while True:
@@ -281,4 +290,5 @@ v0.2.2, add encoding option in cli and change to libtext v0.6.1, fix option bug
 v0.2.3, makes name and text disjoint, fix BZKyo_06g.ws2 branch b'\x01\x81'
 v0.2.4, fix option to "00 00 0F 02 FF" for BZhal_32.ws2
 v0.2.5, fix \x1f bgm01 opcode pre addr wrong,  make some text not render in  BZkyo_02c.ws2
+v0.2.6, fix BZkyo_06.ws2 "03 00 00 00 00 00 00 00 00"
 """

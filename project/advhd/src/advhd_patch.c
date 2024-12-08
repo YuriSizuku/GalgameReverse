@@ -21,7 +21,9 @@
 #include <shlwapi.h>
 #include <locale.h>
 #define WINHOOK_IMPLEMENTATION
+#define WINHOOK_STATIC
 #define MINHOOK_IMPLEMENTATION
+#define MINHOOK_STATIC
 #ifdef USECOMPAT
 #include "stb_minhook_v1332.h"
 #include "winhook_v330.h"
@@ -83,7 +85,7 @@ typedef DWORD (WINAPI *PFN_GetGlyphOutlineW_hook)(
   OUT LPVOID         pvBuffer,
   IN  const MAT2     *lpmat2);
 
-LPSTR _RedirectArcA(LPSTR lpFileName)
+static LPSTR _RedirectArcA(LPSTR lpFileName)
 {
     static char tmppath[MAX_PATH] = {0};
     tmppath[0] = 0;
@@ -105,7 +107,7 @@ LPSTR _RedirectArcA(LPSTR lpFileName)
     return NULL;
 }
 
-LPWSTR _RedirectArcW(LPWSTR lpFileName)
+static LPWSTR _RedirectArcW(LPWSTR lpFileName)
 {
     static wchar_t tmppath[MAX_PATH] = {0};
     tmppath[0] = 0;
@@ -127,7 +129,7 @@ LPWSTR _RedirectArcW(LPWSTR lpFileName)
     return NULL;
 }
 
-HANDLE WINAPI CreateFileA_hook(
+static HANDLE WINAPI CreateFileA_hook(
     IN LPSTR lpFileName,
     IN DWORD dwDesiredAccess,
     IN DWORD dwShareMode,
@@ -147,7 +149,7 @@ HANDLE WINAPI CreateFileA_hook(
     return res;
 }
 
-HANDLE WINAPI CreateFileW_hook(
+static HANDLE WINAPI CreateFileW_hook(
     IN LPWSTR lpFileName,
     IN DWORD dwDesiredAccess,
     IN DWORD dwShareMode,
@@ -167,7 +169,7 @@ HANDLE WINAPI CreateFileW_hook(
     return res;
 }
 
-int __cdecl _ismbclegal_hook(unsigned int c)
+static int __cdecl _ismbclegal_hook(unsigned int c)
 {
     int high = c>>8;
     int low = c&0xff;
@@ -176,7 +178,7 @@ int __cdecl _ismbclegal_hook(unsigned int c)
 #endif
 
 #if 1 // advhd v1 iat hooks
-LONG WINAPI RegOpenKeyExA_hook(HKEY hKey, 
+static LONG WINAPI RegOpenKeyExA_hook(HKEY hKey, 
     LPCSTR lpSubKey, DWORD ulOptions,
     DWORD samDesired, PHKEY phkResult)
 {
@@ -192,7 +194,7 @@ LONG WINAPI RegOpenKeyExA_hook(HKEY hKey,
     return status;
 }
 
-LONG WINAPI RegQueryValueExA_hook(HKEY hKey, 
+static LONG WINAPI RegQueryValueExA_hook(HKEY hKey, 
     LPCSTR lpValueName, LPDWORD lpReserved, PDWORD lpType, 
     LPBYTE lpData, LPDWORD lpcbData)
 {
@@ -220,14 +222,14 @@ LONG WINAPI RegQueryValueExA_hook(HKEY hKey,
     return status;
 }
 
-LCID WINAPI GetSystemDefaultLCID_hook(void)
+static LCID WINAPI GetSystemDefaultLCID_hook(void)
 {
     LCID lcid = GetSystemDefaultLCID();
     printf("GetSystemDefaultLCID %lx\n", lcid);
     return 0x411;
 }
 
-HFONT WINAPI CreateFontIndirectA_hook(IN LOGFONTA *lplf)
+static HFONT WINAPI CreateFontIndirectA_hook(IN LOGFONTA *lplf)
 {
     lplf->lfCharSet = g_advhdcfg.charset;
     strcpy(lplf->lfFaceName, g_advhdcfg.font);
@@ -236,7 +238,7 @@ HFONT WINAPI CreateFontIndirectA_hook(IN LOGFONTA *lplf)
 #endif
 
 #if 1 // advhd v2 iat hooks
-int WINAPI MultiByteToWideChar_hook(
+static int WINAPI MultiByteToWideChar_hook(
     IN UINT CodePage,
     IN DWORD dwFlags,
     IN LPCCH lpMultiByteStr,
@@ -258,7 +260,7 @@ int WINAPI MultiByteToWideChar_hook(
     return ret;
 }
 
-int WINAPI WideCharToMultiByte_hook(
+static int WINAPI WideCharToMultiByte_hook(
     IN UINT CodePage,
     IN DWORD dwFlags,
     IN LPCWCH lpWideCharStr,
@@ -274,7 +276,7 @@ int WINAPI WideCharToMultiByte_hook(
     return ret;
 }
 
-HFONT WINAPI CreateFontIndirectW_hook(IN LOGFONTW *lplf)
+static HFONT WINAPI CreateFontIndirectW_hook(IN LOGFONTW *lplf)
 {
     lplf->lfCharSet = g_advhdcfg.charset;
     MultiByteToWideChar(g_advhdcfg.codepage, MB_COMPOSITE, g_advhdcfg.font, 
@@ -282,7 +284,7 @@ HFONT WINAPI CreateFontIndirectW_hook(IN LOGFONTW *lplf)
     return CreateFontIndirectW(lplf);
 }
 
-DWORD WINAPI GetGlyphOutlineW_hook(
+static DWORD WINAPI GetGlyphOutlineW_hook(
     IN  HDC            hdc,
     IN  UINT           uChar,
     IN  UINT           fuFormat,
@@ -304,7 +306,7 @@ DWORD WINAPI GetGlyphOutlineW_hook(
 }
 #endif
 
-void install_inlinehooks()
+static void install_inlinehooks()
 {
     // get kernel32 or kernelbase
     PVOID kernel32 =  GetModuleHandleA("Kernelbase.dll");
@@ -342,7 +344,7 @@ void install_inlinehooks()
     }
 }
 
-void install_iathooksv1()
+static void install_iathooksv1()
 {
     // advhd v1 hooks
     if(!winhook_iathook("Advapi32.dll", 
@@ -371,7 +373,7 @@ void install_iathooksv1()
     }
 }
 
-void install_iathooksv2()
+static void install_iathooksv2()
 {
     // advhd v2 hooks
     if(!winhook_iathook("Kernel32.dll", 
@@ -400,7 +402,7 @@ void install_iathooksv2()
     }
 }
 
-size_t get_imagesize(void *pe)
+static size_t get_imagesize(void *pe)
 {
     PIMAGE_DOS_HEADER pDosHeader = (PIMAGE_DOS_HEADER)pe;
     PIMAGE_NT_HEADERS  pNtHeader = (PIMAGE_NT_HEADERS)
@@ -411,7 +413,7 @@ size_t get_imagesize(void *pe)
     return imagesize; 
 }
 
-void read_config(const char *path)
+static void read_config(const char *path)
 {
     char line[MAX_PATH] = {0};
     char *k = NULL;
@@ -478,24 +480,28 @@ void read_config(const char *path)
     }
 }
 
-void install_hooks()
+static void install_hooks()
 {
     FILE *fp = fopen("advhd_patch_console", "rb");
     if(fp)
     {
         AllocConsole();
+        system("chcp 936");
+        setlocale(LC_ALL, "chs");
+        wprintf(L"advhd v1v2 版本通用汉化补丁, build in 241024\n");
         freopen("CONOUT$", "w", stdout);
         fclose(fp);
     }
-    system("chcp 936");
-    setlocale(LC_ALL, "chs");
     printf("advhd_patch v0.2.6, developed by devseed\n");
-    wprintf(L"advhd v1v2 版本通用汉化补丁, build in 241024\n");
-
     read_config(CONFIG_PATH);
     install_inlinehooks();
     install_iathooksv1();
     install_iathooksv2();
+}
+
+EXPORT void dummy()
+{
+
 }
 
 BOOL WINAPI DllMain(

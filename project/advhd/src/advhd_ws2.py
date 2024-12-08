@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*-
 __description__ = """
 export or import ws2 text for willplus advhd, 
-    v0.2.5, developed by devseed
+    v0.2.7, developed by devseed
 
 tested games: 
     BlackishHouse (v1.6.2.1)
-    華は短し、踊れよ乙女 (1.9.9.9)
+    華は短し、踊れよ乙女 (v1.9.9.9)
     
 """
 
-__version__ = 220
+__version__ = 270
 
 import os
 import sys
@@ -111,6 +111,15 @@ def import_ws2(inpath, orgpath, outpath="out.ws2", encoding="gbk"):
             addr = cur + len(pattern)
             _addjumpentry(addr)
             addr += 0x10
+            _addjumpentry(addr)
+            cur = addr + 4
+
+        cur = 0 # fix BZnoa_04.ws2， BZhal_28.ws2
+        pattern = bytes.fromhex("03 00 00 80 3F 00 00 00 00")
+        while True:
+            cur = data.find(pattern, cur)
+            if cur < 0: break
+            addr = cur + len(pattern)
             _addjumpentry(addr)
             cur = addr + 4
 
@@ -283,12 +292,13 @@ if __name__ == '__main__':
 
 """
 history:
-v0.1, initial version for BlackishHouse
-v0.2, support 華は短し、踊れよ乙女 (1.9.9.9)
+v0.1, initial version for BlackishHouse (v1.6.2.1)
+v0.2, support 華は短し、踊れよ乙女 (v1.9.9.9)
 v0.2.1, fix some opcode for 華は短し、踊れよ乙女
 v0.2.2, add encoding option in cli and change to libtext v0.6.1, fix option bug
 v0.2.3, makes name and text disjoint, fix BZKyo_06g.ws2 branch b'\x01\x81'
 v0.2.4, fix option to "00 00 0F 02 FF" for BZhal_32.ws2
 v0.2.5, fix \x1f bgm01 opcode pre addr wrong,  make some text not render in  BZkyo_02c.ws2
 v0.2.6, fix BZkyo_06.ws2 "03 00 00 00 00 00 00 00 00"
+v0.2.7, fix BZnoa_04.ws2, BZhal_28.ws2 "03 00 00 80 3F 00 00 00 00"
 """

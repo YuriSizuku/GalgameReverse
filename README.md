@@ -265,3 +265,9 @@ Localization util tools are moved to [Localization](https://github.com/YuriSizuk
 > Q-bit_キグルミキノコ (android)  
 
 * `qbit_text.py` export and import text for translation
+
+### renpy
+
+> 苍空的彼端 // 250203 added
+
+* `skyblue_wjz.py` extract `*.blend` rpa file with sig `WJZ-4.9`

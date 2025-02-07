@@ -247,12 +247,13 @@ Localization util tools are moved to [Localization](https://github.com/YuriSizuk
 ### krkr
 
 * `krkr_patch.c`, make `krkr_patch.dll` for changing locale and redirect CHSPATCH  
-* `krkr_sjis2utf16bom` , batch convert `sjis` files to `utf-16le-bom` format  
+* `krkr_hxv4_dumpkey.js`, for dump hxv4 cx keys
+* `krkr_sjis2utf16.py` , batch convert `sjis` files to `utf-16le-bom` format  
 
 > つばさの丘の姫王
 
 * `sdhime_xp3enc.cpp`,  make encrypted xp3 files  
-* `sdhime_krkrpatch`, chs localization support
+* `sdhime_patch.c`, chs localization support
 
 ### artemis
 

@@ -17,19 +17,20 @@ ifneq (,$(wildcard src/compat/*))
 CFLAGS+=-DUSECOMPAT
 endif
 
-ifneq (,$(findstring clang, $(CXX))) # for llvm-mingw
+ifneq (,$(findstring clang++, $(CXX))) # for llvm-mingw
 CFLAGS+=-m32 -static-libstdc++ \
 	-Wl,-Bstatic,--whole-archive -lunwind \
 	-Wl,--no-whole-archive \
 	-gcodeview -Wl,--pdb=$(BUILD_DIR)/version.pdb 
 LDFLAGS+= -Wl,--gc-sections
-else ifneq (,$(findstring gcc, $(CXX))) # for mingw-w64
+else ifneq (,$(findstring g++, $(CXX))) # for mingw-w64
 CFLAGS+=-m32
 LDFLAGS+= -Wl,--gc-sections \
 	-static-libgcc -static-libstdc++ \
 	-Wl,-Bstatic,--whole-archive -lwinpthread \
 	-Wl,--no-whole-archive
 else ifneq (,$(findstring tcc, $(CXX))) # for tcc
+$(error not support tcc for compile cpp)
 CFLAGS+=-m32
 else # for previous llvm clang with msvc
 CFLAGS+=-target i686-pc-windows-msvc -D _CRT_SECURE_NO_DEPRECATE
@@ -46,7 +47,7 @@ krkr_hxv4_dumphash: src/krkr_hxv4_dumphash.cpp src/compat/tp_stub.cpp src/compat
 	$(CXX) -shared  $^ -o$(BUILD_DIR)/version.dll \
 		$(INCS) $(LIBDIRS) $(LIBS) $(CFLAGS) $(LDFLAGS)
 	@cp -f $(BUILD_DIR)/version.dll $(BUILD_DIR)/krkr_hxv4_dumphash.dll
-	@cp -f $(BUILD_DIR)/version.pdb $(BUILD_DIR)/krkr_hxv4_dumphash.pdb 
+	@if [ -f $(BUILD_DIR)/version.pdb ]; then cp -f $(BUILD_DIR)/version.pdb $(BUILD_DIR)/krkr_hxv4_dumphash.pdb; fi
 	@rm -rf $(BUILD_DIR)/version.exp
 	@rm -rf $(BUILD_DIR)/version.lib
 	@rm -rf $(BUILD_DIR)/version.def

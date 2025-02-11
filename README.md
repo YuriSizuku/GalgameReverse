@@ -237,6 +237,13 @@ Localization util tools are moved to [Localization](https://github.com/YuriSizuk
 * `meikoi_dump.js`, invoke il2cpp func to dump script_dialog to text
 * `meikoi_dump.c`, invoke il2cpp func to dump hpb(hph) to unityfs
 
+### qt
+
+* `qfile_dump.cpp`, use QFile and QDir to dynamic dump qres files
+
+> 叙事曲1：难忘的回忆 // 250211 added  
+> 叙事曲2：星空下的诺言 // 250211 added  
+
 ## 3. Cross galgame
 
 ### onscripter
@@ -255,6 +262,8 @@ Localization util tools are moved to [Localization](https://github.com/YuriSizuk
 
 * `sdhime_xp3enc.cpp`,  make encrypted xp3 files  
 * `sdhime_patch.c`, chs localization support
+
+> D.C.5 Plus Happiness ～ダ・カーポ5～プラスハピネス // added on 250210
 
 ### artemis
 

@@ -4,7 +4,7 @@
 CXX:=clang++
 BUILD_DIR:=asset/build
 INCS:=-Isrc/compat
-LIBS:=
+LIBS:=-lgdi32
 CFLAGS:=-ffunction-sections -fdata-sections -Wno-null-dereference
 LDFLAGS:=
 
@@ -37,7 +37,7 @@ CFLAGS+=-target i686-pc-windows-msvc -D _CRT_SECURE_NO_DEPRECATE
 LDFLAGS+=-Wl,/OPT:REF # for llvm
 endif
 
-all: prepare krkr_hxv4_dumphash
+all: prepare krkr_hxv4_dumphash krkr_hxv4_patch
 
 prepare:
 	@mkdir -p $(BUILD_DIR)
@@ -46,10 +46,16 @@ krkr_hxv4_dumphash: src/krkr_hxv4_dumphash.cpp src/compat/tp_stub.cpp src/compat
 	@echo "## $@"
 	$(CXX) -shared  $^ -o$(BUILD_DIR)/version.dll \
 		$(INCS) $(LIBDIRS) $(LIBS) $(CFLAGS) $(LDFLAGS)
-	@cp -f $(BUILD_DIR)/version.dll $(BUILD_DIR)/krkr_hxv4_dumphash.dll
-	@if [ -f $(BUILD_DIR)/version.pdb ]; then cp -f $(BUILD_DIR)/version.pdb $(BUILD_DIR)/krkr_hxv4_dumphash.pdb; fi
-	@rm -rf $(BUILD_DIR)/version.exp
-	@rm -rf $(BUILD_DIR)/version.lib
-	@rm -rf $(BUILD_DIR)/version.def
+	@cp -f $(BUILD_DIR)/version.dll $(BUILD_DIR)/$@.dll
+	@if [ -f $(BUILD_DIR)/version.pdb ]; then cp -f $(BUILD_DIR)/version.pdb $(BUILD_DIR)/$@.pdb; fi
+	@rm -rf $(BUILD_DIR)/version.*
 
-.PHONY: prepare krkr_hxv4_dumphash
+krkr_hxv4_patch: src/krkr_hxv4_patch.cpp src/compat/tp_stub.cpp src/compat/winversion_v100.def
+	@echo "## $@"
+	$(CXX) -shared  $^ -o$(BUILD_DIR)/version.dll \
+		$(INCS) $(LIBDIRS) $(LIBS) $(CFLAGS) $(LDFLAGS)
+	@cp -f $(BUILD_DIR)/version.dll $(BUILD_DIR)/$@.dll
+	@if [ -f $(BUILD_DIR)/version.pdb ]; then cp -f $(BUILD_DIR)/version.pdb $(BUILD_DIR)/$@.pdb; fi
+	@rm -rf $(BUILD_DIR)/version.*
+
+.PHONY: prepare krkr_hxv4_dumphash krkr_hxv4_patch

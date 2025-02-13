@@ -6,10 +6,10 @@
  *   clang++ -m32 -shared -Wno-null-dereference -Isrc/compat -DUSECOMPAT src/krkr_hxv4_dumphash.cpp src/compat/tp_stub.cpp src/compat/winversion_v100.def -o asset/build/version.dll -g -gcodeview -Wl,--pdb=asset/build/version.pdb 
  * 
  * usage:
- *    compile and then put version.dll into game directory, 
- *    then it will decodes all the lines as name in files.txt and dirs.txt
- *    files.txt -> files_match.txt, dirs.txt -> dirs_match.txt (must be utf16lebom)
- *    after that you can restore content path extracted by KrkrExtractForCxdecV2
+ *   renmae the target dll to version.dll and put into game directory, 
+ *   then it will decodes all the lines as name in files.txt and dirs.txt
+ *   files.txt -> files_match.txt, dirs.txt -> dirs_match.txt (must be utf16lebom)
+ *   after that you can restore content path extracted by KrkrExtractForCxdecV2
  * 
  * tested games:
  *   D.C.5 Plus Happiness ～ダ・カーポ5～プラスハピネス

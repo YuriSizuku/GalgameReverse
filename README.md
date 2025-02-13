@@ -253,10 +253,11 @@ Localization util tools are moved to [Localization](https://github.com/YuriSizuk
 
 ### krkr
 
-* `krkr_patch.c`, make `krkr_patch.dll` for changing locale and redirect CHSPATCH  
-* `krkr_hxv4_dumpkey.js`, for dump hxv4 cx keys used for garbro
-* `krkr_hxv4_dumphash.cpp`, dynamic batch hash calculator for filelist and dirlist
+* `krkr_krkr2_patch.c`, make `krkr2_patch.dll` for changing locale and redirect CHSPATCH  
 * `krkr_sjis2utf16.py` , batch convert `sjis` files to `utf-16le-bom` format  
+* `krkr_hxv4_dumpkey.js`, for dump hxv4 cx keys used for garbro  
+* `krkr_hxv4_dumphash.cpp`, dynamic batch hash calculator for filelist and dirlist  
+* `krkr_hxv4_patch.cpp`, redirect `arc:\\.\xxx` to unencrypted `patch.xp3>xxx` for localization, as well as font  
 
 > つばさの丘の姫王
 

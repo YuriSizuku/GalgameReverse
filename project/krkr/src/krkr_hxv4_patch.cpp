@@ -1,6 +1,6 @@
 /**
  *  redirect files to unencrypted xp3 file
- *   v0.1, developed by devseed
+ *   v0.2, developed by devseed
  * 
  * build:
  *   clang++ -m32 -shared -Wno-null-dereference -Isrc/compat -DUSECOMPAT src/krkr_hxv4_patch.cpp src/compat/tp_stub.cpp src/compat/winversion_v100.def -lgdi32 -o asset/build/version.dll -g -gcodeview -Wl,--pdb=asset/build/version.pdb 
@@ -10,17 +10,19 @@
  *   then it will read override/config.txt and replace files in override/patch.xp3
  *   
  *   override/config.ini (must be in utf16-le with bom, unix lf)
+ *     loglevel=2
  *     exename=DC5PH_chs.exe
- *     xp3name=override/patch.xp3
+ *     xp3path=override/patch.xp3
  *     charset=134
  *     # force use this fontname
- *     font=simhei
+ *     fontname=simhei
  *     # add user custom font
- *     fontadd=override/default.ttf
- *     useconsole=1
+ *     fontpath=override/default.ttf
  * 
  * tested games:
- *   D.C.5 Plus Happiness ～ダ・カーポ5～プラスハピネス
+ *   D.C.5 Plus Happiness ～ダ・カーポ5～プラスハピネス // arc://./
+ *   GINKA // arc://./
+ *   Atri: My Dear Moments // archive://(.+?)/.xp3/...
  * 
  * refer: 
  *   https://github.com/crskycode/KrkrDump/blob/master/KrkrDump/dllmain.cpp
@@ -66,15 +68,30 @@
         LOGi("UNBIND_HOOK " #name " %p\n", name##_old); \
     }
 
+static const char* ucs2utf8(const wchar_t * format, ...)
+{
+    static char tmp[1024*3];
+    static wchar_t tmpw[1024];
+
+    va_list arglist;
+    va_start(arglist, format);
+    vswprintf(tmpw, format, arglist);
+    va_end(arglist);
+    int n = WideCharToMultiByte(CP_UTF8, 0, tmpw, wcslen(tmpw), tmp, sizeof(tmp), NULL, NULL);
+    tmp[n] = '\0';
+    
+    return tmp;
+}
+
 // struct and functino
 struct krkrpatch_cfg_t
 {
-    std::wstring exename;
-    std::wstring xp3name;
     int charset;
-    std::wstring font;
-    std::wstring fontadd;
-    bool useconsole;  
+    int loglevel;
+    std::wstring exename;
+    std::wstring xp3path;
+    std::wstring fontname;
+    std::wstring fontpath;
 };
 static HRESULT __stdcall V2Link_hook(iTVPFunctionExporter* exporter);
 static tTJSBinaryStream* FASTCALL TVPCreateStream_hook(ttstr* name, tjs_uint32 flags);
@@ -87,8 +104,9 @@ HFONT WINAPI CreateFontIndirectW_hook(const LOGFONTW *lplf);
 // global value define
 #define CONFIG_PATH "override/config.ini"
 static struct krkrpatch_cfg_t g_cfg = {
-    .exename=L"*", .xp3name=L"override/patch.xp3", .charset=0, 
-    .font=L"", .fontadd=L"", .useconsole=true, 
+    .charset=0,.loglevel=1, 
+    .exename=L"*", .xp3path=L"override/patch.xp3",
+    .fontname=L"", .fontpath=L""
 };
 iTVPFunctionExporter *g_exporter = nullptr;
 FONTENUMPROCW g_fontproc = nullptr;
@@ -114,20 +132,48 @@ tTJSBinaryStream* FASTCALL TVPCreateStream_hook(ttstr* name, tjs_uint32 flags)
     if(!g_exporter) return TVPCreateStream_org(name, flags);
     if(flags != TJS_BS_READ) return TVPCreateStream_org(name, flags);
     
-    // LOGLi(L"%ls\n", name.c_str());
     const wchar_t *inpath = static_cast<const wchar_t*>(name->c_str());
-    if(wcsstr(inpath, L"arc://"))
+    if(wcsstr(inpath, L"arc://")) // hxv4
     {
         const wchar_t *inname = inpath + 6;
         if(wcsncmp(inname, L"./", 2) ==0) inname += 2;
-        ttstr name_redirct = g_cfg.xp3name.c_str() + ttstr(">") + ttstr(inname);
+        ttstr name_redirct = g_cfg.xp3path.c_str() + ttstr(">") + ttstr(inname);
         ttstr name_full = TVPGetAppPath() + L"/" + name_redirct;
         if (TVPIsExistentStorageNoSearchNoNormalize(name_full))
         {
-            LOGLi(L"%ls -> %ls\n", name->c_str(), name_redirct.c_str());
+            if(g_cfg.loglevel >= 1)  LOGi("%s\n", ucs2utf8(L"REDIRECT %ls -> %ls", name->c_str(), name_redirct.c_str()));
             return TVPCreateStream_org(&name_full, flags);
         }
+        else
+        {
+            if(g_cfg.loglevel >= 2) LOGi("NOREDIRECT %s\n", ucs2utf8(inpath));
+        }
     }
+    else if(wcsstr(inpath, L"archive://")) // older cx
+    {
+        const wchar_t *inname = wcsstr(inpath, L".xp3/");
+        if(inname)
+        {
+            inname += 5;
+            ttstr name_redirct = g_cfg.xp3path.c_str() + ttstr(">") + ttstr(inname);
+            ttstr name_full = TVPGetAppPath() + L"/" + name_redirct;
+            if (TVPIsExistentStorageNoSearchNoNormalize(name_full))
+            {
+                if(g_cfg.loglevel >= 1)  LOGi("%s\n", ucs2utf8(
+                        L"REDIRECT %ls -> %ls", name->c_str(), name_redirct.c_str()));
+                return TVPCreateStream_org(&name_full, flags);
+            }
+            else
+            {
+                if(g_cfg.loglevel >= 2) LOGi("NOREDIRECT %s\n", ucs2utf8(inpath));
+            }
+        }
+        else
+        {
+            if(g_cfg.loglevel >= 2) LOGi("NOREDIRECT %s\n", ucs2utf8(inpath));
+        }
+    }
+    if(g_cfg.loglevel >= 2) LOGi("OTHER %s\n", ucs2utf8(inpath));
     return TVPCreateStream_org(name, flags);
 }
 
@@ -145,7 +191,11 @@ FARPROC WINAPI GetProcAddress_hook(HMODULE hModule, LPCSTR lpProcName)
 
 BOOL CALLBACK fontproc_hook(CONST LOGFONTW *lplf,CONST TEXTMETRICW *lpntm,DWORD FontType,LPARAM lParam) 
 {
-    if(g_cfg.charset) ((LOGFONTW *)(lplf))->lfCharSet = g_cfg.charset;
+    if(g_cfg.charset) 
+    {
+        ((LOGFONTW *)(lplf))->lfCharSet = g_cfg.charset;
+        if(g_cfg.loglevel >= 3) LOGi("charset %x -> %x\n", lplf->lfCharSet, g_cfg.charset);
+    }
     if(g_fontproc) return g_fontproc(lplf, lpntm, FontType, lParam);
     return FALSE;
 }
@@ -160,8 +210,16 @@ int WINAPI EnumFontFamiliesExW_hook(HDC hdc, LPLOGFONTW lpLogfont,
 
 HFONT WINAPI CreateFontIndirectW_hook(const LOGFONTW *lplf)
 {
-    if(g_cfg.charset) ((LOGFONTW *)(lplf))->lfCharSet = g_cfg.charset;
-    if(g_cfg.font.length() > 0) wcscpy(((LOGFONTW *)(lplf))->lfFaceName, g_cfg.font.c_str());
+    if(g_cfg.charset) 
+    {
+        if(g_cfg.loglevel >= 3) LOGi("charset %x -> %x\n", lplf->lfCharSet, g_cfg.charset);
+        ((LOGFONTW *)(lplf))->lfCharSet = g_cfg.charset;
+    }
+    if(g_cfg.fontname.length() > 0) 
+    {
+        if(g_cfg.loglevel >= 3) LOGLi(L"facename %ls -> %ls\n", lplf->lfFaceName, g_cfg.fontname.c_str());
+        wcscpy(((LOGFONTW *)(lplf))->lfFaceName, g_cfg.fontname.c_str());
+    }
     return CreateFontIndirectW_org(lplf);
 }
 
@@ -191,25 +249,25 @@ static void read_config(const char *path, struct krkrpatch_cfg_t *cfg)
         {
             cfg->exename = std::wstring(v);
         }
-        else if(!_wcsicmp(k, L"xp3name"))
+        else if(!_wcsicmp(k, L"xp3path"))
         {
-            cfg->xp3name = std::wstring(v);
+            cfg->xp3path = std::wstring(v);
         }
         else if(!_wcsicmp(k, L"charset"))
         {
             cfg->charset = _wtoi(v);
         }
-        else if(!_wcsicmp(k, L"font"))
+        else if(!_wcsicmp(k, L"fontname"))
         {
-            cfg->font = std::wstring(v);
+            cfg->fontname = std::wstring(v);
         }
-        else if(!_wcsicmp(k, L"fontadd")) // user custome font
+        else if(!_wcsicmp(k, L"fontpath")) // user custome font
         {
-            cfg->fontadd = std::wstring(v);
+            cfg->fontpath = std::wstring(v);
         }
-        else if(!_wcsicmp(k, L"useconsole"))
+        else if(!_wcsicmp(k, L"loglevel"))
         {
-            cfg->useconsole = _wtoi(v);
+            cfg->loglevel = _wtoi(v);
         }
     }
 
@@ -218,7 +276,7 @@ static void read_config(const char *path, struct krkrpatch_cfg_t *cfg)
 
 static void print_info()
 {
-    printf("krkr_hxv4_patch, v0.1, developed by devseed\n");
+    printf("krkr_hxv4_patch, v0.2, developed by devseed\n");
     
     DWORD winver = GetVersion();
     DWORD winver_major = (DWORD)(LOBYTE(LOWORD(winver)));
@@ -236,15 +294,14 @@ static void print_info()
 static void init()
 {  
     // load config
-    read_config(CONFIG_PATH, &g_cfg);
-    if(g_cfg.useconsole)
+    FILE *fp = fopen("DEBUG_CONSOLE", "rb");
+    if(fp)
     {
         AllocConsole();
-        freopen("CONOUT$", "w", stdout);
-        // system("chcp 936");
-        // setlocale(LC_ALL, "chs");
+        freopen("CONOUT$", "w", stdout); // problem on printf wchar_t with kanji
     }
     print_info();
+    read_config(CONFIG_PATH, &g_cfg);
 
     // check exe
     auto status = MH_Initialize();
@@ -277,23 +334,23 @@ static void init()
         EnumFontFamiliesExW_old = reinterpret_cast<void*>(EnumFontFamiliesExW);
         BIND_HOOK(EnumFontFamiliesExW);
     }
-    if(g_cfg.font.length() > 0)
+    if(g_cfg.fontname.length() > 0)
     {
         CreateFontIndirectW_old = reinterpret_cast<void*>(CreateFontIndirectW);
         BIND_HOOK(CreateFontIndirectW);
     }
-    if(g_cfg.fontadd.length() > 0)
+    if(g_cfg.fontpath.length() > 0)
     {
-        int res = AddFontResourceW(g_cfg.fontadd.c_str());
-        LOGLi(L"AddFontResourceW %ls res=%d\n", g_cfg.fontadd.c_str(), res);
+        int res = AddFontResourceW(g_cfg.fontpath.c_str());
+        LOGLi(L"AddFontResourceW %ls res=%d\n", g_cfg.fontpath.c_str(), res);
     }
 }
 
 static void uninit()
 {
-    if(g_cfg.fontadd.length() > 0)
+    if(g_cfg.fontpath.length() > 0)
     {
-        RemoveFontResourceW(g_cfg.fontadd.c_str());
+        RemoveFontResourceW(g_cfg.fontpath.c_str());
     }
     auto status = MH_Uninitialize();
     if(status != MH_OK)
@@ -320,3 +377,10 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL,  DWORD fdwReason,  LPVOID lpReserved )
     }
     return TRUE;
 }
+
+/**
+ * history
+ *   v0.1, initial version support hxv4
+ *   v0.1.1, change some parameters
+ *   v0.2, support older cx archive://, such as atri
+ */

@@ -4,6 +4,7 @@ export or import spt text for systemNNN,
 
 tested game:
   倭人異聞録～あさき、ゆめみし～
+  EXTRAVAGANZA ～蟲愛でる少女～
 
 """
 
@@ -368,7 +369,7 @@ class Spt:
     def get_text(self, addr, encoding="sjis"):
         end = addr
         while end < len(self.m_data) and self.m_data[end]!=0: end+=1
-        text = self.m_data[addr: end].decode(encoding)
+        text = self.m_data[addr: end].decode(encoding, errors="ignore")
         return text, end - addr
 
     def parse(self, data):
@@ -443,17 +444,20 @@ class Spt:
             text = text.replace(r'[\r]', '\r').replace(r'[\n]', '\n')
             if encoding == "gbk":
                 text = re.sub("#［(.+?)］", "", text) #［３たいまし］
-                replace_map = {"―": "ー", '〜':'~', '─':'-', '—':'-', '～':'~', '・':'.', '≪':'《', '−':'-', '♪':'音'}
+                replace_map = {'・':'·', '≪':'《', '−':'―', '♪':'♯'}
                 for k, v in replace_map.items():
                     text = text.replace(k, v)
 
             return text
 
         def _make_textdata(text):
-            textdata = text.encode(encoding) + b'\x00'
-            remain_set = {"#名", "#心", "#猫"}
+            textdata = text.encode(encoding, errors="ignore") + b'\x00'
+            remain_set = {"#名", "#心","#桃", "#足", "#猫", "#黄", "#赤"}
             for v in remain_set:
-                textdata = textdata.replace(v.encode(encoding), v.encode('sjis'))
+                try:
+                    textdata = textdata.replace(v.encode(encoding), v.encode('sjis'))
+                except UnicodeEncodeError:
+                    pass
             return textdata
         
         # load ftext and prepare data

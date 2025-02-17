@@ -1,11 +1,14 @@
 /**
  * systemNNN engine 
  * localization support, redirect file, loadpng in dib
- *   v0.2.1, developed by devseed
+ *   v0.2.2, developed by devseed
  * 
  * tested game: 
  *   倭人異聞録～あさき、ゆめみし～ 
- *   (patch=+3DC17:FE;CPicture_LoadDWQ=;CPicture_mpic=32)
+ *   (patch=+3DC17:FE;CPicture_LoadDWQ=939744;CPicture_mpic=32)
+ * 
+ *   EXTRAVAGANZA ～蟲愛でる少女～
+ *   (patch=+3DC17:FE;CPicture_LoadDWQ=56928;CPicture_mpic=32;CPicture_mpic=40)
  *  
  * override/config.ini // number must be decimal except patchpattern
  *   charset=128
@@ -13,6 +16,7 @@
  *   patchpattern=wajin_asaki.patch
  *   CPicture_LoadDWQ=rva
  *   CPicture_mpic=offset
+ *   CPicture_mmaskPic=offset
 */
 
 #include <stdio.h>
@@ -59,12 +63,14 @@ struct systemnnn_cfg_t{
     char patch[1024];
     size_t CPicture_LoadDWQ; // addr
     size_t CPicture_mpic; // offset
+    size_t CPicture_mmaskPic; // offset
 };
 
 struct systemnnn_cfg_t g_systemnnncfg = 
 {
     .charset=936, .font="simehei",
-    .patch={0}, .CPicture_LoadDWQ=0, .CPicture_mpic=32,
+    .patch={0}, .CPicture_LoadDWQ=0, 
+    .CPicture_mpic=32, .CPicture_mmaskPic=40
 };
 
 #if 1 // iat hooks
@@ -122,11 +128,13 @@ typedef BOOL (__fastcall *PFN_CPicture_LoadDWQ)(
 BOOL __fastcall CPicture_LoadDWQ_hook(void *this, size_t edx, 
     LPSTR fileName, BOOL b256Flag, LPSTR dirName)
 {
+    // https://github.com/tinyan/SystemNNN/blob/afd986747eaab074845cd9217f2427a3a438f5c6/nyanPictureLib/Picture.cpp#L938
     static char tmp[MAX_PATH] = {0};
     printf("CPicture::LoadDWQ %s, %s\n", fileName, dirName);
     PFN_CPicture_LoadDWQ pfn = (PFN_CPicture_LoadDWQ) g_pfnOlds[CPicture_LoadDWQ_IDX];
     BOOL res = pfn(this, edx, fileName, b256Flag, dirName);
     uint8_t *pic = (uint8_t*)*(size_t*)((size_t)this + g_systemnnncfg.CPicture_mpic);
+    uint8_t *mask = (uint8_t*)*(size_t*)((size_t)this + g_systemnnncfg.CPicture_mmaskPic);
     if (res)
     {
         int x, y, comp;
@@ -142,7 +150,11 @@ BOOL __fastcall CPicture_LoadDWQ_hook(void *this, size_t edx,
                 pic[4*i] = img[comp*i+2];
                 pic[4*i+1] = img[comp*i+1];
                 pic[4*i+2] = img[comp*i];
-                if(comp==4)   pic[4*i+3] = img[comp*i+3];
+                if(comp==4)
+                {
+                    pic[4*i+3] = img[comp*i+3];
+                    if(mask) mask[i] = img[comp*i+3]; // must should be considered here
+                }
             }
             stbi_image_free(img);
         }
@@ -170,7 +182,6 @@ void install_hooks()
     // some patch like sjis check, like wajin_asaki, change A0 to FE
     // 0043DC11 | 81BD ACFEFFFF A0000000 | cmp dword ptr ss:[ebp-154],A0
     winhook_patchmemorypattern(g_systemnnncfg.patch);
-
 
     // make inline hook
     // replace dwq dib buffer hook
@@ -202,7 +213,7 @@ void install_console()
     }
     system("chcp 936");
     setlocale(LC_ALL, "chs");
-    printf("systemnnn_patch v0.2.1, build240831, developed by devseed\n");
+    printf("systemnnn_patch v0.2.2, build250127, developed by devseed\n");
 }
 
 void read_config(const char *path)
@@ -239,6 +250,10 @@ void read_config(const char *path)
             else if(!_stricmp(k, "CPicture_mpic"))
             {
                 g_systemnnncfg.CPicture_mpic = atoi(v);
+            }
+            else if(!_stricmp(k, "CPicture_mmaskPic"))
+            {
+                g_systemnnncfg.CPicture_mmaskPic = atoi(v);
             }
         }
         fclose(fp);
@@ -280,4 +295,5 @@ BOOL WINAPI DllMain(
  * v0.1, initial version, support sjis chcp, range patch, redirect file
  * v0.2, support dwq dib replace
  * v0.2.1, add systemnnn_patch_console file exist detect for allocconsole
+ * v0.2.2, add m_maskPic for dwq blending problem
 */

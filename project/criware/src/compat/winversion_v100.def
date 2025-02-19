@@ -1,0 +1,19 @@
+LIBRARY "version"
+EXPORTS
+    GetFileVersionInfoA	= __wrap_GetFileVersionInfoA
+    GetFileVersionInfoByHandle = __wrap_GetFileVersionInfoByHandle
+    GetFileVersionInfoExA = __wrap_GetFileVersionInfoExA
+    GetFileVersionInfoExW = __wrap_GetFileVersionInfoExW
+    GetFileVersionInfoSizeA = __wrap_GetFileVersionInfoSizeA
+    GetFileVersionInfoSizeExA = __wrap_GetFileVersionInfoSizeExA
+    GetFileVersionInfoSizeExW = __wrap_GetFileVersionInfoSizeExW
+    GetFileVersionInfoSizeW = __wrap_GetFileVersionInfoSizeW
+    GetFileVersionInfoW = __wrap_GetFileVersionInfoW
+    VerFindFileA = __wrap_VerFindFileA
+    VerFindFileW = __wrap_VerFindFileW
+    VerInstallFileA = __wrap_VerInstallFileA
+    VerInstallFileW = __wrap_VerInstallFileW
+    VerLanguageNameA = __wrap_VerLanguageNameA
+    VerLanguageNameW = __wrap_VerLanguageNameW
+    VerQueryValueA = __wrap_VerQueryValueA
+    VerQueryValueW = __wrap_VerQueryValueW

@@ -190,10 +190,13 @@ Localization util tools are moved to [Localization](https://github.com/YuriSizuk
 
 ### criware
 
+* `xtx_font.py`, `xtx` font decode and encode  
+
 > 祝姫
 
-* `xtx_font.py`, `xtx` font decode and encode, for `祝姫`  
-* `iwaihime_pc_decrypt.c`,  `sn.bin` decode  
+* `iwaihime_sn.c`,  decode `sn.bin`
+* `iwaihime_patch.c`,  redirect files and fonts
+* `iwaihime_font.py`, make xtx font by mapping sjis encoding to gbk glphys
 
 ### hibiki
 

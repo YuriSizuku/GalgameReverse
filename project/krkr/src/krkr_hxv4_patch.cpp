@@ -1,6 +1,6 @@
 /**
  *  redirect files to unencrypted xp3 file
- *   v0.2, developed by devseed
+ *   v0.2.1, developed by devseed
  * 
  * build:
  *   clang++ -m32 -shared -Wno-null-dereference -Isrc/compat -DUSECOMPAT src/krkr_hxv4_patch.cpp src/compat/tp_stub.cpp src/compat/winversion_v100.def -lgdi32 -o asset/build/version.dll -g -gcodeview -Wl,--pdb=asset/build/version.pdb 
@@ -129,11 +129,11 @@ HRESULT __stdcall V2Link_hook(iTVPFunctionExporter* exporter)
 
 tTJSBinaryStream* FASTCALL TVPCreateStream_hook(ttstr* name, tjs_uint32 flags)
 {
-    if(!g_exporter) return TVPCreateStream_org(name, flags);
-    if(flags != TJS_BS_READ) return TVPCreateStream_org(name, flags);
+    if (!g_exporter) return TVPCreateStream_org(name, flags);
+    if (flags != TJS_BS_READ) return TVPCreateStream_org(name, flags);
     
     const wchar_t *inpath = static_cast<const wchar_t*>(name->c_str());
-    if(wcsstr(inpath, L"arc://")) // hxv4
+    if (wcsstr(inpath, L"arc://")) // hxv4, arc://
     {
         const wchar_t *inname = inpath + 6;
         if(wcsncmp(inname, L"./", 2) ==0) inname += 2;
@@ -149,7 +149,7 @@ tTJSBinaryStream* FASTCALL TVPCreateStream_hook(ttstr* name, tjs_uint32 flags)
             if(g_cfg.loglevel >= 2) LOGi("NOREDIRECT %s\n", ucs2utf8(inpath));
         }
     }
-    else if(wcsstr(inpath, L"archive://")) // older cx
+    else if (wcsstr(inpath, L"archive://")) // older cx, archive://
     {
         const wchar_t *inname = wcsstr(inpath, L".xp3/");
         if(inname)
@@ -173,7 +173,23 @@ tTJSBinaryStream* FASTCALL TVPCreateStream_hook(ttstr* name, tjs_uint32 flags)
             if(g_cfg.loglevel >= 2) LOGi("NOREDIRECT %s\n", ucs2utf8(inpath));
         }
     }
-    if(g_cfg.loglevel >= 2) LOGi("OTHER %s\n", ucs2utf8(inpath));
+    else if (!wcsstr(inpath, L"://")) // no protocol
+    {
+        const wchar_t *inname = inpath;
+        ttstr name_redirct = g_cfg.xp3path.c_str() + ttstr(">") + ttstr(inname);
+        ttstr name_full = TVPGetAppPath() + L"/" + name_redirct;
+        if (TVPIsExistentStorageNoSearchNoNormalize(name_full))
+        {
+            if(g_cfg.loglevel >= 1)  LOGi("%s\n", ucs2utf8(L"REDIRECT %ls -> %ls", name->c_str(), name_redirct.c_str()));
+            return TVPCreateStream_org(&name_full, flags);
+        }
+        else
+        {
+            if(g_cfg.loglevel >= 2) LOGi("NOREDIRECT %s\n", ucs2utf8(inpath));
+        }
+    }
+    
+    if (g_cfg.loglevel >= 2) LOGi("OTHER %s\n", ucs2utf8(inpath));
     return TVPCreateStream_org(name, flags);
 }
 
@@ -276,7 +292,7 @@ static void read_config(const char *path, struct krkrpatch_cfg_t *cfg)
 
 static void print_info()
 {
-    printf("krkr_hxv4_patch, v0.2, developed by devseed\n");
+    printf("krkr_hxv4_patch, v0.2.1, developed by devseed\n");
     
     DWORD winver = GetVersion();
     DWORD winver_major = (DWORD)(LOBYTE(LOWORD(winver)));
@@ -383,4 +399,5 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL,  DWORD fdwReason,  LPVOID lpReserved )
  *   v0.1, initial version support hxv4
  *   v0.1.1, change some parameters
  *   v0.2, support older cx archive://, such as atri
+ *   v0.2.1, add no protocol files
  */

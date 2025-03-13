@@ -99,12 +99,12 @@ Interceptor.attach(LoadLibraryW, {
                 let offset = this.context.ecx.add(0x14).readU32();
                 let randtype = this.context.ecx.add(0x18).readU8();
                 let block = this.context.ecx.add(0x20).readByteArray(4096);
-                let order = this.context.ecx.add(0x3020).readU8();
+                let order = this.context.ecx.add(0x3020).readByteArray(0x11);
                 console.log(`* filterkey ${buf2hexstr(filterkey)}`);
                 console.log(`* mask 0x${mask.toString(16)}`);
                 console.log(`* offset 0x${offset.toString(16)}`);
                 console.log(`* randtype ${randtype.toString()}`);
-                console.log(`* order ${order.toString()}`);
+                File.writeAllBytes("order.bin", order);
                 File.writeAllBytes("control_block.bin", block);
                 cxpoint = 0;
         }});

@@ -9,6 +9,7 @@
  * 
  * tested games:
  *   D.C.5 Plus Happiness ～ダ・カーポ5～プラスハピネス
+ *   エッチで一途なド田舎兄さまと、古式ゆかしい病弱妹
  * 
  * refer: 
  *   https://github.com/crskycode/GARbro/blob/master/ArcFormats/KiriKiri/HxCrypt.cs
@@ -19,15 +20,15 @@
 /**
  * @param {ArrayBuffer} buf 
  */
-function buf2hexstr(buf) {
+function buf2hexstr(buf, sep="") {
     const arr = new Uint8Array(buf);
     const hexs = [];
-    for(let i=0; i < arr.length; i++) {
+    for(let i=0; i<arr.length; i++) {
         let hex = arr[i].toString(16);
         hex = ('00' + hex).slice(-2);
-        hexs.push(hex)
+        hexs.push(hex);
     }
-    return hexs.join('');
+    return hexs.join(sep);
 }
 
 var dllpath;
@@ -100,12 +101,27 @@ Interceptor.attach(LoadLibraryW, {
                 let randtype = this.context.ecx.add(0x18).readU8();
                 let block = this.context.ecx.add(0x20).readByteArray(4096);
                 let order = this.context.ecx.add(0x3020).readByteArray(0x11);
-                console.log(`* filterkey ${buf2hexstr(filterkey)}`);
-                console.log(`* mask 0x${mask.toString(16)}`);
-                console.log(`* offset 0x${offset.toString(16)}`);
-                console.log(`* randtype ${randtype.toString()}`);
-                File.writeAllBytes("order.bin", order);
+                console.log(`* filterkey : ${buf2hexstr(filterkey)}`);
+                console.log(`* mask : 0x${mask.toString(16)}`);
+                console.log(`* offset : 0x${offset.toString(16)}`);
+                console.log(`* randtype : ${randtype.toString()}`);
+                console.log(`* order : ${buf2hexstr(order, " ")}`);
                 File.writeAllBytes("control_block.bin", block);
+                  
+                // order compatible for garbro
+                const O = new Uint8Array(order);
+                const S3 = [0, 1, 2];
+                const S6 = [2, 5, 3, 4, 1, 0];
+                const S8 = [0, 2, 3, 1, 5, 6, 7, 4];
+                let O3 = [0, 1, 2];
+                let O6 = [0, 1, 2, 3, 4, 5];
+                let O8 = [0, 1, 2, 3, 4, 5, 6, 7];
+                for (let i=0; i<3; i++) O3[O[14+i]]=S3[i];
+                for (let i=0; i<6; i++) O6[O[8+i]]=S6[i];
+                for (let i=0; i<8; i++) O8[O[i]]=S8[i];
+                console.log(`* PrologOrder (garbro) : ${O3[0]}, ${O3[1]}, ${O3[2]}`);
+                console.log(`* OddBranchOrder (garbro) : ${O6[0]}, ${O6[1]}, ${O6[2]}, ${O6[3]}, ${O6[4]}, ${O6[5]}`);
+                console.log(`* EvenBranchOrder (garbro) : ${O8[0]}, ${O8[1]}, ${O8[2]}, ${O8[3]}, ${O8[4]}, ${O8[5]}, ${O8[6]}, ${O8[7]}`);
                 cxpoint = 0;
         }});
     }

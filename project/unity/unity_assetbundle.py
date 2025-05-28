@@ -1,17 +1,39 @@
 """
-export or import objects from unity asset bundle
-  v0.2.2, developed by devseed
+batch export or import objects from unity asset bundle
+  v0.2.3, developed by devseed
+
+tested games:
+    Lost Smile, windows, 2018.4.15f1
+    ときめきメモリアル～forever with you～, switch, 6000.0.29f1
 
 thirdparty:
   UnityPy 1.22.3 (https://github.com/K0lb3/UnityPy/tree/bfea10a8d4f40296ef353b8464baf9a2a54574c5)
 """
 
 import os
+import sys
 import glob
 import json
 import argparse
 import UnityPy
 from PIL import Image
+from UnityPy.helpers.TypeTreeGenerator import TypeTreeGenerator
+
+DLL_DIR: str = None
+GAME_DIR: str = None
+GAME_VERSION: str = None
+
+def init_unitypy(env: UnityPy.Environment):
+    global DLL_DIR, GAME_DIR, GAME_VERSION
+    if not DLL_DIR and not GAME_DIR and not GAME_VERSION: return
+    if GAME_VERSION is None: GAME_VERSION = env.objects[0].assets_file.unity_version
+    try: # needs to install typetreegeneratorapi
+        generator = TypeTreeGenerator(GAME_VERSION)
+        if GAME_DIR is not None: generator.load_local_game(GAME_DIR)
+        elif DLL_DIR is not None: generator.load_local_dll_folder(DLL_DIR)
+        env.typetree_generator = generator
+    except ImportError as e:
+        print(e, file=sys.stderr)
 
 def parse_pathordir(pathordir, pattern):
     inpaths = []
@@ -23,106 +45,124 @@ def parse_pathordir(pathordir, pattern):
         inpaths = glob.glob(os.path.join(pathordir, pattern), recursive=True)
     return indir, inpaths
 
-def ensure_outpath(outpath):
-    suboutdir = os.path.dirname(outpath)
-    if not os.path.exists(suboutdir): os.makedirs(suboutdir)
+def find_outpath(outdir, names, ext=""):
+    for name in names:
+        if os.path.basename(name) == "": continue
+        outpath = os.path.join(outdir, name+ext)
+        if os.path.exists(outpath): continue
+        targetdir = os.path.dirname(outpath)
+        if not os.path.exists(targetdir): os.makedirs(targetdir)
+        return outpath
+    return None
 
-def list_asset(pathordir, selects=None, searchpattern="**/*.assetbundle"):
+def find_inpath(indir, names, ext=""):
+    for name in names:
+        if os.path.basename(name) == "": continue
+        inpath = os.path.join(indir, name+ext)
+        if os.path.exists(inpath): return inpath
+    return None
+
+def list_asset(pathordir, outpath=None, selects=None, searchpattern="**/*.assetbundle"):
+    lines = []
     indir, inpaths = parse_pathordir(pathordir, searchpattern)
-    print("file,container,pathid,name,type")
+    lines.append("file,container,pathid,name,type")
+    print(lines[-1])
+    if selects is None: selects = {"Texture2D", "MonoBehaviour", "TextAsset", "Font"}
     for fpath in inpaths:
         rpath = os.path.relpath(fpath, indir).replace("\\", "/")
         env = UnityPy.load(fpath)
+        init_unitypy(env)
         for obj in env.objects:
-            if selects and obj.type.name not in selects: continue
+            if obj.type.name not in selects: continue
+            try:
+                data = obj.read()
+                if obj.type.name == "Texture2D" and data.m_CompleteImageSize==0: continue
+                lines.append(f"{rpath},{obj.container},pathid{obj.path_id},{data.m_Name},{obj.type.name}")
+                print(lines[-1])
+            except ValueError:
+                pass
 
-            if obj.type.name == "Texture2D":
-                data = obj.read()
-                if data.m_CompleteImageSize==0: continue
-                print(f"{rpath},{obj.container},pathid{obj.path_id},{data.m_Name},Texture2D")
-            
-            elif obj.type.name == "MonoBehaviour": 
-                if not obj.serialized_type.node: continue
-                tree = obj.read_typetree()
-                print(f"{rpath},{obj.container},pathid{obj.path_id},{tree['m_Name']},MonoBehaviour")
-            
-            elif obj.type.name == "TextAsset": 
-                data = obj.read()
-                print(f"{rpath},{obj.container},pathid{obj.path_id},{data.m_Name},TextAsset")
-
-            elif obj.type.name == "AssetBundle": 
-                data = obj.read()
-                print(f"{rpath},{obj.container},pathid{obj.path_id},{data.m_Name},AssetBundle")
-        
-            elif obj.type.name == "Font": 
-                data = obj.read()
-                print(f"{rpath},{obj.container},pathid{obj.path_id},{data.m_Name},Font")
+    if outpath: 
+        with open(outpath, "w", encoding="utf8") as fp:
+            fp.writelines([line + "\n" for line in lines])
 
 def export_asset(inpath, outdir=None, selects=None):
     env = UnityPy.load(inpath)
+    init_unitypy(env)
+    if selects is None: selects = {"Texture2D", "MonoBehaviour", "TextAsset", "Font"}
     for i, obj in enumerate(env.objects):
-        if selects and obj.type.name not in selects: continue
-        
-        if obj.type.name == "Texture2D":
+        if obj.type.name not in selects: continue
+        try:
             data = obj.read()
+        except ValueError as e:
+            print(f"failed {e}, {i+1}/{len(env.objects)} {obj.container},{obj.path_id},{data.m_Name},{obj.type.name}")
+        
+        # add pathid prefix to avoid "-" in shell
+        names = [data.m_Name, data.m_Name + f"pathid{obj.path_id}"]
+        if obj.type.name == "Texture2D":
             if data.m_CompleteImageSize==0: continue
-            outpath = os.path.join(outdir, data.m_Name + ".png")
-            ensure_outpath(outpath)
+            outpath = find_outpath(outdir, names, ".png")
+            if not outpath: continue
             try:
                 data.image.save(outpath)
-                print(f"export {i+1}/{len(env.objects)} {obj.container},{obj.path_id},{data.m_Name},Texture2D")
+                print(f"export {i+1}/{len(env.objects)} {obj.container},{obj.path_id},{data.m_Name},{obj.type.name}")
             except Exception as e:
-                print(f"failed {e}, {i+1}/{len(env.objects)} {obj.container},{obj.path_id},{data.m_Name},Texture2D")
+                print(f"failed {e},{i+1}/{len(env.objects)} {obj.container},{obj.path_id},{data.m_Name},{obj.type.name}")
         
         elif obj.type.name == "MonoBehaviour":
-            if not obj.serialized_type.node: continue
-            tree = obj.read_typetree()
-            # add pathid prefix to avoid "-" in shell
-            outpath = os.path.join(outdir, f"pathid{obj.path_id}.json")
-            ensure_outpath(outpath)
-            with open(outpath, "wt", encoding = "utf8") as fp:
-                json.dump(tree, fp, ensure_ascii = False, indent = 4)
-            print(f"export {i+1}/{len(env.objects)} {obj.container},{obj.path_id},{tree['m_Name']},MonoBehaviour")
+            try:
+                tree = obj.read_typetree()
+                names.append(tree["m_Name"])
+                outpath = find_outpath(outdir, names, ".json")
+                if not outpath: continue
+                with open(outpath, "wt", encoding = "utf8") as fp:
+                    json.dump(tree, fp, ensure_ascii=False, indent=4)
+                print(f"export {i+1}/{len(env.objects)} {obj.container},{obj.path_id},{data.m_Name},{obj.type.name}")
+            except Exception as e:
+                print(f"failed {e},{i+1}/{len(env.objects)} {obj.container},{obj.path_id},{data.m_Name},{obj.type.name}")
         
         elif obj.type.name == "TextAsset":
-            data = obj.read()
-            if len(data.m_Script)==0 or len(data.m_Name)==0: continue
-            outpath = os.path.join(outdir, f"{data.m_Name}")
-            ensure_outpath(outpath)
+            if len(data.m_Script)==0: continue
+            outpath = find_outpath(outdir, names)
+            if outpath is None: continue
             with open(outpath, "wb") as fp:
                 fp.write(data.m_Script.encode("utf-8", "surrogateescape"))
-            print(f"export {i+1}/{len(env.objects)} {obj.container},{obj.path_id},{data.m_Name},TextAsset")
+            print(f"export {i+1}/{len(env.objects)} {obj.container},{obj.path_id},{data.m_Name},{obj.type.name}")
         
         elif obj.type.name == "Font":
-            data = obj.read()
             if not data.m_FontData: continue
             ext= ".otf" if data.m_FontData[0:4] == b"OTTO" else ".ttf"
-            outpath = os.path.join(outdir, f"{data.m_Name}{ext}")
-            ensure_outpath(outpath)
+            outpath = find_outpath(outdir, names, ext)
+            if not outpath: continue
             with open(outpath, "wb") as fp:
                 fp.write(bytes(data.m_FontData))
-            print(f"export {i+1}/{len(env.objects)} {obj.container},{obj.path_id},{data.m_Name},Font")
+            print(f"export {i+1}/{len(env.objects)} {obj.container},{obj.path_id},{data.m_Name},{obj.type.name}")
 
         elif obj.type.name == "AssetBundle":
-            data = obj.read()
-            print(f"nonexport {i+1}/{len(env.objects)} {obj.container},{obj.path_id},{data.m_Name},AssetBundle")
+            print(f"noexport {i+1}/{len(env.objects)} {obj.container},{obj.path_id},{data.m_Name},AssetBundle")
 
 def import_asset(inpath, indir, outpath=None, selects=None):
-    def _get_target(targetname):
-        targetpath = os.path.join(indir, targetname)
-        if not os.path.exists(targetpath): 
-            targetpath = os.path.join(indir, obj.type.name, targetname)
-            if not os.path.exists(targetpath): return None
-        return targetpath
-
     env = UnityPy.load(inpath)
+    init_unitypy(env)
+    if selects is None: selects = {"Texture2D", "MonoBehaviour", "TextAsset", "Font"}
     for i, obj in enumerate(env.objects):
-        if selects and obj.type.name not in selects: continue
-        
-        if obj.type.name == "Texture2D":
+        if obj.type.name not in selects: continue
+        try:
             data = obj.read()
+        except ValueError as e:
+            pass
+        
+        names = [
+            f"pathid{obj.path_id}", 
+            data.m_Name + f"pathid{obj.path_id}",
+            data.m_Name, 
+            os.path.join(obj.type.name, f"pathid{obj.path_id}"), 
+            os.path.join(obj.type.name, data.m_Name + f"pathid{obj.path_id}"), 
+            os.path.join(obj.type.name, data.m_Name)
+        ]
+        if obj.type.name == "Texture2D":
             if data.m_CompleteImageSize==0: continue
-            targetpath = _get_target(data.m_Name + ".png")
+            targetpath = find_inpath(indir, names, ".png")
             if not targetpath: continue
             try:
                 imgpil = Image.open(targetpath)
@@ -133,8 +173,7 @@ def import_asset(inpath, indir, outpath=None, selects=None):
                 print(f"failed {e}, {i+1}/{len(env.objects)} {obj.container},{obj.path_id},{data.m_Name},Texture2D")
         
         elif obj.type.name == "MonoBehaviour":
-            if not obj.serialized_type.node: continue
-            targetpath = _get_target(f"pathid{obj.path_id}.json")
+            targetpath = find_inpath(indir, names, ".json")
             if not targetpath: continue
             with open(targetpath, "rt", encoding = "utf8") as fp:
                 tree = json.load(fp)
@@ -142,9 +181,8 @@ def import_asset(inpath, indir, outpath=None, selects=None):
             print(f"import {i+1}/{len(env.objects)} {obj.container},{obj.path_id},{tree['m_Name']},MonoBehaviour")
         
         elif obj.type.name == "TextAsset":
-            data = obj.read()
-            if len(data.m_Script)==0 or len(data.m_Name)==0: continue
-            targetpath = _get_target(f"{data.m_Name}")
+            if len(data.m_Script)==0: continue
+            targetpath = find_inpath(indir, names)
             if not targetpath: continue
             with open(targetpath, "rb") as fp:
                 data.m_Script = fp.read().decode("utf-8", "surrogateescape")
@@ -152,10 +190,9 @@ def import_asset(inpath, indir, outpath=None, selects=None):
             print(f"import {i+1}/{len(env.objects)} {obj.container},{obj.path_id},{data.m_Name},TextAsset")
 
         elif obj.type.name == "Font":
-            data = obj.read()
             if not data.m_FontData: continue
             ext= ".otf" if data.m_FontData[0:4] == b"OTTO" else ".ttf"
-            targetpath = _get_target(f"{data.m_Name}{ext}")
+            targetpath = find_inpath(indir, names, ext)
             if not targetpath: continue
             with open(targetpath, "rb") as fp:
                 data.m_FontData = list(fp.read())
@@ -198,13 +235,19 @@ def cli(cmdstr=None):
     parser.add_argument("--outpath", "-o", default="out", help="output path or dir")
     parser.add_argument("--selects", "-s", default=None, help="select types with comma, such as Texture2D,TextAsset")
     parser.add_argument("--searchpattern", default="**/*.assetbundle", help="explorer assertbundle pattern")
+    parser.add_argument("--gameversion", default=None, help="specific unity version")
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument("--gamedir", default=None, help="specific game root dir, should contains *_Data/Managed")
+    group.add_argument("--dlldir", default=None, help="specific gamedll dir (including dummydll by il2cppdumper)")
     args = parser.parse_args(cmdstr.split(" ") if cmdstr else None)
-    
+
+    global GAME_DIR, GAME_VERSION, DLL_DIR
+    GAME_DIR, DLL_DIR, GAME_VERSION = args.gamedir, args.dlldir, args.gameversion
     method, selects, searchpattern = args.method, args.selects, args.searchpattern
     abpath, outpath, indir = args.abpath, args.outpath, args.indir
     if selects is not None: selects = selects.split(",")
     if method == "list":
-        list_asset(abpath, selects=selects, searchpattern=searchpattern)
+        list_asset(abpath, outpath, selects=selects, searchpattern=searchpattern)
     elif method == "export":
         export_assert_multi(abpath, outpath, selects=selects, searchpattern=searchpattern)
     elif method == "import":
@@ -222,4 +265,5 @@ v0.1, initial version
 v0.2, add MonoBehaviour and TextAsset
 v0.2.1, add font
 v0.2.2, add more options
+v0.2.3, add specific unity version and managed dll, avoid same name export
 """

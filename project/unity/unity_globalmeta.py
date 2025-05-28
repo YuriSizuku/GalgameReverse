@@ -1,6 +1,6 @@
 """
 export or import text from global-metadata.dat
-  v0.1, developed by devseed
+  v0.2, developed by devseed
 
 refer:
   https://github.com/JeremieCHN/MetaDataStringEditor
@@ -10,7 +10,10 @@ refer:
 import os
 import sys
 import cffi
+import argparse
 from io import BytesIO
+
+__VERSION__ = 200
 
 # ftext functions
 from typing import List, Union, Tuple, Dict
@@ -192,7 +195,7 @@ def export_globalmeata_text(inpath, outpath=None):
 
     return ftexts
 
-def import_globalmeta_text(inpath, ftextpath, outpath=None):
+def import_globalmeta_text(inpath, ftextpath, outpath=None, keepoffset=False):
     with open(inpath, "rb") as fp:
         data = memoryview(bytearray(fp.read()))
     header = ffi.from_buffer("struct Il2CppGlobalMetadataHeader*", data)
@@ -212,15 +215,27 @@ def import_globalmeta_text(inpath, ftextpath, outpath=None):
             (stringliteral + i).dataIndex = bufio.tell()
             continue
         if offset not in addrmap: 
-            textdata = data[offset: offset+length]
+            textdata = bytes(data[offset: offset+length])
         else: 
             text = addrmap[offset].text.replace(r'[\n]','\n').replace(r'[\r]', '\r')
             textdata = text.encode("utf8")
-        (stringliteral + i).length = len(textdata)
-        (stringliteral + i).dataIndex = bufio.tell()
-        bufio.write(textdata)
-        # if bufio.tell() % 4: bufio.write(b"\x00" * (4 - bufio.tell()%4))
+        
+        if keepoffset:
+            targetsize = (stringliteral + i).length
+            if len(textdata) >= targetsize: 
+                textdata = textdata[:targetsize]
+            else:
+                (stringliteral + i).length = len(textdata)
+                textdata += b"\x00" * (targetsize - len(textdata))
+        else: 
+            (stringliteral + i).length = len(textdata)
+            (stringliteral + i).dataIndex = bufio.tell()
 
+        bufio.write(textdata)
+    
+    if bufio.tell() % 4: bufio.write(b"\x00" * (4 - bufio.tell()%4))
+    
+    print(f"[import_globalmeta_text] oldsize=0x{header.stringLiteralDataCount:x}, newsize=0x{bufio.tell():x}")
     if bufio.tell() <= header.stringLiteralDataCount:
         offset = header.stringLiteralDataOffset
         data[offset: offset + bufio.tell()] = bufio.getbuffer()
@@ -239,26 +254,36 @@ def import_globalmeta_text(inpath, ftextpath, outpath=None):
 def debug():
     pass
 
-def cli(argv):
-    if len(argv) < 3:
-        print("unity_globalmeta export_text inpath [outpath]")
-        print("unity_globalmeta import_text inpath ftextpath [outpath]")
-        return
+def cli(cmdstr=None):
+    parser = argparse.ArgumentParser(description=
+            "Unity global-metadata cli tools"
+            "\n  v0.2, developed by devseed")
+    parser.add_argument("method", choices=["export_text", "import_text"], help="operation method")
+    parser.add_argument("globalmetapath", help="global-metadata.dat path")
+    parser.add_argument("-o", "--outpath", default=None)
+    parser.add_argument("-i", "--inpath", help="ftextpath", default=None)
+    parser.add_argument("--keepoffset", help="keep the origin offset", action="store_true")
+    args = parser.parse_args(cmdstr.split(" ") if cmdstr else None)
 
-    inpath = argv[2]
-    if argv[1].lower() == 'export_text': 
-        outpath = argv[3] if len(argv) >= 4 else 'out.txt'
-        export_globalmeata_text(inpath, outpath)
-    elif argv[1].lower() == 'import_text':
-        ftextpath = argv[3]
-        outpath = argv[4] if len(argv) >= 5 else 'out.dat'
-        import_globalmeta_text(inpath, ftextpath, outpath)
-    else: raise ValueError(f"{argv[1]} not support!")
+    method = args.method
+    globalmetapath, outpath = args.globalmetapath, args.outpath
+    keepoffset = args.keepoffset
+
+    if method == 'export_text': 
+        export_globalmeata_text(globalmetapath, outpath)
+    elif method == 'import_text':
+        ftextpath = args.inpath
+        if ftextpath == None:
+            raise ValueError(f"need to specific --inpath (ftextpath)")
+        import_globalmeta_text(globalmetapath, ftextpath, outpath, keepoffset=keepoffset)
+    else: raise ValueError(f"{method} not support!")
 
 if __name__ == "__main__":
-    cli(sys.argv)
+    cli()
 
 """
 history:
 v0.1, initial version
+v0.1.1, use 0x4 align (actually this doesn't cause switch crash, even origin file makes crash)
+v0.2, change command line to argparser
 """

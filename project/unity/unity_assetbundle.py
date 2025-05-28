@@ -6,8 +6,8 @@ tested games:
   Lost Smile, windows, 2018.4.15f1
   ときめきメモリアル～forever with you～, switch, 6000.0.29f1
 
-thirdparty:
-  UnityPy 1.22.3 (https://github.com/K0lb3/UnityPy/tree/bfea10a8d4f40296ef353b8464baf9a2a54574c5)
+requires:
+  python -m pip install UnityPy==1.22.4 typetreegeneratorapi typing_extensions
 """
 
 import os
@@ -102,7 +102,7 @@ def list_asset(pathordir, outpath=None, selects=None, searchpattern="**/*.assetb
                 if obj.type.name == "Texture2D" and data.m_CompleteImageSize==0: continue
                 lines.append(f"{rpath},{obj.container},pathid{obj.path_id},{data.m_Name},{obj.type.name}")
                 print(lines[-1])
-            except ValueError:
+            except Exception:
                 pass
 
     if outpath: 
@@ -117,9 +117,10 @@ def export_asset(inpath, outdir=None, selects=None, namestyle=None):
         if obj.type.name not in selects: continue
         try:
             data = obj.read()
-        except ValueError as e:
-            print(f"failed {e}, {i+1}/{len(env.objects)} {obj.container},{obj.path_id},{data.m_Name},{obj.type.name}")
-        
+        except Exception as e:
+            print(f"failed ({e}), {i+1}/{len(env.objects)} {obj.container},{obj.path_id},,{obj.type.name}")
+            continue
+
         # add pathid prefix to avoid "-" in shell
         names = make_names(os.path.basename(inpath), data.m_Name, obj.path_id, i+1, namestyle)
         if obj.type.name == "Texture2D":
@@ -130,8 +131,8 @@ def export_asset(inpath, outdir=None, selects=None, namestyle=None):
                 data.image.save(outpath)
                 print(f"export {i+1}/{len(env.objects)} {obj.container},{obj.path_id},{data.m_Name},{obj.type.name}")
             except Exception as e:
-                print(f"failed {e},{i+1}/{len(env.objects)} {obj.container},{obj.path_id},{data.m_Name},{obj.type.name}")
-        
+                print(f"failed ({e}), {i+1}/{len(env.objects)} {obj.container},{obj.path_id},{data.m_Name},{obj.type.name}")
+
         elif obj.type.name == "MonoBehaviour":
             try:
                 tree = obj.read_typetree()
@@ -142,8 +143,8 @@ def export_asset(inpath, outdir=None, selects=None, namestyle=None):
                     json.dump(tree, fp, ensure_ascii=False, indent=4)
                 print(f"export {i+1}/{len(env.objects)} {obj.container},{obj.path_id},{data.m_Name},{obj.type.name}")
             except Exception as e:
-                print(f"failed {e},{i+1}/{len(env.objects)} {obj.container},{obj.path_id},{data.m_Name},{obj.type.name}")
-        
+                print(f"failed ({e}, {i+1}/{len(env.objects)} {obj.container},{obj.path_id},{data.m_Name},{obj.type.name}")
+
         elif obj.type.name == "TextAsset":
             if len(data.m_Script)==0: continue
             outpath = find_outpath(outdir, names)
@@ -173,7 +174,7 @@ def import_asset(inpath, indir, outpath=None, selects=None, namestyle=None):
         try:
             data = obj.read()
         except ValueError as e:
-            pass
+            continue
         
         names = make_names(os.path.basename(inpath), data.m_Name, obj.path_id, i+1, namestyle, isimport=True)
         othernames = [os.path.join(obj.type.name, x) for x in names]
@@ -223,19 +224,27 @@ def import_asset(inpath, indir, outpath=None, selects=None, namestyle=None):
         with open(outpath, "wb") as fp:
             fp.write(env.file.save())
 
-def export_assert_multi(inpath, outdir=None, selects=None, searchpattern="**/*.assetbundle", namestyle=None):
-    indir, inpaths = parse_pathordir(inpath, searchpattern)
-    for fpath in inpaths:
-        rpath = os.path.relpath(fpath, indir).replace("\\", "/") 
+def export_assert_multi(abpath, outdir=None, selects=None, searchpattern="**/*.assetbundle", namestyle=None):
+    abdir, abpaths = parse_pathordir(abpath, searchpattern)
+    if len(abpaths) == 0:
+        print(f"error: no assetbundle at {abpath} to export")
+        return
+    for fpath in abpaths:
+        rpath = os.path.relpath(fpath, abdir).replace("\\", "/") 
+        print(f"process {rpath}")
         targetoutdir = outdir
-        if os.path.isdir(inpath):  
+        if os.path.isdir(abpath):  
             targetoutdir = os.path.join(outdir, os.path.splitext(rpath)[0])
         export_asset(fpath, targetoutdir, selects=selects, namestyle=namestyle)
 
 def import_asset_multi(abpath, indir, outpath=None, selects=None, searchpattern="**/*.assetbundle", namestyle=None):
     abdir, abpaths = parse_pathordir(abpath, searchpattern)
+    if len(abpaths) == 0:
+        print(f"error: no assetbundle at {abpath} to import")
+        return
     for fpath in abpaths:
-        rpath = os.path.relpath(fpath, abdir).replace("\\", "/") 
+        rpath = os.path.relpath(fpath, abdir).replace("\\", "/")
+        print(f"process {rpath}")
         targetindir = indir
         targetoutfile = outpath
         if os.path.isdir(abpath):
@@ -246,7 +255,7 @@ def import_asset_multi(abpath, indir, outpath=None, selects=None, searchpattern=
 def cli(cmdstr=None):
     parser = argparse.ArgumentParser(description=
             "Unity assetbundle cli tools for batch operation"
-            "\n  v0.2.2, developed by devseed")
+            "\n  v0.2.4, developed by devseed")
     parser.add_argument("method", choices=["list", "export", "import"], help="operation method")
     parser.add_argument("abpath", help="asssetbulde path or dir")
     parser.add_argument("--indir", "-i", default=None, help="import dir")

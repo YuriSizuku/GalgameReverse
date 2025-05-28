@@ -1,10 +1,10 @@
 """
 batch export or import objects from unity asset bundle
-  v0.2.3, developed by devseed
+  v0.2.4, developed by devseed
 
 tested games:
-    Lost Smile, windows, 2018.4.15f1
-    ときめきメモリアル～forever with you～, switch, 6000.0.29f1
+  Lost Smile, windows, 2018.4.15f1
+  ときめきメモリアル～forever with you～, switch, 6000.0.29f1
 
 thirdparty:
   UnityPy 1.22.3 (https://github.com/K0lb3/UnityPy/tree/bfea10a8d4f40296ef353b8464baf9a2a54574c5)
@@ -18,6 +18,8 @@ import argparse
 import UnityPy
 from PIL import Image
 from UnityPy.helpers.TypeTreeGenerator import TypeTreeGenerator
+
+__VERSION__ = 240
 
 DLL_DIR: str = None
 GAME_DIR: str = None
@@ -62,6 +64,27 @@ def find_inpath(indir, names, ext=""):
         if os.path.exists(inpath): return inpath
     return None
 
+def make_names(abname, name, pathid, seq, namestyle="name", isimport=False):
+    outnames = []
+    if namestyle == "namethenpathid": 
+        if isimport:
+            outnames.append(f"{name}pathid{pathid}")
+            outnames.append(f"{name}")
+        else:
+            outnames.append(f"{name}")
+            outnames.append(f"{name}pathid{pathid}")
+    elif namestyle == "nameseq":
+        outnames.append(f"{name}id{seq}")
+    elif namestyle == "namepathid":
+        outnames.append(f"{name}pathid{pathid}")
+    elif namestyle == "seq":
+        outnames.append(f"seq{seq}")
+    elif namestyle == f"pathid":
+        outnames.append(f"pathid{seq}")
+    elif namestyle == "uabea":
+        outnames.append(f"{name}-{abname}-{seq}")
+    return outnames
+
 def list_asset(pathordir, outpath=None, selects=None, searchpattern="**/*.assetbundle"):
     lines = []
     indir, inpaths = parse_pathordir(pathordir, searchpattern)
@@ -86,7 +109,7 @@ def list_asset(pathordir, outpath=None, selects=None, searchpattern="**/*.assetb
         with open(outpath, "w", encoding="utf8") as fp:
             fp.writelines([line + "\n" for line in lines])
 
-def export_asset(inpath, outdir=None, selects=None):
+def export_asset(inpath, outdir=None, selects=None, namestyle=None):
     env = UnityPy.load(inpath)
     init_unitypy(env)
     if selects is None: selects = {"Texture2D", "MonoBehaviour", "TextAsset", "Font"}
@@ -98,7 +121,7 @@ def export_asset(inpath, outdir=None, selects=None):
             print(f"failed {e}, {i+1}/{len(env.objects)} {obj.container},{obj.path_id},{data.m_Name},{obj.type.name}")
         
         # add pathid prefix to avoid "-" in shell
-        names = [data.m_Name, data.m_Name + f"pathid{obj.path_id}"]
+        names = make_names(os.path.basename(inpath), data.m_Name, obj.path_id, i+1, namestyle)
         if obj.type.name == "Texture2D":
             if data.m_CompleteImageSize==0: continue
             outpath = find_outpath(outdir, names, ".png")
@@ -141,7 +164,7 @@ def export_asset(inpath, outdir=None, selects=None):
         elif obj.type.name == "AssetBundle":
             print(f"noexport {i+1}/{len(env.objects)} {obj.container},{obj.path_id},{data.m_Name},AssetBundle")
 
-def import_asset(inpath, indir, outpath=None, selects=None):
+def import_asset(inpath, indir, outpath=None, selects=None, namestyle=None):
     env = UnityPy.load(inpath)
     init_unitypy(env)
     if selects is None: selects = {"Texture2D", "MonoBehaviour", "TextAsset", "Font"}
@@ -152,14 +175,9 @@ def import_asset(inpath, indir, outpath=None, selects=None):
         except ValueError as e:
             pass
         
-        names = [
-            f"pathid{obj.path_id}", 
-            data.m_Name + f"pathid{obj.path_id}",
-            data.m_Name, 
-            os.path.join(obj.type.name, f"pathid{obj.path_id}"), 
-            os.path.join(obj.type.name, data.m_Name + f"pathid{obj.path_id}"), 
-            os.path.join(obj.type.name, data.m_Name)
-        ]
+        names = make_names(os.path.basename(inpath), data.m_Name, obj.path_id, i+1, namestyle, isimport=True)
+        othernames = [os.path.join(obj.type.name, x) for x in names]
+        names.extend(othernames)
         if obj.type.name == "Texture2D":
             if data.m_CompleteImageSize==0: continue
             targetpath = find_inpath(indir, names, ".png")
@@ -205,16 +223,16 @@ def import_asset(inpath, indir, outpath=None, selects=None):
         with open(outpath, "wb") as fp:
             fp.write(env.file.save())
 
-def export_assert_multi(inpath, outdir=None, selects=None, searchpattern="**/*.assetbundle"):
+def export_assert_multi(inpath, outdir=None, selects=None, searchpattern="**/*.assetbundle", namestyle=None):
     indir, inpaths = parse_pathordir(inpath, searchpattern)
     for fpath in inpaths:
         rpath = os.path.relpath(fpath, indir).replace("\\", "/") 
         targetoutdir = outdir
         if os.path.isdir(inpath):  
             targetoutdir = os.path.join(outdir, os.path.splitext(rpath)[0])
-        export_asset(fpath, targetoutdir, selects=selects)
+        export_asset(fpath, targetoutdir, selects=selects, namestyle=namestyle)
 
-def import_asset_multi(abpath, indir, outpath=None, selects=None, searchpattern="**/*.assetbundle"):
+def import_asset_multi(abpath, indir, outpath=None, selects=None, searchpattern="**/*.assetbundle", namestyle=None):
     abdir, abpaths = parse_pathordir(abpath, searchpattern)
     for fpath in abpaths:
         rpath = os.path.relpath(fpath, abdir).replace("\\", "/") 
@@ -223,7 +241,7 @@ def import_asset_multi(abpath, indir, outpath=None, selects=None, searchpattern=
         if os.path.isdir(abpath):
             targetindir = os.path.join(indir, os.path.splitext(rpath)[0])
             targetoutfile = os.path.join(outpath, rpath)
-        import_asset(fpath, targetindir, targetoutfile, selects=selects)
+        import_asset(fpath, targetindir, targetoutfile, selects=selects, namestyle=namestyle)
 
 def cli(cmdstr=None):
     parser = argparse.ArgumentParser(description=
@@ -235,6 +253,8 @@ def cli(cmdstr=None):
     parser.add_argument("--outpath", "-o", default="out", help="output path or dir")
     parser.add_argument("--selects", "-s", default=None, help="select types with comma, such as Texture2D,TextAsset")
     parser.add_argument("--searchpattern", default="**/*.assetbundle", help="explorer assertbundle pattern")
+    parser.add_argument("--namestyle", default="namethenpathid", help="namestyle for export and import", 
+        choices=["uabea", "pathid", "seq", "namepathid", "nameseq", "namethenpathid"])
     parser.add_argument("--gameversion", default=None, help="specific unity version")
     group = parser.add_mutually_exclusive_group()
     group.add_argument("--gamedir", default=None, help="specific game root dir, should contains *_Data/Managed")
@@ -243,17 +263,20 @@ def cli(cmdstr=None):
 
     global GAME_DIR, GAME_VERSION, DLL_DIR
     GAME_DIR, DLL_DIR, GAME_VERSION = args.gamedir, args.dlldir, args.gameversion
-    method, selects, searchpattern = args.method, args.selects, args.searchpattern
+    method, selects = args.method, args.selects
+    searchpattern, namestyle = args.searchpattern, args.namestyle
     abpath, outpath, indir = args.abpath, args.outpath, args.indir
     if selects is not None: selects = selects.split(",")
     if method == "list":
         list_asset(abpath, outpath, selects=selects, searchpattern=searchpattern)
     elif method == "export":
-        export_assert_multi(abpath, outpath, selects=selects, searchpattern=searchpattern)
+        export_assert_multi(abpath, outpath, selects=selects, 
+            searchpattern=searchpattern, namestyle=namestyle)
     elif method == "import":
         if indir is None: 
             raise ValueError(f"need to specific --indir (import dir)")
-        import_asset_multi(abpath,indir, outpath, selects=selects, searchpattern=searchpattern)
+        import_asset_multi(abpath,indir, outpath, selects=selects, 
+            searchpattern=searchpattern, namestyle=namestyle)
     else: raise ValueError(f"unknow operation {method}")
 
 if __name__ == "__main__":
@@ -266,4 +289,5 @@ v0.2, add MonoBehaviour and TextAsset
 v0.2.1, add font
 v0.2.2, add more options
 v0.2.3, add specific unity version and managed dll, avoid same name export
+v0.2.4, add namepatern for import and export
 """

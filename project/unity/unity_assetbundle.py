@@ -1,13 +1,14 @@
 """
 batch export or import objects from unity asset bundle
-  v0.2.4, developed by devseed
+  v0.2.5, developed by devseed
 
 tested games:
   Lost Smile, windows, 2018.4.15f1
   ときめきメモリアル～forever with you～, switch, 6000.0.29f1
+  ときめきメモリアル Girl's Side 4th Heart, switch, 2020.3.25f1 (import Texture2D by --noswizzle)
 
 requires:
-  python -m pip install UnityPy==1.22.4 typetreegeneratorapi typing_extensions
+  python -m pip install UnityPy==1.22.4 typetreegeneratorapi==0.0.5 typing_extensions==4.13.2
 """
 
 import os
@@ -19,7 +20,7 @@ import UnityPy
 from PIL import Image
 from UnityPy.helpers.TypeTreeGenerator import TypeTreeGenerator
 
-__VERSION__ = 240
+__VERSION__ = 250
 
 DLL_DIR: str = None
 GAME_DIR: str = None
@@ -83,6 +84,13 @@ def make_names(abname, name, pathid, seq, namestyle="name", isimport=False):
         outnames.append(f"pathid{seq}")
     elif namestyle == "uabea":
         outnames.append(f"{name}-{abname}-{seq}")
+    elif namestyle == "assetstudio":
+        if isimport:
+            outnames.append(f"{name} #{seq}")
+            outnames.append(f"{name}")
+        else:
+            outnames.append(f"{name}")
+            outnames.append(f"{name} #{seq}")
     return outnames
 
 def list_asset(pathordir, outpath=None, selects=None, searchpattern="**/*.assetbundle"):
@@ -165,7 +173,7 @@ def export_asset(inpath, outdir=None, selects=None, namestyle=None):
         elif obj.type.name == "AssetBundle":
             print(f"noexport {i+1}/{len(env.objects)} {obj.container},{obj.path_id},{data.m_Name},AssetBundle")
 
-def import_asset(inpath, indir, outpath=None, selects=None, namestyle=None):
+def import_asset(inpath, indir, outpath=None, selects=None, namestyle=None, noswizzle=False):
     env = UnityPy.load(inpath)
     init_unitypy(env)
     if selects is None: selects = {"Texture2D", "MonoBehaviour", "TextAsset", "Font"}
@@ -185,6 +193,7 @@ def import_asset(inpath, indir, outpath=None, selects=None, namestyle=None):
             if not targetpath: continue
             try:
                 imgpil = Image.open(targetpath)
+                if noswizzle and data.m_PlatformBlob: data.m_PlatformBlob = []
                 data.image = imgpil
                 data.save()
                 print(f"import {i+1}/{len(env.objects)} {obj.container},{obj.path_id},{data.m_Name},Texture2D")
@@ -237,7 +246,8 @@ def export_assert_multi(abpath, outdir=None, selects=None, searchpattern="**/*.a
             targetoutdir = os.path.join(outdir, os.path.splitext(rpath)[0])
         export_asset(fpath, targetoutdir, selects=selects, namestyle=namestyle)
 
-def import_asset_multi(abpath, indir, outpath=None, selects=None, searchpattern="**/*.assetbundle", namestyle=None):
+def import_asset_multi(abpath, indir, outpath=None, selects=None, 
+        searchpattern="**/*.assetbundle", namestyle=None, noswizzle=False):
     abdir, abpaths = parse_pathordir(abpath, searchpattern)
     if len(abpaths) == 0:
         print(f"error: no assetbundle at {abpath} to import")
@@ -250,7 +260,8 @@ def import_asset_multi(abpath, indir, outpath=None, selects=None, searchpattern=
         if os.path.isdir(abpath):
             targetindir = os.path.join(indir, os.path.splitext(rpath)[0])
             targetoutfile = os.path.join(outpath, rpath)
-        import_asset(fpath, targetindir, targetoutfile, selects=selects, namestyle=namestyle)
+        import_asset(fpath, targetindir, targetoutfile, 
+            selects=selects, namestyle=namestyle, noswizzle=noswizzle)
 
 def cli(cmdstr=None):
     parser = argparse.ArgumentParser(description=
@@ -263,7 +274,8 @@ def cli(cmdstr=None):
     parser.add_argument("--selects", "-s", default=None, help="select types with comma, such as Texture2D,TextAsset")
     parser.add_argument("--searchpattern", default="**/*.assetbundle", help="explorer assertbundle pattern")
     parser.add_argument("--namestyle", default="namethenpathid", help="namestyle for export and import", 
-        choices=["uabea", "pathid", "seq", "namepathid", "nameseq", "namethenpathid"])
+        choices=["uabea", "assetstudio", "pathid", "seq", "namepathid", "nameseq", "namethenpathid"])
+    parser.add_argument("--noswizzle", action="store_true", help="forece disable swizzle for switch texture import")
     parser.add_argument("--gameversion", default=None, help="specific unity version")
     group = parser.add_mutually_exclusive_group()
     group.add_argument("--gamedir", default=None, help="specific game root dir, should contains *_Data/Managed")
@@ -275,6 +287,7 @@ def cli(cmdstr=None):
     method, selects = args.method, args.selects
     searchpattern, namestyle = args.searchpattern, args.namestyle
     abpath, outpath, indir = args.abpath, args.outpath, args.indir
+    noswizzle = args.noswizzle
     if selects is not None: selects = selects.split(",")
     if method == "list":
         list_asset(abpath, outpath, selects=selects, searchpattern=searchpattern)
@@ -285,7 +298,8 @@ def cli(cmdstr=None):
         if indir is None: 
             raise ValueError(f"need to specific --indir (import dir)")
         import_asset_multi(abpath,indir, outpath, selects=selects, 
-            searchpattern=searchpattern, namestyle=namestyle)
+            searchpattern=searchpattern, namestyle=namestyle, 
+            noswizzle=noswizzle)
     else: raise ValueError(f"unknow operation {method}")
 
 if __name__ == "__main__":
@@ -299,4 +313,5 @@ v0.2.1, add font
 v0.2.2, add more options
 v0.2.3, add specific unity version and managed dll, avoid same name export
 v0.2.4, add namepatern for import and export
+v0.2.5, add assetstudio namestyle and --noswizzle option for import
 """

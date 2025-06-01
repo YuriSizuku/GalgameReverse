@@ -1,13 +1,14 @@
 /**
  * majiro engine, localization support
- *   v0.2, developed by devseed
+ *   v0.2.1, developed by devseed
  * 
  * tested game:
  *   そらいろ (ねこねこソフト) v1.1
  *   (patch=+38C0:C3;+1903B:B8A1;+19087:B8A1;+19A7A:B8A1;+1905D:B9A1;+19AF0:B9A1)
- * 
  *   ルリのかさね ～いもうと物語り (ねこねこソフト)
- *   
+ *   すみれ (ねこねこソフト) v1.02
+ *   みずいろ remake (ねこねこソフト) v1.02
+ *   (patch=+CE2C4:A1B8;+CE2C8:A1B9)
  * 
  * override/config.ini // number must be decimal except patchpattern
  *   charset=128
@@ -70,10 +71,10 @@ LPSTR _RedirectFileA(LPCSTR path)
     if(!name) name = path;
     
     // try rediect savedata
-    if(strstr(path, "savedata")){
-        strcat(tmppath, "savedata\\");
-        strcat(tmppath, name);
-        printf("CreateFileA redirect %s -> %s\n", path, tmppath);
+    char *savepath = strstr(path, "savedata");
+    if(savepath) {
+        strcat(tmppath, savepath);
+        printf("CreateFileW redirect %s -> %s\n", path, tmppath);
         return tmppath;
     }
 
@@ -96,9 +97,9 @@ LPWSTR _RedirectFileW(LPCWSTR path)
     if(!name) name = path;
     
     // try rediect savedata
-    if(wcsstr(path, L"savedata")){
-        wcscat(tmppath, L"savedata\\");
-        wcscat(tmppath, name);
+    wchar_t *savepath = wcsstr(path, L"savedata");
+    if(savepath) {
+        wcscat(tmppath, savepath);
         wprintf(L"CreateFileW redirect %ls -> %ls\n", path, tmppath);
         return tmppath;
     }
@@ -230,13 +231,14 @@ int WINAPI WideCharToMultiByte_hook(
 void patch_gbk()
 {
     HMODULE base = GetModuleHandleA(NULL);
+    void* addr_cur = (void*)base;
     void* addr_start = (void*)base;
     void* addr_end = (void*)((size_t)base + winpe_imagesizeval((void*)base, 0));
     char patchbytes[3] = {0};
     
+    // そらいろ、すみれ
     // 68 75 81 00 00 push 8175h
-    // strcpy(patchbytes, "\x68\xb8\xa1");
-    void* addr_cur = addr_start;
+    addr_cur = addr_start;
     while (addr_cur) 
     {
         addr_cur = winhook_searchmemory(addr_cur, (size_t)addr_end - (size_t)addr_cur, "68 75 81 00 00", NULL);
@@ -244,7 +246,6 @@ void patch_gbk()
         winhook_patchmemory(addr_cur, "\x68\xb8\xa1", 3);
         printf("patch at %p [68 b8 a1]\n", addr_cur);
     } 
-    
     // 68 76 81 00 00 push 8176h
     addr_cur = addr_start;
     while (addr_cur) 
@@ -253,6 +254,26 @@ void patch_gbk()
         if(!addr_cur) break;
         winhook_patchmemory(addr_cur, "\x68\xb9\xa1", 3);
         printf("patch at %p [68 b9 a1]\n", addr_cur);
+    } 
+
+    // みずいろ
+    //  C7 85 EC F3 FF FF 81 75 00 00  mov dword ptr [ebp+SubStr], 7581h
+    addr_cur = addr_start;
+    while (addr_cur) 
+    {
+        addr_cur = winhook_searchmemory(addr_cur, (size_t)addr_end - (size_t)addr_cur, "FF FF 81 75 00 00", NULL);
+        if(!addr_cur) break;
+        winhook_patchmemory(addr_cur, "\xff\xff\xa1\xb8", 4);
+        printf("patch at %p [FF FF a1 b8 00 00]\n", addr_cur);
+    } 
+    //  C7 85 F4 F3 FF FF 81 76 00 00 mov dword ptr [ebp+var_C0C], 7681h
+    addr_cur = addr_start;
+    while (addr_cur) 
+    {
+        addr_cur = winhook_searchmemory(addr_cur, (size_t)addr_end - (size_t)addr_cur, "FF FF 81 76 00 00", NULL);
+        if(!addr_cur) break;
+        winhook_patchmemory(addr_cur, "\xff\xff\xa1\xb9", 4);
+        printf("patch at %p [FF FF a1 b9 00 00]\n", addr_cur);
     } 
 
     // charset first byte table
@@ -345,15 +366,6 @@ void install_hooks()
     winhook_patchmemorypattern(g_majirocfg.patch);
 }
 
-void install_console()
-{
-    AllocConsole();
-    freopen("CONOUT$", "w", stdout);
-    system("chcp 936");
-    setlocale(LC_ALL, "chs");
-    printf("majiro_patch v0.2, developed by devseed\n");
-}
-
 void read_config(const char *path)
 {
     char tmp[MAX_PATH] = {0};
@@ -398,6 +410,21 @@ void read_config(const char *path)
     }
 }
 
+void init()
+{
+    FILE *fp = fopen("DEBUG_CONSOLE", "rb");
+    if(fp)
+    {
+        AllocConsole();
+        freopen("CONOUT$", "w", stdout);
+        system("chcp 936");
+        setlocale(LC_ALL, "chs");
+    }
+    printf("majiro_patch v0.2.2, developed by devseed\n");
+    read_config(CONFIG_PATH);
+    install_hooks();
+}
+
 __declspec(dllexport) void dummy()
 {
 
@@ -411,11 +438,7 @@ BOOL WINAPI DllMain(
     switch( fdwReason ) 
     { 
         case DLL_PROCESS_ATTACH:
-#ifdef _DEBUG
-            install_console();
-#endif
-            read_config(CONFIG_PATH);
-            install_hooks();
+            init();
             break;
         case DLL_THREAD_ATTACH:
             break;
@@ -433,4 +456,6 @@ BOOL WINAPI DllMain(
  * v0.1.2, redirect savedata, as it is related to text modify
  * v0.1.3, add GetACP_hook, GetCPInfo_hook for other language os
  * v0.2, add automaticly search for patch gbk, support ルリのかさね ～いもうと物語り
+ * v0.2.1, change savedata redirect to relative path
+ * v0.2.2, support みずいろ　voice
 */

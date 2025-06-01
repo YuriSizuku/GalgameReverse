@@ -113,7 +113,7 @@ def load_tbl(inpath, encoding='utf-8'):
                 #print(m.group(1), m.group(2), d)
                 c = m.group(2)
                 tbl.append((charcode, c))
-    print(inpath + " with " + str(len(tbl)) +" loaded!")
+    # print(inpath + " with " + str(len(tbl)) +" loaded!")
     return tbl
 
 def encode_tbl(text, tbl):
@@ -131,8 +131,8 @@ def encode_tbl(text, tbl):
                 flag =True
                 break
         if flag is False:
-            print("Encodingtbl failed with "+ c + " in tbl")
-            return None
+            print(f"Encodingtbl failed with {c}({hex(ord(c))})")
+            data.write(b'#')
     return data.getvalue()
 
 def decode_tbl(data, tbl, maxlen=3):

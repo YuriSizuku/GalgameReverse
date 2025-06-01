@@ -101,16 +101,19 @@ def load_ftext(ftextobj: Union[str, List[str]],
     else:
         re_line1 = re.compile(r"^○(\d*)\|(.+?)\|(.+?)○[ ](.*)")
         re_line2 = re.compile(r"^●(\d*)\|(.+?)\|(.+?)●[ ](.*)")
-        for line in lines:
-            line = line.strip("\n").strip('\r')
-            m = re_line1.match(line)
-            if m is not None:
-                ftexts1.append({'addr':int(m.group(2),16),
-                'size':int(m.group(3),16),'text': m.group(4)})
-            m = re_line2.match(line)
-            if m is not None:
-                ftexts2.append({'addr':int(m.group(2),16),
-                'size':int(m.group(3),16),'text': m.group(4)})
+        for i, line in enumerate(lines):
+            try:
+                line = line.strip("\n").strip('\r')
+                m = re_line1.match(line)
+                if m is not None:
+                    ftexts1.append({'addr':int(m.group(2),16),
+                    'size':int(m.group(3),16),'text': m.group(4)})
+                m = re_line2.match(line)
+                if m is not None:
+                    ftexts2.append({'addr':int(m.group(2),16),
+                    'size':int(m.group(3),16),'text': m.group(4)})
+            except ValueError:
+                print(f"line {i+1}, {line}, error")
     return ftexts1, ftexts2
 
 class struct_t(struct.Struct):

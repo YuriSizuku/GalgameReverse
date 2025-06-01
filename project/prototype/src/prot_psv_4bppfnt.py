@@ -152,7 +152,7 @@ def make_fontgb2312(fntpath, ttfpath, outpath):
         futil.extract_tilefont(outpath+".bin", 32, 32, 4, outpath+".png")
         fp.write(data)
 
-def make_tbfgb2312(fntpath, outpath=""):
+def make_tblgb2312(fntpath, outpath=""):
     tbl_gb2312 = make_tblgb2312()
     tbl_gb2312.append(('「'.encode('gb2312'), '「'))
     tbl_gb2312.append(('」'.encode('gb2312'), '」'))
@@ -207,7 +207,7 @@ def main():
         ttfpath = sys.argv[3]
         outpath = sys.argv[4]
         make_fontgb2312(fntpath, ttfpath, outpath)
-        make_tbfgb2312(fntpath, os.path.splitext(outpath)[0] + '.tbl')
+        make_tblgb2312(fntpath, os.path.splitext(outpath)[0] + '.tbl')
     else: raise ValueError(f"option {sys.argv[1]} not supported")
 
 if __name__ == "__main__":

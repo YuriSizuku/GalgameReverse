@@ -14,11 +14,14 @@ else
 CFLAGS+=-Os
 endif
 ifneq (,$(wildcard src/compat/*))
-CFLAGS+=-DUSE_COMPAT
+CFLAGS+=-DUSECOMPAT
 endif
 
 ifneq (,$(findstring clang, $(CC))) # for llvm-mingw
-CFLAGS+=-m32 -gcodeview -Wl,--pdb=$(BUILD_DIR)/systemnnn_patch.pdb 
+CFLAGS+=-m32
+ifndef NOPDB
+CFLAGS+=-gcodeview -Wl,--pdb=$(BUILD_DIR)/systemnnn_patch.pdb 
+endif
 LDFLAGS+= -Wl,--gc-sections
 else ifneq (,$(findstring gcc, $(CC))) # for mingw-w64
 CFLAGS+=-m32

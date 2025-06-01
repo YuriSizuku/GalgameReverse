@@ -41,4 +41,4 @@ majiro_patch: src/majiro_patch.c
 	@rm -rf $(BUILD_DIR)/$@.lib
 	@rm -rf $(BUILD_DIR)/$@.def
 
-.PHONY: majiro_patch
+.PHONY: all prepare majiro_patch

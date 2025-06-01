@@ -44,16 +44,16 @@ struct advhd_cfg_t
     UINT ucharmap[MAX_UCHARMAP][2];
 };
 
-struct advhd_cfg_t g_advhdcfg = {
+static struct advhd_cfg_t g_advhdcfg = {
     .font="simhei", .codepage=936, .charset=GB2312_CHARSET, .ucharmap={0}
 };
 
 #if 1// advhd inline hooks
 #define MAX_INLHOOK 3
-PVOID g_pfnTargets[MAX_INLHOOK] = {NULL};
-PVOID g_pfnNews[MAX_INLHOOK] = {NULL}; 
-PVOID g_pfnOlds[MAX_INLHOOK] = {NULL};
-HANDLE g_mutexs[MAX_INLHOOK] = {NULL};
+static PVOID g_pfnTargets[MAX_INLHOOK] = {NULL};
+static PVOID g_pfnNews[MAX_INLHOOK] = {NULL}; 
+static PVOID g_pfnOlds[MAX_INLHOOK] = {NULL};
+static HANDLE g_mutexs[MAX_INLHOOK] = {NULL};
 #define CreateFileA_IDX 0
 #define CreateFileW_IDX 1
 #define _ismbclegal_IDX 2

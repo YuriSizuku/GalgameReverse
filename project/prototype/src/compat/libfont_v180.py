@@ -139,7 +139,6 @@ def load_tbl(inpath, encoding='utf-8'):
                     charcode = struct.pack(">BBB", d>>16, (d>>8)&0xff, d&0xff)
                 #print(m.group(1), m.group(2), d)
                 c = m.group(2)
-                tbl.append((charcode, c))
     print(inpath + " with " + str(len(tbl)) +" loaded!")
     return tbl
 

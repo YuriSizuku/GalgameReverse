@@ -1,15 +1,17 @@
 /**
  * dump wamsoft hxv4 keys (hx decrypt index, cx decrypt index)
- *   v0.1, developed by devseed
+ *   v0.1.1, developed by devseed
  * 
  * usage:
  *    npm i  @types/frida-gum --save
- *    frida -l krkr_hxv4_dumpkey.js -f dc5ph.exe
+ *    frida -l krkr_hxv4_dumpkey.js -f dc5ph.exe # frida version 17.2.4
  *    (the key will show on console, block will dump to control_block.bin)
  * 
  * tested games:
  *   D.C.5 Plus Happiness ～ダ・カーポ5～プラスハピネス
- *   エッチで一途なド田舎兄さまと、古式ゆかしい病弱妹
+ *   エッチで一途なド田舎兄さまと、古式ゆかしい病弱妹 (dlsite, steam)
+ *   KANADE
+ *   花束を君に贈ろう-Kinsenka-
  * 
  * refer: 
  *   https://github.com/crskycode/GARbro/blob/master/ArcFormats/KiriKiri/HxCrypt.cs
@@ -33,7 +35,9 @@ function buf2hexstr(buf, sep="") {
 
 var dllpath;
 var cxtpm_load_flag = false;
-const LoadLibraryW = Module.getExportByName('kernel32.dll', 'LoadLibraryW');
+// change this to frida breaking change in 17.0
+// const LoadLibraryW = Module.getExportByName('kernel32.dll', 'LoadLibraryW');
+const LoadLibraryW = Process.getModuleByName('kernel32.dll').getExportByName('LoadLibraryW')
 Interceptor.attach(LoadLibraryW, {
     onEnter(args) {
         dllpath = args[0].readUtf16String();
@@ -43,8 +47,8 @@ Interceptor.attach(LoadLibraryW, {
         if(cxtpm_load_flag==false) return;
         cxtpm_load_flag = false;
 
-        let m;
-        var hmod = Process.findModuleByAddress(retval.toUInt32())
+        let m; // change this to frida breaking change in 17.0
+        var hmod = Process.findModuleByAddress(ptr(retval.toUInt32()));
         console.log(`load ${dllpath} at 0x${hmod.base.toString(16)}`);
         
         // .text:1001F0B0 55                push    ebp
@@ -69,8 +73,8 @@ Interceptor.attach(LoadLibraryW, {
                 if(!hxpoint) return;
                 let key = this.context.ebp.add(0x14).readPointer().readByteArray(32);
                 let nonce = this.context.ebp.add(0x18).readPointer().readByteArray(16);
-                console.log(`* key ${buf2hexstr(key)}`);
-                console.log(`* nonce ${buf2hexstr(nonce)}`);
+                console.log(`* key : ${buf2hexstr(key)}`);
+                console.log(`* nonce : ${buf2hexstr(nonce)}`);
                 hxpoint = 0;
         }});
 

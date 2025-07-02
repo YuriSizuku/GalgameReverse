@@ -257,7 +257,8 @@ Localization util tools are moved to [Localization](https://github.com/YuriSizuk
 ### krkr
 
 * `krkr_text.py` , batch convert text encoding
-* `krkr_xp3.py`, pack or unpack krkr2 xp3 files (support xp3filter)
+* `krkr_xp2.py`, tool for krkr1 (v0.91) xp2 (xpk, XPK2) format files
+* `krkr_xp3.py`, tool for krkr2 xp3 files (support xp3filter)
 * `krkr_hxv4_dumpkey.js`, dump hxv4 cx keys used for garbro  
 * `krkr_hxv4_dumphash.cpp`, dynamic batch hxv4 hash calculator for filelist and dirlist  
 * `krkr_hxv4_patch.cpp`, redirect `arc:\\.\xxx`  (hxv4) to unencrypted `patch.xp3>xxx` (previous cx) for localization, as well as font  

@@ -7,13 +7,16 @@
  *   倭人異聞録～あさき、ゆめみし～ 
  *   (patch=+3DC17:FE;CPicture_LoadDWQ=939744;CPicture_mpic=32)
  * 
- *   EXTRAVAGANZA ～蟲愛でる少女～
+ *   EXTRAVAGANZA～蟲愛でる少女～
  *   (patch=+3DC17:FE;CPicture_LoadDWQ=56928;CPicture_mpic=32;CPicture_mpic=40)
+ * 
+ *   MinDeaD BlooD～麻由と麻奈の輸血箱
+ *   (patch=+3DBC7:FE;CPicture_LoadDWQ=939680;CPicture_mpic=32;CPicture_mpic=40)
  *  
  * override/config.ini // number must be decimal except patchpattern
  *   charset=128
  *   font=simhei
- *   patchpattern=wajin_asaki.patch
+ *   patchpattern=xxx
  *   CPicture_LoadDWQ=rva
  *   CPicture_mpic=offset
  *   CPicture_mmaskPic=offset
@@ -68,7 +71,7 @@ struct systemnnn_cfg_t{
 
 struct systemnnn_cfg_t g_systemnnncfg = 
 {
-    .charset=936, .font="simehei",
+    .charset=SHIFTJIS_CHARSET, .font="simehei",
     .patch={0}, .CPicture_LoadDWQ=0, 
     .CPicture_mpic=32, .CPicture_mmaskPic=40
 };

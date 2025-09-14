@@ -93,7 +93,7 @@ def lzw_compress(data):
             pw = s
         else:
             # print(i, s, len(lzwc_dict), lzwc_dict[pw])
-            lzwc_dict[s] = int.to_bytes(len(lzwc_dict), 2, 'little')
+            lzwc_dict[s] = int.to_bytes(len(lzwc_dict), 2, 'little') # sometimes it might be OverflowError
             compressed.write(lzwc_dict[pw])
             pw = c
     # print(len(lzwc_dict))
@@ -247,10 +247,10 @@ def encode_dat(inpath, datpath, outpath = "out.dat"):
             for x in range(width):
                 if  color_channel == 4 : # RGBA8888
                     b, g, r, a = img[y][x]
-                    px_byte = struct.pack("<BBBB", (r+1)%256, (g+1)%256, (b+1)%256, (a+1)%256)
+                    px_byte = struct.pack("<BBBB", int(r+1)%256, int(g+1)%256, int(b+1)%256, int(a+1)%256)
                 elif color_channel == 3 : # RGB888
                     b, g, r = img[y][x]
-                    px_byte = struct.pack("<BBB", (r+1)%256, (g+1)%256, (b+1)%256)
+                    px_byte = struct.pack("<BBB", int(r+1)%256, int(g+1)%256, int(b+1)%256)
                 elif color_channel == 1: # color panel
                     min_i = 0
                     min_d = np.dot(img[y][x]-color_panel[0])

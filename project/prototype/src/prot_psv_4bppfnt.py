@@ -24,7 +24,7 @@ thisdir = os.path.dirname(sys.argv[0])
 sys.path.append(os.path.join(thisdir, r"compat"))
 import libfont_v180 as futil
 
-def make_tblgb2312(outpath=r""):
+def make_tblgb2312_inner(outpath=r""):
     tbl = []
     for low in range(0x20, 0x7f): # asci
         charcode = struct.pack('<B', low)
@@ -136,7 +136,7 @@ def make_fontgb2312(fntpath, ttfpath, outpath):
         else:
             data[start] = (data[start] & 0b00001111) + (d<<4)
 
-    tbl = make_tblgb2312()
+    tbl = make_tblgb2312_inner()
     tbl.append(('「'.encode('gb2312'), '「'))
     tbl.append(('」'.encode('gb2312'), '」'))
    
@@ -153,7 +153,7 @@ def make_fontgb2312(fntpath, ttfpath, outpath):
         fp.write(data)
 
 def make_tblgb2312(fntpath, outpath=""):
-    tbl_gb2312 = make_tblgb2312()
+    tbl_gb2312 = make_tblgb2312_inner()
     tbl_gb2312.append(('「'.encode('gb2312'), '「'))
     tbl_gb2312.append(('」'.encode('gb2312'), '」'))
     tbl_sjis = []

@@ -99,7 +99,7 @@ def patch_text(data, addrs, sizes, texts, tbl, disable_longer=False):
         else:
             data[addr+shift: addr+shift+len(buf)] = buf
             n = length - len(buf)
-            data[addr+shift+len(buf): addr+shift+length] = n * b'\x20'
+            data[addr+shift+len(buf): addr+shift+length] = n * b'\x00' # try to change to 00 for place holder
     
     # rebuild jump pointer
     if disable_longer: assert(len(jump_table)==0)

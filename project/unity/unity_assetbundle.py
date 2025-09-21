@@ -6,9 +6,11 @@ tested games:
   Lost Smile, windows, 2018.4.15f1
   ときめきメモリアル～forever with you～, switch, 6000.0.29f1
   ときめきメモリアル Girl's Side 4th Heart, switch, 2020.3.25f1 (import Texture2D by --noswizzle)
+  神凪ノ杜 五月雨綴り, switch, 2021.3.31f1
+  神凪ノ杜 五月雨綴り, psv, 5.6.6f2
 
 requires:
-  python -m pip install UnityPy==1.22.4 typetreegeneratorapi==0.0.5 typing_extensions==4.13.2
+  python -m pip install UnityPy==1.22.5 typetreegeneratorapi==0.0.5 typing_extensions==4.13.2
 """
 
 import os
@@ -20,7 +22,7 @@ import UnityPy
 from PIL import Image
 from UnityPy.helpers.TypeTreeGenerator import TypeTreeGenerator
 
-__VERSION__ = 250
+__VERSION__ = "v0.2.5"
 
 DLL_DIR: str = None
 GAME_DIR: str = None
@@ -265,8 +267,8 @@ def import_asset_multi(abpath, indir, outpath=None, selects=None,
 
 def cli(cmdstr=None):
     parser = argparse.ArgumentParser(description=
-            "Unity assetbundle cli tools for batch operation"
-            "\n  v0.2.4, developed by devseed")
+            f"Unity assetbundle cli tools for batch operation"
+            f"\n  {__VERSION__}, developed by devseed")
     parser.add_argument("method", choices=["list", "export", "import"], help="operation method")
     parser.add_argument("abpath", help="asssetbulde path or dir")
     parser.add_argument("--indir", "-i", default=None, help="import dir")

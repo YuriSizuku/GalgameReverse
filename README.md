@@ -253,6 +253,7 @@ Localization util tools are moved to [Localization](https://github.com/YuriSizuk
 
 * `unity_assetbundle.py`, batch export or import objects from assertbundle
 * `unity_globalmeta.py`, export or import text from global-metadata.dat
+* `unity_globalmeta.py`, print or rebuild unity custom font
 
 ### krkr
 

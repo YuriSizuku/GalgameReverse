@@ -13,7 +13,7 @@ import cffi
 import argparse
 from io import BytesIO
 
-__VERSION__ = 200
+__VERSION__ = "v0.2"
 
 # ftext functions
 from typing import List, Union, Tuple, Dict
@@ -256,8 +256,8 @@ def debug():
 
 def cli(cmdstr=None):
     parser = argparse.ArgumentParser(description=
-            "Unity global-metadata cli tools"
-            "\n  v0.2, developed by devseed")
+            f"Unity global-metadata cli tools"
+            f"\n  {__VERSION__}, developed by devseed")
     parser.add_argument("method", choices=["export_text", "import_text"], help="operation method")
     parser.add_argument("globalmetapath", help="global-metadata.dat path")
     parser.add_argument("-o", "--outpath", default=None)

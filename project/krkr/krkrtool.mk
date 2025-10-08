@@ -6,7 +6,7 @@ BUILD_DIR:=asset/build
 INCS:=-Isrc/compat
 LIBS:=-lgdi32
 CFLAGS:=-ffunction-sections -fdata-sections -Wno-null-dereference
-LDFLAGS:=
+LDFLAGS:=-lshlwapi
 
 ifdef DEBUG
 CFLAGS+=-g -D_DEBUG

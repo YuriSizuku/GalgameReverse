@@ -1,6 +1,6 @@
 /**
  *  dynamicly compute dirhash and filehash in list
- *   v0.1, developed by devseed
+ *   v0.1.1, developed by devseed
  * 
  * build:
  *   clang++ -m32 -shared -Wno-null-dereference -Isrc/compat -DUSECOMPAT src/krkr_hxv4_dumphash.cpp src/compat/tp_stub.cpp src/compat/winversion_v100.def -o asset/build/version.dll -g -gcodeview -Wl,--pdb=asset/build/version.pdb 
@@ -99,6 +99,7 @@ void *V2Link_old = nullptr;
 decltype(CreateHxv4CompoundStorageMedia_hook) *CreateHxv4CompoundStorageMedia_org = nullptr;
 void *CreateHxv4CompoundStorageMedia_old = nullptr;
 const char *CreateHxv4CompoundStorageMedia_sig = (const char *)"55 8b ec 6a ff 68 ? ? ? ? 64 a1 00 00 00 00 50 83 ec 08 56 a1 ? ? ? ? 33 c5 50 8d 45 f4 64 a3 00 00 00 00 a1 ? ? ? ? 85 c0 75 12 68 ? ? ? ? e8 ? ? ? ? 83 c4 04 a3 ? ? ? ? 8b 75 0c 56 ff d0 83 f8 02 74 ? b8 15 fc ff ff 8b 4d f4 64 89 0d 00 00 00 00 59 5e 8b e5 5d c3";
+const char *KrkrSignVerify_sig = (const char *)"55 8B EC 8B 4D 08 85 C9 74 13 FF 75 10 FF 75 0C";
 
 HRESULT __stdcall V2Link_hook(iTVPFunctionExporter* exporter)
 {
@@ -139,9 +140,18 @@ HMODULE LoadLibraryW_hook(LPCWSTR name)
             V2Link_old = addr;
         }
 
+        // hook KrkrSign::VerifierImpl + 4
+        addr = winhook_searchmemory((void*)hmod, dllsize, KrkrSignVerify_sig, NULL);
+        LOGi("search KrkrSignVerify va=%p rva=%zx\n", addr, (size_t)addr - (size_t)hmod);
+        if(addr)
+        {
+            uint8_t patchbuf[] = {0x31, 0xc0, 0x40, 0xc3}; // xor eax, eax; inc eax; retn;
+            winhook_patchmemory(addr, patchbuf, sizeof(patchbuf));
+        }
+
         // hook CreateHxv4CompoundStorageMedia
         addr = winhook_searchmemory((void*)hmod, dllsize, CreateHxv4CompoundStorageMedia_sig, NULL);
-        LOGi("search CreateHxv4CompoundStorageMedia va=%p rva=0x%zx\n", addr, (size_t)addr - (size_t)hmod);
+        LOGi("search CreateHxv4CompoundStorageMedia va=%p rva=%zx\n", addr, (size_t)addr - (size_t)hmod);
         if(addr)
         {
             MH_CreateHook(addr,  reinterpret_cast<LPVOID>(CreateHxv4CompoundStorageMedia_hook),  
@@ -226,7 +236,7 @@ static void init()
     freopen("CONOUT$", "w", stdout);
     // system("chcp 936");
     // setlocale(LC_ALL, "chs");
-    printf("krkr_hxv4_hash calculator, v0.1, developed by devseed\n");
+    printf("krkr_hxv4_hash calculator, v0.1.1, developed by devseed\n");
     
     DWORD winver = GetVersion();
     DWORD winver_major = (DWORD)(LOBYTE(LOWORD(winver)));
@@ -277,3 +287,9 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL,  DWORD fdwReason,  LPVOID lpReserved )
     }
     return TRUE;
 }
+
+/**
+ * history
+ * v0.1, initial version
+ * v0.1.1, add KrkrSign patch
+ */

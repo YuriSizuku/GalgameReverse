@@ -33,6 +33,7 @@
 #include <string>
 #include <clocale>
 #include <windows.h>
+#include <shlwapi.h> 
 #include "tp_stub.h"
 
 #define WINHOOK_IMPLEMENTATION
@@ -95,6 +96,7 @@ struct krkrpatch_cfg_t
 };
 static HRESULT __stdcall V2Link_hook(iTVPFunctionExporter* exporter);
 static tTJSBinaryStream* FASTCALL TVPCreateStream_hook(ttstr* name, tjs_uint32 flags);
+static HMODULE WINAPI LoadLibraryW_hook(LPCWSTR name);
 static FARPROC WINAPI GetProcAddress_hook(HMODULE hModule, LPCSTR lpProcName);
 static int WINAPI EnumFontFamiliesExW_hook(HDC hdc, LPLOGFONTW lpLogfont, 
     FONTENUMPROCW lpProc, LPARAM lParam, DWORD dwFlags
@@ -112,10 +114,12 @@ iTVPFunctionExporter *g_exporter = nullptr;
 FONTENUMPROCW g_fontproc = nullptr;
 DEFINE_HOOK(TVPCreateStream);
 DEFINE_HOOK(V2Link);
+DEFINE_HOOK(LoadLibraryW);
 DEFINE_HOOK(GetProcAddress);
 DEFINE_HOOK(EnumFontFamiliesExW);
 DEFINE_HOOK(CreateFontIndirectW);
 DEFINE_SIG(TVPCreateStream, "55 8b ec 6a ff 68 ? ? ? ? 64 a1 ? ? ? ? 50 83 ec 5c 53 56 57 a1 ? ? ? ? 33 c5 50 8d 45 f4 64 a3 ? ? ? ? 89 65 f0 89 4d ec c7 45 ? ? ? ? ? e8 ? ? ? ? 8b 4d f4 64 89 0d ? ? ? ? 59 5f 5e 5b 8b e5 5d c3");
+DEFINE_SIG(KrkrSignVerify, "55 8B EC 8B 4D 08 85 C9 74 13 FF 75 10 FF 75 0C");
 
 // hook functions
 HRESULT __stdcall V2Link_hook(iTVPFunctionExporter* exporter)
@@ -131,6 +135,7 @@ tTJSBinaryStream* FASTCALL TVPCreateStream_hook(ttstr* name, tjs_uint32 flags)
 {
     if (!g_exporter) return TVPCreateStream_org(name, flags);
     if (flags != TJS_BS_READ) return TVPCreateStream_org(name, flags);
+    if (!PathFileExistsW(g_cfg.xp3path.c_str())) return TVPCreateStream_org(name, flags);
     
     const wchar_t *inpath = static_cast<const wchar_t*>(name->c_str());
     if (wcsstr(inpath, L"arc://")) // hxv4, arc://
@@ -191,6 +196,27 @@ tTJSBinaryStream* FASTCALL TVPCreateStream_hook(ttstr* name, tjs_uint32 flags)
     
     if (g_cfg.loglevel >= 2) LOGi("OTHER %s\n", ucs2utf8(inpath));
     return TVPCreateStream_org(name, flags);
+}
+
+HMODULE WINAPI LoadLibraryW_hook(LPCWSTR name)
+{
+    auto hmod = LoadLibraryW_org(name);
+    // LOGLi(L"LoadLibraryW name=%ls hmod=%p\n", name, hmod);
+    if(wcsstr(name, L"krkr_"))
+    {
+        size_t dllsize = winhook_getimagesize(GetCurrentProcess(), hmod);
+        LOGi("load cxdec.tpm dllbase=%p dllsize=0x%zx\n", hmod, dllsize);
+
+        // hook KrkrSign::VerifierImpl + 4
+        void* addr = winhook_searchmemory((void*)hmod, dllsize, KrkrSignVerify_sig, NULL);
+        LOGi("search KrkrSignVerify va=%p rva=%zx\n", addr, (size_t)addr - (size_t)hmod);
+        if(addr)
+        {
+            uint8_t patchbuf[] = {0x31, 0xc0, 0x40, 0xc3}; // xor eax, eax; inc eax; retn;
+            winhook_patchmemory(addr, patchbuf, sizeof(patchbuf));
+        }
+    }
+    return hmod;
 }
 
 FARPROC WINAPI GetProcAddress_hook(HMODULE hModule, LPCSTR lpProcName)
@@ -292,7 +318,7 @@ static void read_config(const char *path, struct krkrpatch_cfg_t *cfg)
 
 static void print_info()
 {
-    printf("krkr_hxv4_patch, v0.2.1, developed by devseed\n");
+    printf("krkr_hxv4_patch, v0.2.2, developed by devseed\n");
     
     DWORD winver = GetVersion();
     DWORD winver_major = (DWORD)(LOBYTE(LOWORD(winver)));
@@ -338,6 +364,8 @@ static void init()
     // hook stream
     GetProcAddress_old = reinterpret_cast<void*>(GetProcAddress);
     BIND_HOOK(GetProcAddress);
+    LoadLibraryW_old = reinterpret_cast<void*>(LoadLibraryW);
+    BIND_HOOK(LoadLibraryW); // for patch krkrsign
     size_t imagebase = winhook_getimagebase(GetCurrentProcess());
     size_t imagesize = winhook_getimagesize(GetCurrentProcess(), (HMODULE)imagebase);
     TVPCreateStream_old = winhook_searchmemory(
@@ -396,8 +424,9 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL,  DWORD fdwReason,  LPVOID lpReserved )
 
 /**
  * history
- *   v0.1, initial version support hxv4
- *   v0.1.1, change some parameters
- *   v0.2, support older cx archive://, such as atri
- *   v0.2.1, add no protocol files
+ * v0.1, initial version support hxv4
+ * v0.1.1, change some parameters
+ * v0.2, support older cx archive://, such as atri
+ * v0.2.1, add no protocol files
+ * v0.2.2, add KrkrSign patch
  */

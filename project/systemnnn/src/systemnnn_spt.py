@@ -5,7 +5,6 @@ export or import spt text for systemNNN,
 tested game:
   倭人異聞録～あさき、ゆめみし～
   EXTRAVAGANZA ～蟲愛でる少女～
-
 """
 
 import re

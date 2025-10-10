@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
-__description__ = """
+__version__ = "0.3.2.1"
+__description__ = f"""
 modify windows pe with dll injected for hooking
 only support for x86 and x64 architecture, no arm support now
-    v0.3.2.1, developed by devseed
+    v{__version__}, developed by devseed
 """
 
 import sys
@@ -10,8 +11,6 @@ import os
 import argparse
 import lief
 from keystone import Ks, KS_ARCH_X86, KS_MODE_32, KS_MODE_64
-
-__version__ = 321
 
 def injectdll_iat(exepath, dllpath, outpath="out.exe"): 
     """

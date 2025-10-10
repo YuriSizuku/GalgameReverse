@@ -1,6 +1,9 @@
 build_1txt() {
-    echo "## build_1init"
-    
+    echo "## build_1txt"
+    mkdir -p ${WORK_DIR}/5.result/override/init2
+    mkdir -p ${WORK_DIR}/5.result/override/nya
+    mkdir -p ${WORK_DIR}/5.result/override/spt
+
     echo "## build fxf"
     ./init.sh encode_fxf ${WORK_DIR}/3.edit/init2_txt ${WORK_DIR}/5.result/override/init2
     # ./init.sh encode_fxf ${WORK_DIR}/3.edit/spt_txt ${WORK_DIR}/5.result/override/spt
@@ -20,6 +23,8 @@ build_1txt() {
 
 build_1spt() {
     echo "## build_1spt"
+    mkdir -p ${WORK_DIR}/5.result/override/spt
+
     for infile in $(ls ${WORK_DIR}/3.edit/spt_ftext/*.txt); do
         inname=$(basename $infile ".txt")
         echo $inname
@@ -31,6 +36,8 @@ build_1spt() {
 
 build_2dwq() {
     echo "## build_2dwq"
+    mkdir -p ${WORK_DIR}/5.result/override/png
+
     if [ -f ${WORK_DIR}/3.edit/dwq_png/*.png ]; then
         cp -f ${WORK_DIR}/3.edit/dwq_png/*.png ${WORK_DIR}/5.result/override/png
     fi
@@ -38,20 +45,34 @@ build_2dwq() {
 
 build_3dll() {
     echo "## build_3dll"
-    if [ -z "$CC" ]; then CC=$MINGWSDK/bin/i686-w64-mingw32-clang; fi
-    make -C ${SRC_DIR}/../ -f systemnnn.mk CC=$CC BUILD_DIR=${WORK_DIR}/5.result
+    mkdir -p ${WORK_DIR}/5.result
+
+    if [ -z "$CC" ]; then CC=$LLVMMINGW_HOME/bin/i686-w64-mingw32-clang; fi
+    make -C ${SRC_DIR}/../ -f systemnnn.mk CC=$CC BUILD_DIR=${WORK_DIR}/4.post DEBUG=$DEBUG NOPDB=$NOPDB
+    cp -f ${WORK_DIR}/4.post/systemnnn_patch.* ${WORK_DIR}/5.result
 }
 
 build_3exe() {
     echo "## build_3exe"
-    python -B ${SRC_DIR}/compat/windllin_v321.py -m codecave2 \
+    mkdir -p ${WORK_DIR}/5.result/override
+
+    python -B ${SRC_DIR}/compat/windllin_v0_3_2_1.py -m codecave2 \
         ${WORK_DIR}/1.origin/wajin_asaki.exe systemnnn_patch.dll \
         -o ${WORK_DIR}/5.result/wajin_asaki_chs.exe 1>/dev/null
-    echo "charset=134" > ${WORK_DIR}/5.result/override/config.ini
-    echo "font=simhei" >> ${WORK_DIR}/5.result/override/config.ini
+    
+    echo "## generate config file"
+    echo "override_file=1" > ${WORK_DIR}/5.result/override/config.ini
+    echo "override_font=1" >> ${WORK_DIR}/5.result/override/config.ini
+    echo "createfontcharset=134" >> ${WORK_DIR}/5.result/override/config.ini
+    echo "fontname=simhei" >> ${WORK_DIR}/5.result/override/config.ini
     echo "patch=+3DC17:FE" >> ${WORK_DIR}/5.result/override/config.ini
     echo "CPicture_LoadDWQ=939744" >> ${WORK_DIR}/5.result/override/config.ini
     echo "CPicture_mpic=32" >> ${WORK_DIR}/5.result/override/config.ini
+    iconv -f utf-8 -t utf-16le -c ${WORK_DIR}/5.result/override/config.ini > ${WORK_DIR}/5.result/override/config2.ini
+    mv -f ${WORK_DIR}/5.result/override/config2.ini ${WORK_DIR}/5.result/override/config.ini
+
+    echo "## generate debug cmd"
+    echo "wajin_asaki_chs.exe | tee wajin_asaki_chs_log.txt" > ${WORK_DIR}/5.result/wajin_asaki_chs_debug.cmd
 }
 
 release_patch() {

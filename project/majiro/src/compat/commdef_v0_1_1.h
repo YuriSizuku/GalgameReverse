@@ -1,11 +1,14 @@
 /**
  * common macro define
- *   v0.1, developed by devseed
+ *   v0.1.1, developed by devseed
 */
 
 #ifndef _COMMDEF_H
 #define _COMMDEF_H
-#define COMMDEF_VERSION 100
+#define COMMDEF_VERSION "0.1.1"
+#ifdef __cplusplus
+extern "C" {
+#endif
 #include <stdio.h>
 #include <stdint.h>
 
@@ -68,10 +71,10 @@
 #define LOG_LEVEL_DEBUG 4
 #define LOG_LEVEL_VERBOSE 5
 #define LogTagPrintf(format, tag, ...) {\
-    printf("[%s,%d,%s,%s] ", __FILE__, __LINE__, __func__, tag);\
+    printf("[%s,%s] ", __func__, tag);\
     printf(format, ##__VA_ARGS__);}
 #define LogTagWprintf(format, tag, ...) {\
-    printf("[%s,%d,%s,%s] ", __FILE__, __LINE__, __func__, tag);\
+    printf("[%s,%s] ", __func__, tag);\
     wprintf(format, ##__VA_ARGS__);}
 #define DummyPrintf(format, ...)
 #define LOG(format, ...) LogTagPrintf(format, "I", ##__VA_ARGS__)
@@ -217,9 +220,157 @@ static INLINE void* inl_memcpy(void *dst, const void *src, size_t n)
     return dst;
 }
 
+static INLINE size_t inl_hexifya(char *dst, size_t dstlen, const uint8_t *src, size_t srcsize, const char *sep)
+{
+    size_t srcpos = 0;
+    size_t dstpos = 0;
+    size_t sepsize = 0;
+    if(sep)
+    {
+        while (sep[sepsize]) sepsize++;
+    }  
+    for(srcpos=0; srcpos < srcsize; srcpos++)
+    {
+        uint8_t c1 = src[srcpos] & 0xf;
+        c1 = c1 >= 10 ? c1 - 10 + 'A': c1 + '0';
+        uint8_t c2 = src[srcpos] >> 4;
+        c2 = c2 >= 10 ? c2 - 10 + 'A': c2 + '0';
+        if(dstpos+2 < dstlen)
+        {
+            dst[dstpos++] = (char)c2;
+            dst[dstpos++] = (char)c1;
+        }
+        else
+        {
+            break;
+        }
+        if(dstpos + sepsize < dstlen)
+        {
+            for(size_t j=0; j < sepsize; j++)
+            {
+                dst[dstpos++] = sep[j];
+            }
+        }
+    }
+    dst[dstpos] = '\0';
+    return srcpos;
+}
+
+static INLINE size_t inl_hexifyw(wchar_t *dst, size_t dstlen, const uint8_t *src, size_t srcsize, const wchar_t *sep)
+{
+    size_t srcpos = 0;
+    size_t dstpos = 0;
+    size_t sepsize = 0;
+    if(sep)
+    {
+        while (sep[sepsize]) sepsize++;
+    }  
+    for(srcpos=0; srcpos < srcsize; srcpos++)
+    {
+        uint16_t c1 = src[srcpos] & 0xf;
+        c1 = c1 >= 10 ? c1 - 10 + L'A': c1 + L'0';
+        uint16_t c2 = src[srcpos] >> 4;
+        c2 = c2 >= 10 ? c2 - 10 + L'A': c2 + L'0';
+        if(dstpos+2 < dstlen)
+        {
+            dst[dstpos++] = (wchar_t)c2;
+            dst[dstpos++] = (wchar_t)c1;
+        }
+        else
+        {
+            break;
+        }
+        if(dstpos + sepsize < dstlen)
+        {
+            for(size_t j=0; j < sepsize; j++)
+            {
+                dst[dstpos++] = sep[j];
+            }
+        }
+    }
+    dst[dstpos] = L'\0';
+    return srcpos;
+}
+
+static INLINE void* inl_search(void* addr, 
+    size_t memsize, const char* pattern, size_t* pmatchsize)
+{
+    size_t i = 0;
+    int matchend = 0;
+    void* matchaddr = NULL;
+    while (i < memsize)
+    {
+        int j = 0;
+        int matchflag = 1;
+        matchend = 0;
+        while (1)
+        {
+            if (pattern[j] == 0x20)
+            {
+                j++;
+                continue;
+            }
+            if (!pattern[j]) break;
+
+            char _c1 = (((char*)addr)[i + matchend] >> 4 ) & 0x0f;
+            _c1 = _c1 < 10 ? _c1 + '0' : (_c1 - 10) + 'A';
+            char _c2 = (((char*)addr)[i + matchend] & 0xf) & 0x0f;
+            _c2 = _c2 < 10 ? _c2 + '0' : (_c2 - 10) + 'A';
+            
+            if (pattern[j] != '?')
+            {
+                
+                if (_c1 != pattern[j] && _c1 + 0x20 != pattern[j])
+                {
+                    matchflag = 0;
+                    break;
+                }
+            }
+            else 
+            {
+                if(!pattern[j + 1]) 
+                {
+                    matchend++;
+                    break;
+                }
+                if (pattern[j + 1] == 0x20) goto inl_search_next;
+            }
+
+            if(!pattern[j + 1]) 
+            {
+                matchend++;
+                break;
+            }
+            if (pattern[j + 1] != '?')
+            {
+                if (_c2 != pattern[j + 1] && _c2 + 0x20 != pattern[j + 1])
+                {
+                    matchflag = 0;
+                    break;
+                }
+            }
+inl_search_next:
+            j += 2;
+            matchend++;
+        }
+        if (matchflag)
+        {
+            matchaddr = (void*)((uint8_t*)addr + i);
+            break;
+        }
+        i++;
+    }
+    if (pmatchsize) *pmatchsize = matchend;
+    return matchaddr;
+}
+
+#ifdef __cplusplus
+}
+#endif
 #endif // _COMMDEF_H
 
 /**
  * history
  * v0.1, initial version
+ * v0.1.1, add hexifya, hexifyw, search
 */

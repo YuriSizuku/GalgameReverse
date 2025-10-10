@@ -41,22 +41,21 @@ all:
 	@make build_3dll
 	@make build_3exe
 
-link:
-	@if ! [ -d workflow ]; then \
-        ln -s $(WORKFLOW_DIR) workflow;\
-    fi
-
-unlink:
-	@rm -rf workflow
-	
-init_mingwsdk init_workdir init_gamedir:
+init_gamedir init_workdir:
 	@./init.sh $@
 
-build_1mjo build_2arc build_3dll build_3exe: init_workdir
+build_1mjo build_2arc build_3dll build_3exe:
 	@./build.sh $@
 
 release_patch:
 	@./build.sh $@
+
+open:
+	@if [ -n "$(uname -a | grep Msys)" ]; then \
+		start explorer $(BASE_DIR); \
+	else \
+		bash -c "nemo $(BASE_DIR) &"; \
+	fi
 
 run:
 	@cd $(GAME_DIR);$(GAME_EXEC) sorairo_chs.exe
@@ -87,9 +86,10 @@ test:
 
 clean:
 	@rm -f $(WORK_DIR)/*.7z
-	@rm -rf ${WORK_DIR}/5.result
+	@rm -rf ${WORK_DIR}/4.post/*
+	@rm -rf ${WORK_DIR}/5.result/*
 
-.PHONY: all link unlink \
-	init_workdir init_gamedir \
+.PHONY: all open run run_gdbserver send test clean \
+	init_gamedir init_workdir \
 	build_1mjo build_2arc build_3dll build_3exe \
-	release_patch run send test clean
+	release_patch

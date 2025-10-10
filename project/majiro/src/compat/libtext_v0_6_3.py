@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
-__description__ = """
+__version__  = "0.6.3"
+__description__ = f"""
 A binary text tool (remake) for text exporting, importing and checking
-    v0.6.1, developed by devseed
+    v{__version__}, developed by devseed
 """
 
+import binascii
 import logging
 import argparse
 from io import StringIO, BytesIO
@@ -13,9 +15,7 @@ from typing import Callable, Tuple, Union, List, Dict
 try:
     from libutil import writelines, writebytes, filter_loadfiles, ftext_t, tbl_t, jtable_t, msg_t, load_batch, save_ftext, load_ftext, load_tbl
 except ImportError:
-    exec("from libutil_v600 import writelines, writebytes, filter_loadfiles, ftext_t, tbl_t, jtable_t, msg_t, load_batch, save_ftext, load_ftext, load_tbl")
-
-__version__  = 610
+    exec("from libutil_v0_6 import writelines, writebytes, filter_loadfiles, ftext_t, tbl_t, jtable_t, msg_t, load_batch, save_ftext, load_ftext, load_tbl")
 
 # text basic functions
 def iscjk(c: str): 
@@ -81,16 +81,18 @@ def encode_tbl(text: str, tbl: List[tbl_t], bytes_fallback: bytes=None) -> bytes
     tblmap = encode_tbl.tblmap
     for i, c in enumerate(text):
         if c in tblmap: bufio.write(tblmap[c])
-        elif bytes_fallback: bufio.write(bytes_fallback)
+        elif bytes_fallback is not None: 
+            bufio.write(bytes_fallback)
         else:
             bufio.close()
             logging.error(f"encode failed at {i} with {c} [text='{text}]'")
             return None
+
     data = bufio.getvalue()
     bufio.close()
     return data
 
-def decode_tbl(data: bytes, tbl: List[tbl_t]) -> str:
+def decode_tbl(data: bytes, tbl: List[tbl_t], text_fallback=None) -> str:
     """
     decoding the data by tbl
     :return: the decoded text in python string
@@ -112,11 +114,16 @@ def decode_tbl(data: bytes, tbl: List[tbl_t]) -> str:
             sbufio.write(tblrmap[data[i:i+j]])
             flag = True
             break
-        if not flag:
-            sbufio.close()
-            logging.error(f"decode failed at {i} [data={data.hex(' ')}]")
-            return None
+        if not flag: # not find in tbl
+            if text_fallback is not None: 
+                sbufio.write(text_fallback)
+                j = 1
+            else:
+                sbufio.close()
+                logging.error(f"decode failed at {i} [data={data.hex(' ')}]")
+                return None
         i += j
+
     text = sbufio.getvalue()
     sbufio.close()
     return text
@@ -132,9 +139,28 @@ def encode_general(text: str, enc: Union[str, List[tbl_t]]='utf-8', enc_error: U
         try: 
             return text.encode(enc, enc_error)
         except UnicodeEncodeError as e:
-            logging.error(f"encode failed {e} [text='{text}]'")
+            logging.error(f"encode failed {e} [text='{text}']")
             return None
-    else: return encode_tbl(text, enc, enc_error)
+    else:
+        if enc_error == "ignore" : enc_error = b""
+        return encode_tbl(text, enc, enc_error)
+
+def decode_general(data: bytes, enc: Union[str, List[tbl_t]]='utf-8', enc_error: Union[str, bytes]='ignore'):
+    """
+    automaticly judge to encode by tbl or encoding
+    :param enc: tbl or encoding
+    :param enc_error: errors or bytes_fallback
+    """
+
+    if type(enc)==str: 
+        try: 
+            return data.decode(enc, enc_error)
+        except UnicodeEncodeError as e:
+            logging.error(f"decode failed {e} [data={binascii.hexlify(data, sep=' ')}]")
+            return None
+    else: 
+        if enc_error == "ignore" : enc_error = ""
+        return decode_tbl(data, enc, enc_error)
 
 def split_extend(text, text_noeval=False) -> List[Union[slice, bytes]]:    
     start = 0
@@ -502,9 +528,12 @@ def check_ftexts(linesobj: Union[str, Tuple[List[ftext_t], List[ftext_t]]], outp
         encoding='utf-8', tblobj: Union[str, List[tbl_t]]=None, *, 
         text_noeval=False, text_replace: Dict[bytes, bytes]=None,
         bytes_fallback: bytes = None, insert_longer=False, 
-        referobj: Union[str, bytes]=None) -> List[msg_t]:
+        referobj: Union[str, bytes]=None, referencoding=None, refertblobj=None) -> List[msg_t]:
     """
     check the ftexts including format and charactors
+    :param referobj: origin raw reference file
+    :param referencoding: reference file encoding
+    :param refertblobj: reference file tbl
     """
     
     msgs: List[msg_t] = []
@@ -522,10 +551,13 @@ def check_ftexts(linesobj: Union[str, Tuple[List[ftext_t], List[ftext_t]]], outp
         msgs.append(msg)
     
     for i, (t1, t2) in enumerate(zip(ftexts1, ftexts2)):
-        # check org now match
+        # check org now match and overlap
+        addr_set = set()
         err = ""
+        if t2.addr in addr_set: err += f"overlaped ftext, "
         if t1.addr != t2.addr: err += f"addr not match 0x{t1.addr:x}!=0x{t2.addr:x}, "
         if t1.size != t2.size: err += f"size not match 0x{t1.size:x}!=0x{t2.size:x} "
+        addr_set.add(t2.addr)
         if len(err) > 0:
             msg = msg_t(t1.addr, err + f"[○●no={i+1} addr=0x{t1.addr} text='{t1.text}']", logging.WARNING)
             logging.warning(f"{msg.msg}")
@@ -533,7 +565,16 @@ def check_ftexts(linesobj: Union[str, Tuple[List[ftext_t], List[ftext_t]]], outp
         
         # check src data
         if refdata:
-            encbytes = encode_extend(t1.text, enc, enc_error, text_noeval)
+            if referencoding is None and refertblobj is None: 
+                referenc = enc
+            else:
+                refertbl = load_tbl(refertblobj)
+                referenc = refertbl if refertbl else referencoding
+            try:
+                encbytes = None
+                encbytes = encode_extend(t1.text, referenc, enc_error, text_noeval)
+            except ValueError as e:
+                print(e)
             if encbytes != refdata[t1.addr: t1.addr + t1.size]:
                 msg = msg_t(t1.addr, f"text not match [○no{i+1} addr=0x{t1.addr} text='{t1.text}']", logging.WARNING)
                 logging.warning(f"{msg.msg}")
@@ -628,7 +669,8 @@ def cli(cmdstr=None):
         for i, (ftextpath, outpath, referpath) in enumerate(zip(ftextpaths, outpaths, referpaths)):
             if args.batch: logging.info(f"batch {i+1}/{n} [ftextpath={ftextpath} referpath={referpath} outpath={outpath}]")
             check_ftexts(ftextpath, outpath,  
-                encoding=args.encoding, tblobj=args.tbl, referobj=referpath, 
+                encoding=args.encoding, tblobj=args.tbl, 
+                referobj=referpath, referencoding=args.referencoding, refertblobj=args.refertbl,
                 text_replace=text_replace, text_noeval=args.text_noeval,
                 bytes_fallback=bytes_fallback, insert_longer=args.insert_longer)
 
@@ -643,7 +685,7 @@ def cli(cmdstr=None):
         t.add_argument("-e", "--encoding", default="utf-8", help="binfile encoding")
         t.add_argument("-t", "--tbl", default=None, help="binfile tbl")
         t.add_argument("--log_level", default="info", help="set log level", 
-            choices=("none", "critical", "error", "warnning", "info", "debug"))
+            choices=("none", "critical", "error", "warning", "info", "debug"))
         t.add_argument("--batch", action="store_true", help="batch mode on binpath, ftextpath, outpath, referpath")
        
     p_extract.set_defaults(handler=cmd_extract)
@@ -667,6 +709,8 @@ def cli(cmdstr=None):
     p_check.set_defaults(handler=cmd_check)
     p_check.add_argument("ftextpath")
     p_check.add_argument("--refer", dest="referpath", help="binfile path")
+    p_check.add_argument("--refer_encoding", dest="referencoding", default=None, help="org data encoding")
+    p_check.add_argument("--refer_tbl", dest="refertbl", default=None, help="org data tbl")
     p_check.add_argument("--text_noeval", action="store_true",  help="disable eval like {{b'\x00'}}")
     p_check.add_argument("-r", "--text_replace", type=str, default=None, 
         metavar=('src', 'dst'), nargs=2, action='append', help="replace bytes after encoding ")
@@ -689,4 +733,6 @@ v0.1, initial version with utf-8 support
 ... 
 v0.6, remake to increase speed and simplify functions
 v0.6.1, add batch mode on extract, insert to optimize performance
+v0.6.2, add referencoding, refertbl
+v0.6.3, add decode_tbl text_fallback parameter, decode_general
 """

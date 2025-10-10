@@ -1,6 +1,6 @@
 /**
- * windows dyamic hook util functions wrappers
- *    v0.3.3, developed by devseed
+ * windows dynamic hook and memory util functions
+ *    v0.3.7, developed by devseed
  * 
  * macros:
  *    WINHOOK_IMPLEMENT, include defines of each function
@@ -12,10 +12,15 @@
 
 #ifndef _WINHOOK_H
 #define _WINHOOK_H
-#define WINHOOK_VERSION 330
+#define WINHOOK_VERSION "0.3.7"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#include <windows.h>
 #ifdef USECOMPAT
-#include "commdef_v100.h"
+#include "commdef_v0_1_1.h"
 #else
 #include "commdef.h"
 #endif // USECOMPAT
@@ -51,11 +56,6 @@
 
 #define WINHOOK_API WINHOOK_API_DEF WINHOOK_API_EXPORT WINHOOK_API_INLINE
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-#include <windows.h>
-
 /**
  * start a exe and inject dll into exe
  * @return pid
@@ -86,42 +86,25 @@ WINHOOK_API
 size_t winhook_getimagebase(HANDLE hprocess);
 
 /**
+ * get the other process image size
+*/
+WINHOOK_API
+size_t winhook_getimagesize(HANDLE hprocess, HMODULE hmod);
+
+/**
  * dynamic inject a dll into a process
 */ 
 WINHOOK_API
 BOOL winhook_injectdll(HANDLE hprocess, LPCSTR dllname);
 
 /**
- * alloc a console for the program
-*/
-WINHOOK_API
-void winhook_installconsole();
-
-/**
  * patch addr by buf with bufsize
 */
 WINHOOK_API
-BOOL winhook_patchmemoryex(HANDLE hprocess,LPVOID addr, const void* buf, size_t bufsize);
+BOOL winhook_patch(LPVOID addr, const void* buf, size_t bufsize);
 
 WINHOOK_API
-BOOL winhook_patchmemory(LPVOID addr, const void* buf, size_t bufsize)
-{
-    return winhook_patchmemoryex(GetCurrentProcess(), addr, buf, bufsize);
-}
-    
-/**
- * batch patch memories
-*/
-WINHOOK_API
-BOOL winhook_patchmemorysex(HANDLE hprocess,
-    LPVOID addrs[], void* bufs[], size_t bufsizes[], int n);
-
-WINHOOK_API
-BOOL winhook_patchmemorys(LPVOID addrs[], void* bufs[], size_t bufsizes[], int n)
-{
-    return winhook_patchmemorysex(GetCurrentProcess(), addrs, bufs, bufsizes, n);
-}
-    
+BOOL winhook_patchex(HANDLE hprocess,LPVOID addr, const void* buf, size_t bufsize);
 
 /**
  * patch memory with pattern, 
@@ -133,46 +116,40 @@ BOOL winhook_patchmemorys(LPVOID addrs[], void* bufs[], size_t bufsizes[], int n
  * @return patch bytes number, error < 0
 */
 WINHOOK_API
-int winhook_patchmemorypattern(const char *pattern);
+int winhook_patchp(const char *pattern);
 
 /**
  * patch memory with pattern 1337 by x64dbg, use rva
  * can use ';' instead of '\r' '\n'
 */
 WINHOOK_API
-int winhook_patchmemory1337ex(HANDLE hprocess, 
-    const char* pattern, size_t base, BOOL revert);
+int winhook_patch1337(const char* pattern, size_t base, BOOL revert);
 
 WINHOOK_API
-int winhook_patchmemory1337(const char* pattern, size_t base, BOOL revert)
-{
-    return winhook_patchmemory1337ex(GetCurrentProcess(), pattern, base, revert);
-}
-    
+int winhook_patch1337ex(HANDLE hprocess, 
+    const char* pattern, size_t base, BOOL revert);
+   
 /**
  * patch memory with pattern ips(International Patching System)
  * specifications at https://zerosoft.zophar.net/ips.php
  * addr is relative to base, big endian
 */
 WINHOOK_API
-int winhook_patchmemoryipsex(HANDLE hprocess, const char* pattern, size_t base);
+int winhook_patchips(const char* pattern, size_t base);
 
 WINHOOK_API
-int winhook_patchmemoryips(const char* pattern, size_t base)
-{
-    return winhook_patchmemoryipsex(GetCurrentProcess(), pattern, base);
-}
-    
+int winhook_patchipsex(HANDLE hprocess, const char* pattern, size_t base);
+
 /**
- * search the pattern like "ab 12 ?? 34"
+ * search the pattern like "ab 12 ?? 34" or "ab 12 ? 34"
  * @return the matched address
 */
 WINHOOK_API
-void* winhook_searchmemory(void* addr, size_t memsize,
+void* winhook_search(void* addr, size_t memsize,
     const char* pattern, size_t *pmatchsize);
 
 WINHOOK_API
-void* winhook_searchmemoryex(HANDLE hprocess,
+void* winhook_searchex(HANDLE hprocess,
     void* addr, size_t memsize, const char* pattern, size_t* pmatchsize);
 
 /**
@@ -183,10 +160,7 @@ WINHOOK_API
 BOOL winhook_iathookpe(LPCSTR targetDllName, void* mempe, PROC pfnOrg, PROC pfnNew);
 
 WINHOOK_API
-BOOL winhook_iathookmodule(LPCSTR targetDllName, LPCSTR moduleDllName, PROC pfnOrg, PROC pfnNew)
-{
-    return winhook_iathookpe(targetDllName, GetModuleHandle(moduleDllName), pfnOrg, pfnNew);
-}
+BOOL winhook_iathookmodule(LPCSTR targetDllName, LPCSTR moduleDllName, PROC pfnOrg, PROC pfnNew);
     
 /**
  * iat dynamiclly hook, 
@@ -194,10 +168,7 @@ BOOL winhook_iathookmodule(LPCSTR targetDllName, LPCSTR moduleDllName, PROC pfnO
  * @param targetDllName like "user32.dll", "kernel32.dll"
 */
 WINHOOK_API
-BOOL winhook_iathook(LPCSTR targetDllName, PROC pfnOrg, PROC pfgNew)
-{
-    return winhook_iathookmodule(targetDllName, NULL, pfnOrg, pfgNew);
-}
+BOOL winhook_iathook(LPCSTR targetDllName, PROC pfnOrg, PROC pfgNew);
 
 #ifdef WINHOOK_IMPLEMENTATION
 #include <stdio.h>
@@ -208,24 +179,46 @@ BOOL winhook_iathook(LPCSTR targetDllName, PROC pfnOrg, PROC pfgNew)
 #include <psapi.h>
 
 #ifdef WINHOOK_USEDYNBIND
-#ifndef WINDYN_IMPLEMENTATION
-#define WINDYN_IMPLEMENTATION
+#ifndef WINDYNKERNEL32_IMPLEMENTATION
+#define WINDYNKERNEL32_IMPLEMENTATION
 #endif // WINDYN_IMPLEMENTATION
 #ifndef WINDYN_STATIC
 #define WINDYN_STATIC
 #endif // WINDYN_STATIC
 #ifdef USECOMPAT
-#include "windyn_v150.h"
+#include "windynkernel32_v0_1_7.h"
 #else
-#include "windyn.h"
+#include "windynkernel32.h"
 #endif // USECOMPAT
 #define strlen inl_strlen
 #define _stricmp inl_stricmp
 #define _wcsicmp inl_wcsicmp
+
 #define GetModuleHandleA windyn_GetModuleHandleA
 #define LoadLibraryA windyn_LoadLibraryA
 #define GetProcAddress windyn_GetProcAddress
+#define VirtualAlloc windyn_VirtualAlloc
+#define VirtualFree windyn_VirtualFree
+#define VirtualProtect windyn_VirtualProtect
 #define VirtualAllocEx windyn_VirtualAllocEx
+#define VirtualFreeEx windyn_VirtualFreeEx
+#define VirtualProtectEx windyn_VirtualProtectEx
+#define CreateProcessA windyn_CreateProcessA
+#define OpenProcess windyn_OpenProcess
+#define GetCurrentProcess windyn_GetCurrentProcess
+#define ReadProcessMemory windyn_ReadProcessMemory
+#define WriteProcessMemory windyn_WriteProcessMemory
+#define CreateRemoteThread windyn_CreateRemoteThread
+#define GetCurrentThread windyn_GetCurrentThread
+#define SuspendThread windyn_SuspendThread
+#define ResumeThread windyn_ResumeThread
+#define GetThreadContext windyn_GetThreadContext
+#define SetThreadContext windyn_SetThreadContext
+#define WaitForSingleObject windyn_WaitForSingleObject
+#define CloseHandle windyn_CloseHandle
+#define CreateToolhelp32Snapshot windyn_CreateToolhelp32Snapshot
+#define Process32First windyn_Process32First
+#define Process32Next windyn_Process32Next
 #endif // WINHOOK_USEDYNBIND
 
 // loader functions
@@ -328,6 +321,13 @@ size_t winhook_getimagebase(HANDLE hprocess)
     return (size_t)modules[0]; // module 0 is apparently always the EXE itself
 }
 
+size_t winhook_getimagesize(HANDLE hprocess, HMODULE hmod)
+{
+    MODULEINFO info;
+    GetModuleInformation(hprocess, hmod, &info, sizeof(info));
+    return info.SizeOfImage;
+}
+
 BOOL winhook_injectdll(HANDLE hprocess, LPCSTR dllname)
 {
     LPVOID addr = VirtualAllocEx(hprocess, 
@@ -351,14 +351,13 @@ BOOL winhook_injectdll(HANDLE hprocess, LPCSTR dllname)
     return TRUE;
 }
 
-void winhook_installconsole()
+// dynamic hook functions
+BOOL winhook_patch(LPVOID addr, const void* buf, size_t bufsize)
 {
-    AllocConsole();
-    freopen("CONOUT$", "w", stdout);    
+    return winhook_patchex(GetCurrentProcess(), addr, buf, bufsize);
 }
 
-// dynamic hook functions
-BOOL winhook_patchmemoryex(HANDLE hprocess, LPVOID addr, const void* buf, size_t bufsize)
+BOOL winhook_patchex(HANDLE hprocess, LPVOID addr, const void* buf, size_t bufsize)
 {
     if (addr == NULL || buf == NULL) return FALSE;
     DWORD oldprotect;
@@ -372,17 +371,7 @@ BOOL winhook_patchmemoryex(HANDLE hprocess, LPVOID addr, const void* buf, size_t
     return ret;
 }
 
-BOOL winhook_patchmemorysex(HANDLE hprocess, LPVOID addrs[], void* bufs[], size_t bufsizes[], int n)
-{
-    int ret = 0;
-    for (int i = 0; i < n; i++)
-    {
-        ret += winhook_patchmemoryex(hprocess, addrs[i], bufs[i], bufsizes[i]);
-    }
-    return ret;
-}
-
-int winhook_patchmemorypattern(const char *pattern)
+int winhook_patchp(const char *pattern)
 {
     if (!pattern) return -1;
     size_t imagebase = (size_t)GetModuleHandleA(NULL);
@@ -466,7 +455,12 @@ int winhook_patchmemorypattern(const char *pattern)
     return res;
 }
 
-int winhook_patchmemory1337ex(HANDLE hprocess, const char* pattern, size_t base, BOOL revert)
+int winhook_patch1337(const char* pattern, size_t base, BOOL revert)
+{
+    return winhook_patch1337ex(GetCurrentProcess(), pattern, base, revert);
+}
+
+int winhook_patch1337ex(HANDLE hprocess, const char* pattern, size_t base, BOOL revert)
 {
 #define IS_ENDLINE(c) (c==';' || c=='\r' || c=='\n')
     enum FLAG1337 {
@@ -505,7 +499,7 @@ int winhook_patchmemory1337ex(HANDLE hprocess, const char* pattern, size_t base,
         {
             if (flag1337 == RVA1337) continue;
             uint8_t* patchbyte = revert ? &oldbyte : &newbyte;
-            winhook_patchmemoryex(hprocess, (LPVOID)(base + rva), patchbyte, 1);
+            winhook_patchex(hprocess, (LPVOID)(base + rva), patchbyte, 1);
             flag1337 = RVA1337;
             rva = 0;
             oldbyte = 0;
@@ -539,7 +533,12 @@ int winhook_patchmemory1337ex(HANDLE hprocess, const char* pattern, size_t base,
     return res;
 }
 
-int winhook_patchmemoryipsex(HANDLE hprocess, const char* pattern, size_t base)
+int winhook_patchips(const char* pattern, size_t base)
+{
+    return winhook_patchipsex(GetCurrentProcess(), pattern, base);
+}
+
+int winhook_patchipsex(HANDLE hprocess, const char* pattern, size_t base)
 {
 #define BYTE3_TO_UINT_BIGENDIAN(bp) \
      (((unsigned int)(bp)[0] << 16) & 0x00FF0000) | \
@@ -566,7 +565,7 @@ int winhook_patchmemoryipsex(HANDLE hprocess, const char* pattern, size_t base)
         else
         {
             size_t addr = base + offset;
-            winhook_patchmemoryex(hprocess, (LPVOID)addr, p, size);
+            winhook_patchex(hprocess, (LPVOID)addr, p, size);
             p += size;
             res += size;
         }
@@ -574,69 +573,33 @@ int winhook_patchmemoryipsex(HANDLE hprocess, const char* pattern, size_t base)
     return res;
 }
 
-void* winhook_searchmemory(void* addr, 
+void* winhook_search(void* addr, 
     size_t memsize, const char* pattern, size_t* pmatchsize)
 {
-    size_t i = 0;
-    int matchend = 0;
-    void* matchaddr = NULL;
-    while (i < memsize)
-    {
-        int j = 0;
-        int matchflag = 1;
-        matchend = 0;
-        while (pattern[j])
-        {
-            if (pattern[j] == 0x20)
-            {
-                j++;
-                continue;
-            }
-            char _c1 = (((char*)addr)[i+matchend]>>4) & 0x0f;
-            _c1 = _c1 < 10 ? _c1 + '0' : (_c1 - 10) + 'A';
-            char _c2 = (((char*)addr)[i+matchend]&0xf) & 0x0f;
-            _c2 = _c2 < 10 ? _c2 + '0' : (_c2 - 10) + 'A';
-            if (pattern[j] != '?')
-            {
-                if (_c1 != pattern[j] && _c1 + 0x20 != pattern[j])
-                {
-                    matchflag = 0;
-                    break;
-                }
-            }
-            if (pattern[j + 1] != '?')
-            {
-                if (_c2 != pattern[j+1] && _c2 + 0x20 != pattern[j+1])
-                {
-                    matchflag = 0;
-                    break;
-                }
-            }
-            j += 2;
-            matchend++;
-        }
-        if (matchflag)
-        {
-            matchaddr = (void*)((uint8_t*)addr + i);
-            break;
-        }
-        i++;
-    }
-    if (pmatchsize) *pmatchsize = matchend;
-    return matchaddr;
+    return inl_search(addr, memsize, pattern, pmatchsize);
 }
 
-void* winhook_searchmemoryex(HANDLE hprocess,
+void* winhook_searchex(HANDLE hprocess,
     void* addr, size_t memsize, const char* pattern, size_t* pmatchsize)
 {
     void* buf = VirtualAlloc(NULL, memsize, MEM_COMMIT, PAGE_READWRITE);
     size_t bufsize = 0;
     ReadProcessMemory(hprocess, addr, buf, memsize, (SIZE_T*)&bufsize);
-    void* matchaddr = winhook_searchmemory(buf, memsize, pattern, pmatchsize);
+    void* matchaddr = winhook_search(buf, memsize, pattern, pmatchsize);
     VirtualFree(buf, 0, MEM_RELEASE);
     if (!matchaddr) return matchaddr;
     size_t offset = (size_t)matchaddr - (size_t)buf;
     return (void*)((uint8_t*)addr + offset);
+}
+
+BOOL winhook_iathook(LPCSTR targetDllName, PROC pfnOrg, PROC pfgNew)
+{
+    return winhook_iathookmodule(targetDllName, NULL, pfnOrg, pfgNew);
+}
+
+BOOL winhook_iathookmodule(LPCSTR targetDllName, LPCSTR moduleDllName, PROC pfnOrg, PROC pfnNew)
+{
+    return winhook_iathookpe(targetDllName, GetModuleHandleA(moduleDllName), pfnOrg, pfnNew);
 }
 
 BOOL winhook_iathookpe(LPCSTR targetDllName, void* mempe, PROC pfnOrg, PROC pfnNew)
@@ -699,4 +662,8 @@ BOOL winhook_iathookpe(LPCSTR targetDllName, void* mempe, PROC pfnOrg, PROC pfnN
  * v0.3.1, add winhook_patchmemory1337, winhook_patchmemoryips
  * v0.3.2, improve macro style, chaneg some of macro to function
  * v0.3.3, seperate some macro to commdef, remove winhook_inlinehook, use stb_minhook directly
+ * v0.3.4, change winhook_searchmemory pattern to xx ? xx xx, or xx ?? xx xx, 
+ * v0.3.5, add winhook_getimagesize, winhook_searchmemory to inl_search
+ * v0.3.6, add more windyn functions
+ * v0.3.7, change and simplify some function name
 */

@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
-__description__ = """
+__version__  = "0.6"
+__description__ = f"""
 util functions and structures for galgame localization
-    v0.6, developed by devseed
+    v{__version__}, developed by devseed
 """
 
 import os
@@ -16,8 +17,6 @@ try: # optional libraries to import
     import numpy as np
     from PIL import Image
 except ImportError: pass
-
-__version__  = 600
 
 # util functions
 def readlines(data: bytes, encoding='utf-8', encoding_error='ignore', keepends=True) -> List[str]:

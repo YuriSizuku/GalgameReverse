@@ -13,24 +13,28 @@ else
 CFLAGS+=-Os
 endif
 
-ifdef USE_DVFS
+ifneq (,$(wildcard src/compat/dvfs/*.h))
 CFLAGS+=-DUSE_DVFS
 endif
 
 CFLAGS64:=$(CFLAGS) 
-ifneq (,$(findstring clang, $(CC)))
-CFLAGS+=-target i686-pc-windows-msvc -D _CRT_SECURE_NO_DEPRECATE
-CFLAGS64+=-target x86_64-pc-windows-msvc -D _CRT_SECURE_NO_DEPRECATE
-LDFLAGS+=-Wl,/OPT:REF
-else 
+ifneq (,$(findstring clang, $(CC))) # for llvm-mingw
+CFLAGS+=-m32 -gcodeview -Wl,--pdb=$(BUILD_DIR)/amanomiko_patch.pdb
+CFLAGS64+=m64
+LDFLAGS+= -Wl,--gc-sections
+else ifneq (,$(findstring gcc, $(CC))) # for mingw-w64
 CFLAGS+=-m32
-CFLAGS64+=-m64
-ifneq (,$(findstring gcc, $(CC)))
-LDFLAGS+= -Wl,--gc-sections\
+LDFLAGS+= -Wl,--gc-sections \
 	-static-libgcc -static-libstdc++ \
 	-Wl,-Bstatic,--whole-archive -lwinpthread \
 	-Wl,--no-whole-archive
-endif
+else ifneq (,$(findstring tcc, $(CC))) # for tcc
+CFLAGS+=-m32
+CFLAGS64+=-m64
+else # for previous llvm clang with msvc
+CFLAGS+=-target i686-pc-windows-msvc -D _CRT_SECURE_NO_DEPRECATE
+CFLAGS64+=-target x86_64-pc-windows-msvc -D _CRT_SECURE_NO_DEPRECATE
+LDFLAGS+=-Wl,/OPT:REF
 endif
 
 all: amanomiko_patch 

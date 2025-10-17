@@ -135,7 +135,7 @@ void install_hooks()
     #ifdef _DEBUG
     AllocConsole();
     freopen("CONOUT$", "w", stdout);
-    printf("install hook, v0.1, build in 220702\n");
+    printf("install hook, v0.1.1, build in 220702\n");
     #endif
     install_fonthook();
     winhook_inlinehooks(

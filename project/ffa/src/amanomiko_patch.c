@@ -120,14 +120,23 @@ void install_fonthook()
     }
 }
 
+// 0x4226A0
+extern int __cdecl check_RegKey_hook(const char* key);
+// 0x422510
+extern int __cdecl get_reg_value_hook(const char* key, char* lpData);
+
 PVOID g_pfnTargets[] = {
     (PVOID)0x44850C, 
     (PVOID)0x44BD90, 
-    (PVOID)0x44B9B0};
+    (PVOID)0x44B9B0,
+    (PVOID)0x4226A0,
+    (PVOID)0x422510 };
 PVOID g_pfnNews[] = {
     (PVOID)decodelzss_44850C_hook, 
     (PVOID)_ismbblead_hook,
-    (PVOID)_setmbcp_hook}; 
+    (PVOID)_setmbcp_hook,
+    (PVOID)check_RegKey_hook,
+    (PVOID)get_reg_value_hook };
 PVOID g_pfnOlds[sizeof(g_pfnTargets)/sizeof(PVOID)];
 
 void install_hooks()

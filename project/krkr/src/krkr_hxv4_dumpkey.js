@@ -128,5 +128,16 @@ Interceptor.attach(LoadLibraryW, {
                 console.log(`* EvenBranchOrder (garbro) : ${O8[0]}, ${O8[1]}, ${O8[2]}, ${O8[3]}, ${O8[4]}, ${O8[5]}, ${O8[6]}, ${O8[7]}`);
                 cxpoint = 0;
         }});
+
+        var vpoint = 0;
+        m = Memory.scanSync(hmod.base, hmod.size, "FF 75 24 8D 45 8C 53 FF 75 1C 57 50 8D 45 EC 50");
+        if (m.length == 1) vpoint = m[0].address;
+        Interceptor.attach(vpoint, {
+            onEnter(args) {
+                if (!vpoint) return;
+                console.log(`* verify : ${buf2hexstr(this.context.ebp.sub(0x74).readByteArray(32))}`);
+                vpoint = 0;
+            }
+        });
     }
 });

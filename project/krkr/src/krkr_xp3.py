@@ -1,6 +1,6 @@
 """
-pack or unpack krkr2 xp3 files (support xp3filter)
-  v0.1, developed by devseed
+krkr2 xp3 file tool (support xp3filter)
+  v0.1.1, developed by devseed
 
 xp3 <- [files entry] <- [info | segm | adlr]
 
@@ -17,16 +17,20 @@ zsize 8 fsize 8, fsize 8 // if compress_flag, hase zsize
 ] * n
 """
 
+__version__ = "v0.1.1"
+__description__ = f"krkr2 xp3 file tool, {__version__}, by devseed"
+
 import os
 import io
 import sys
 import zlib
 import mmap
+import shlex
 import ctypes
 import struct
 import argparse
 from dataclasses import dataclass
-from typing import List, Tuple, Callable
+from typing import List, Callable
 
 # TVP constant
 XP3_SIG = bytes.fromhex("58 50 33 0D 0A 20 0A 1A 8B 67 01")
@@ -67,6 +71,8 @@ class Xp3Adlr_t(ctypes.Structure):
 
 @dataclass
 class Xp3Entry:
+    sig: str = None # entry sig "FILE"
+    data: memoryview = None # raw bytes of entry
     info: Xp3Info_t = None
     adlr: Xp3Adlr_t = None
     segms: List[Xp3Segm_t] = None
@@ -77,7 +83,7 @@ xp3filter_t = Callable[[int, int, memoryview, int], None]
 def xp3filter_dummy(hash, offset, buf, buflen):
     pass
 
-def xp3adler32(adler, data: memoryview):
+def update_adler32(data: memoryview, adler: int) -> int:
     BASE = 65521
     NMAX = 5552
     sum2 = (adler >> 16) & 0xFFFF
@@ -124,10 +130,52 @@ def xp3adler32(adler, data: memoryview):
     
     return (sum2 << 16) | adler
 
-def parse_xp3(data: memoryview, base_offset=0, show_log=True) -> Tuple[List[Xp3Entry], Xp3Entry]:    
+def decrypt_text(data: memoryview, enc_type=1) -> memoryview:
+    if enc_type == 2:
+        zsize, fsize = struct.unpack("<qq", data)
+        return memoryview(zlib.decompress(data[16:]))
+
+    outio = io.BytesIO()
+    outio.write(b"\xff\xfe")
+    if enc_type == 1:
+        for i in range(0, len(data), 2):
+            d = struct.unpack_from("<H", data, i)[0]
+            d = (d & 0xAAAA) >> 1 | (d & 0x5555) << 1
+            outio.write(struct.pack("<H", d))
+    else:
+        for i in range(0, len(data), 2):
+            d = struct.unpack_from("<H", data, i)[0]
+            if d > 0x20:
+                d = d ^ (((d & 0xFE) << 8) ^ 1)
+                outio.write(struct.pack("<H", d))
+
+    return outio.getbuffer()
+
+def extract_entry(data: memoryview, entry: Xp3Entry, base_offset=0, xp3filter: xp3filter_t=None) -> memoryview:
+    outio = io.BytesIO()
+    
+    for segm in entry.segms:
+        offset = base_offset + segm.offset
+        segdata = data[offset: offset + segm.zsize]
+        if (segm.flags & TVP_XP3_SEGM_ENCODE_METHOD_MASK) == TVP_XP3_SEGM_ENCODE_ZLIB: 
+            segdata = memoryview(bytearray(zlib.decompress(segdata)))
+        if xp3filter: 
+            segdata = memoryview(bytearray(segdata))
+            xp3filter(entry.adlr.hash, 0, segdata, len(segdata))
+        if len(segdata) > 5 and  segdata[0] == 0xfe and segdata[1] == 0xfe and segdata[3] == 0xff and segdata[4] == 0xfe:
+            segdata = decrypt_text(segdata[5:], segdata[2])
+        outio.write(segdata)    
+    
+    return outio.getbuffer()
+
+def parse_xp3(data: memoryview, base_offset=0, show_log=True) -> List[Xp3Entry]:    
     assert(data.read(len(XP3_SIG)) == XP3_SIG)
     
     data_offset = int.from_bytes(data.read(8), 'little', signed=False)
+    # https://github.com/krkrz/krkr2/blob/master/kirikiri2/tags/2.22rev2/base/XP3Archive.cpp
+    if struct.unpack_from("<I", data, data_offset)[0] == 0x80: # will jmp, this is the special situation for cx
+        data_offset = base_offset + struct.unpack_from("<Q", data, data_offset+9)[0];
+        assert(data_offset >= 0x13 and data_offset < len(data))
     compres_flag = data[data_offset]
     assert(compres_flag == 0 or compres_flag == 1)
 
@@ -141,6 +189,7 @@ def parse_xp3(data: memoryview, base_offset=0, show_log=True) -> Tuple[List[Xp3E
         fsize,  = struct.unpack_from("<Q", data, data_offset + 1)
         index_data = data[data_offset + 9: data_offset + 9 + fsize]
     assert(index_data != None and len(index_data) == fsize)
+    index_data = memoryview(index_data)
 
     # parse entries
     i = 0
@@ -153,8 +202,9 @@ def parse_xp3(data: memoryview, base_offset=0, show_log=True) -> Tuple[List[Xp3E
         i += 1
 
         entry_start = 12
+        entry_data = index_data[index_start + entry_start: index_start + entry_start + entry_size]
+        entry = Xp3Entry(sig = entry_sig, data=entry_data)
         if entry_sig == b"File":
-            entry = Xp3Entry()
             while entry_start < entry_size:
                 chunk_sig, chunk_size = struct.unpack_from("<4sq", index_data, index_start + entry_start)
                 chunk_log = f"  |{chunk_sig.decode()} (start=0x{entry_start:x} size=0x{chunk_size:x})"
@@ -165,12 +215,12 @@ def parse_xp3(data: memoryview, base_offset=0, show_log=True) -> Tuple[List[Xp3E
                     name_start = index_start + entry_start + 12 + ctypes.sizeof(info)
                     if name_len > 0 and name_len*2 + ctypes.sizeof(info) <= chunk_size: # chunk_size without sig
                         try:
-                            entry.name = index_data[name_start: name_start+name_len*2].decode("utf-16le")
+                            entry.name = index_data[name_start: name_start+name_len*2].tobytes().decode("utf-16le")
                         except UnicodeDecodeError:
                             pass
                     entry.info = info
                     chunk_log += f" flags={info.flags} fsize=0x{info.fsize:x} zsize=0x{info.fsize:x} name={entry.name}"
-                
+
                 elif chunk_sig == b"segm": # file content
                     j = 0
                     if entry.segms is None: entry.segms = []
@@ -179,34 +229,24 @@ def parse_xp3(data: memoryview, base_offset=0, show_log=True) -> Tuple[List[Xp3E
                         chunk_log += f"\n    |{j} flags={segm.flags} offset=0x{segm.offset:x} fsize=0x{segm.fsize:x} zsize=0x{segm.zsize:x}"
                         entry.segms.append(segm)
                         j += 1
-                
+
                 elif chunk_sig == b"adlr": # file hash
                     if chunk_size == 4:
                         entry.adlr = Xp3Adlr_t.from_buffer_copy(index_data, index_start + entry_start + 12)
                         chunk_log += f" hash=0x{entry.adlr.hash:08x}"
-                
-                entry_start += 12 + chunk_size
+
                 if show_log: print(chunk_log)
-            entries.append(entry)
-        
+                entry_start += 12 + chunk_size
+
+        entries.append(entry)
         index_start += 12 + entry_size
 
     return entries
 
-def extract_content(data: memoryview, entry: Xp3Entry, base_offset=0, xp3filter: xp3filter_t=None) -> memoryview:
-    outio = io.BytesIO()
-    
-    for segm in entry.segms:
-        offset = base_offset + segm.offset
-        segdata = data[offset: offset + segm.zsize]
-        if (segm.flags & TVP_XP3_SEGM_ENCODE_METHOD_MASK) == TVP_XP3_SEGM_ENCODE_ZLIB: 
-            segdata = memoryview(bytearray(zlib.decompress(segdata)))
-        if xp3filter: 
-            segdata = memoryview(bytearray(segdata))
-            xp3filter(entry.adlr.hash, 0,segdata, len(segdata))
-        outio.write(segdata)    
-    
-    return outio.getbuffer()
+def print_xp3(inpath):
+    with open(inpath, "rb") as fp:
+        with mmap.mmap(fp.fileno(), 0, access=mmap.ACCESS_READ) as data:
+            parse_xp3(data, show_log=True)
 
 def unpack_xp3(inpath, outdir="out", xp3filter: xp3filter_t=None):
     fp = open(inpath, "rb")
@@ -216,7 +256,8 @@ def unpack_xp3(inpath, outdir="out", xp3filter: xp3filter_t=None):
 
     for i, entry in enumerate(entries):
         # decrypt and extract content
-        outdata = extract_content(data, entry, 0, xp3filter)
+        if entry.segms is None: continue 
+        outdata = extract_entry(data, entry, 0, xp3filter)
 
         # prepare path to write
         if entry.info.namelen > 1: subpath = entry.name
@@ -226,7 +267,7 @@ def unpack_xp3(inpath, outdir="out", xp3filter: xp3filter_t=None):
         if not os.path.exists(tmpdir): os.makedirs(tmpdir)
 
         # save decrypted content
-        print(f"extract {i+1}/{len(entries)} {subpath} with 0x{len(outdata):x} size")
+        print(f"[unpack_xp3] {i+1}/{len(entries)} {subpath} fsize=0x{len(outdata):x}")
         with open(outpath, "wb") as fp2:
             fp2.write(outdata)
 
@@ -261,7 +302,7 @@ def pack_xp3(indir, outpath, compress="none", xp3filter: xp3filter_t=None):
         info.namelen, info.name = len(inpath), inpath
         segm.fsize = len(data)
         segm.offset = outio.tell()
-        adlr.hash = xp3adler32(1, data)
+        adlr.hash = update_adler32(data, 1)
         if xp3filter:
             data = memoryview(bytearray(data))
             xp3filter(adlr.hash, 0, data, len(data))
@@ -277,7 +318,7 @@ def pack_xp3(indir, outpath, compress="none", xp3filter: xp3filter_t=None):
             segm.zsize = len(data)
             outio.write(data)
 
-        print(f"add {i+1}/{len(inpaths)} {inpath} fsize=0x{info.fsize} zsize=0x{info.zsize}")
+        print(f"[pack_xp3] {i+1}/{len(inpaths)} {inpath} fsize=0x{info.fsize} zsize=0x{info.zsize}")
         entry = Xp3Entry(info, adlr,[segm])
         entries.append(entry)
 
@@ -311,8 +352,8 @@ def pack_xp3(indir, outpath, compress="none", xp3filter: xp3filter_t=None):
         fp.write(outio.getbuffer())
     
 def cli(cmdstr=None):
-    p = argparse.ArgumentParser(description="pack or unpack krkr2 xp3 file, v0.1, by devseed")
-    p.add_argument("method", choices=["pack", "unpack"])
+    p = argparse.ArgumentParser(description=__description__)
+    p.add_argument("method", choices=["pack", "unpack", "print"])
     p.add_argument("inpath", help="file path or dir path")
     p.add_argument("-o", "--outpath", default="out")
     p.add_argument("-c", "--compress", choices=["none", "index", "content", "all"], default="none")
@@ -320,12 +361,20 @@ def cli(cmdstr=None):
         p.print_help()
         return
 
-    args = p.parse_args(cmdstr.split(" ") if cmdstr is not None else None)
-    print(args)
-    if args.method == "unpack":
-        unpack_xp3(args.inpath, args.outpath, None)
-    elif args.method == "pack":
-        pack_xp3(args.inpath, args.outpath, args.compress, None)
+    args = p.parse_args(shlex.split(cmdstr) if cmdstr is not None else None)
+    method, inpath, outpath = args.method, args.inpath, args.outpath
+    if method == "print":
+        print_xp3(inpath)
+    if method == "unpack":
+        unpack_xp3(inpath, outpath, None)
+    elif method == "pack":
+        pack_xp3(inpath, outpath, args.compress, None)
 
 if __name__ == "__main__":
     cli()
+
+"""
+history:
+v0.1, initial version
+v0.1.1, add other print_xp3, xp3entry raw data and decrypt_text
+"""

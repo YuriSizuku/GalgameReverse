@@ -258,13 +258,14 @@ Localization util tools are moved to [Localization](https://github.com/YuriSizuk
 ### krkr
 
 * `krkr_text.py` , batch convert text encoding
-* `krkr_xp2.py`, tool for krkr1 (v0.91) xp2 (xpk, XPK2) format files
-* `krkr_xp3.py`, tool for krkr2 xp3 files (support xp3filter)
-* `krkr_xp3_hxv4.py`, tool for krkr hxv4 xp3 files (using keys and contrl_block dumped by `krkr_hxv4_dumpkey.js`)
-* `krkr_hxcrypt.py`, implement CxEncryption and HxEncryption, rewrite from c# to python
-* `krkr_hxv4_dumpkey.js`, dump hxv4 cx keys used for garbro and `krkr_xp3_hxv4.py`
-* `krkr_hxv4_dumphash.cpp`, dynamic batch hxv4 hash calculator for filelist and dirlist  
-* `krkr_hxv4_patch.cpp`, redirect `arc:\\.\xxx`  (hxv4) to unencrypted `patch.xp3>xxx` (previous cx) for localization, as well as font  
+* `krkr_xp2.py`, krkr1 (v0.91) xp2 (xpk, XPK2) format files
+* `krkr_xp3.py`, krkr2 xp3 files (support xp3filter)
+* `krkr_xp3_hxv4.py`, krkr hxv4 xp3 files (using keys and contrl_block dumped by `krkr_hxv4_dumpkey.js`)
+* `krkr_hxcrypt.py`, krkr hxv4 CxEncryption and HxEncryption rewrite from c# to python
+* `krkr_hxv4_hash.py`, krkr hxv4 static hash calculator for filehash and dirhash
+* `krkr_hxv4_dumpkey.js`, krkr hxv4 dump hxv4 cx keys used for garbro and `krkr_xp3_hxv4.py`
+* `krkr_hxv4_dumphash.cpp`, krkr hxv4 dynamic hash calculator for filelist and dirlist
+* `krkr_hxv4_patch.cpp`, krkr hxv4 redirect `arc:\\.\xxx` to unencrypted `patch.xp3>xxx` (previous cx) for localization
 
 > つばさの丘の姫王
 

@@ -287,7 +287,7 @@ def cli(cmdstr=None):
         p.print_help()
         return
 
-    args = p.parse_args(shlex.split(cmdstr) if cmdstr is not None else None)
+    args = p.parse_args(shlex.split(cmdstr, posix=False) if cmdstr is not None else None)
     method, inpath, outpath = args.method, args.inpath, args.outpath
     parampath, blockpath = args.parampath, args.blockpath
     param, block = Hxv4Param(), b""

@@ -1,25 +1,28 @@
 """
-  for decoding and encoding tm2 format texture
-    v0.3.1, developed by devseed
+sony psp tm2 tool
+v0.3.2, developed by devseed
 
-    tested games:
-    ULJM05054 金色のコルダ (index4)
-    ULJM06326 Jewelic Nightmare (index8)
+tested games:
+ULJM05054 金色のコルダ (index4)
+ULJM06326 Jewelic Nightmare (index8)
 
-
-    refer:
-    https://openkh.dev/common/tm2.html
-    https://github.com/marco-calautti/Rainbow
+refer:
+https://openkh.dev/common/tm2.html
+https://github.com/marco-calautti/Rainbow
     
 """
 
+__version__ = "v0.3.2"
+__description__ = f"sony psp tm2 tools {__version__}, developed by devseed"
+
 import os
 import sys
-import numpy as np
 from enum import Enum
 from ctypes import *
-from PIL import Image, ImagePalette
 from typing import Tuple, List
+
+import numpy as np
+from PIL import Image, ImagePalette
 
 class COLOR_TYPE(Enum):
     UNDEFINED = 0
@@ -83,49 +86,49 @@ class Tm2():
         return (x2, y2)
     
     @classmethod
-    def deinterlace_palatte(cls, palatte):
+    def deinterlace_palette(cls, palette):
         """
         https://github.com/marco-calautti/Rainbow/blob/51bb1834181c474893bdfbd810e3a45fe6397914/Rainbow.ImgLib/ImgLib/Filters/TIM2PaletteFilter.cs#L26
         """
 
-        parts = len(palatte) // 32
+        parts = len(palette) // 32
         stripes = 2
         colors = 8
         blocks = 2
         
-        newpallate = [0] * len(palatte)
+        newpallate = [0] * len(palette)
         i = 0
         for part in range(parts):
             for block in range(blocks):
                 for stripe in range(stripes):
                     for color in range(colors):
                         i2 = part * colors * stripes * blocks + block * colors + stripe * stripes * colors + color 
-                        newpallate[i] = palatte[i2]
+                        newpallate[i] = palette[i2]
                         i+=1
-        assert(i==len(palatte))
+        assert(i==len(palette))
         return newpallate
     
     @classmethod
-    def interlace_palatte(cls, palatte):
+    def interlace_palette(cls, palette):
         """
         https://github.com/marco-calautti/Rainbow/blob/51bb1834181c474893bdfbd810e3a45fe6397914/Rainbow.ImgLib/ImgLib/Filters/TIM2PaletteFilter.cs#L26
         """
 
-        parts = len(palatte) // 32
+        parts = len(palette) // 32
         stripes = 2
         colors = 8
         blocks = 2
         
-        newpallate = [0] * len(palatte)
+        newpallate = [0] * len(palette)
         i = 0
         for part in range(parts):
             for block in range(blocks):
                 for stripe in range(stripes):
                     for color in range(colors):
                         i2 = part * colors * stripes * blocks + block * colors + stripe * stripes * colors + color 
-                        newpallate[i2] = palatte[i]
+                        newpallate[i2] = palette[i]
                         i+=1
-        assert(i==len(palatte))
+        assert(i==len(palette))
         return newpallate
     
     @classmethod
@@ -200,7 +203,7 @@ class Tm2():
             offset_palette = offset_picdata + pic.size_image # palette is at the end
             palette = [np.frombuffer(self.m_data, np.uint8, 4, cur) 
                     for cur in range(offset_palette, offset_palette + size_palette, 4)]
-            if interlaced:  palette = self.deinterlace_palatte(palette)
+            if interlaced:  palette = self.deinterlace_palette(palette)
 
             img = np.zeros((h, w, 4), dtype=np.uint8) # load image
             for y in range(h):
@@ -240,7 +243,7 @@ class Tm2():
                     ppicdata[i] = (low&0xf) + ((high<<4)&0xf0)
             elif color_type == COLOR_TYPE.INDEX8:
                 interlaced = pic.type_clutcolor & 0x80 == 0
-                if interlaced: palettedata = np.array(self.interlace_palatte(palette)).tobytes()
+                if interlaced: palettedata = np.array(self.interlace_palette(palette)).tobytes()
                 assert(img.size == pic.size_image)
                 memmove(ppicdata, img.tobytes(), pic.size_image)
             memmove(ppalette, palettedata, pic.size_palette)
@@ -262,7 +265,7 @@ class Tm2():
 
         if outpath != "":
             imgpil = Image.fromarray(np.array(img)) 
-            if palette and 0: # not extract with palatte, this makes alpha not work
+            if palette:
                 palettepil = ImagePalette.ImagePalette("RGBA", np.array(palette).tobytes())
                 imgpil = imgpil.convert("P", palette=palettepil, colors=len(palette)//2)
             imgpil.save(outpath)  
@@ -275,12 +278,17 @@ class Tm2():
         
         palette = None
         imgpil = Image.open(inpath)
+        imgpil.apply_transparency()
+        assert imgpil.width == pic.width, f"img width {imgpil.width}!={ pic.width}"
+        assert imgpil.height == pic.height, f"img height {imgpil.height}!={ pic.height}"
         if pic.type_imagecolor == COLOR_TYPE.INDEX4.value:
-            imgpil = imgpil.convert("P", colors=16)
+            if imgpil.palette is None: imgpil = imgpil.convert("P", colors=16)
+            assert len(imgpil.palette.colors) <= 16, f"pallate color {len(imgpil.palette.colors)} > 16"
             palette = [np.array(color, np.uint8) for color in imgpil.palette.colors]
             if len(palette) < 16: palette.extend([np.array([0, 0, 0, 0], dtype=np.uint8)]*(16- len(palette)))
         elif pic.type_imagecolor == COLOR_TYPE.INDEX8.value:
-            imgpil = imgpil.convert("P", colors=256)
+            if imgpil.palette is None: imgpil = imgpil.convert("P", colors=256)
+            assert len(imgpil.palette.colors) <= 256, f"pallate color {len(imgpil.palette.colors)} > 256"
             palette = [np.array(color, np.uint8) for color in imgpil.palette.colors]
             if len(palette) < 256: palette.extend([np.array([0, 0, 0, 0], dtype=np.uint8)]*(256- len(palette)))
         img = np.array(imgpil)
@@ -316,20 +324,17 @@ def insert_tm2(tm2path, indir, outpath="out.tm2", use_swizzle=False):
     with open(outpath, 'wb') as fp:
         fp.write(data)
 
-def debug():
-    pass
-
 def cli(argv):
     def cmd_help():
-        print("psptm2 tools v0.3, developed by devseed")
+        print(__description__)
         print("usage")
-        print("psptm2 e[swi] tm2path [outdir] # convert tm2 to pngs")
-        print("psptm2 i[swi] tm2path indir [outpath] # insert pngs to tm2")
-        print("psptm2 c[swi|deswi][tilew|tileh] imgpath [outpath] # swizzle or deswizzle image")
+        print("sony_tm2 e[swi] tm2path [outdir] # convert tm2 to pngs")
+        print("sony_tm2 i[swi] tm2path indir [outpath] # insert pngs to tm2")
+        print("sony_tm2 c[swi|deswi][tilew|tileh] imgpath [outpath] # swizzle or deswizzle image")
         print("examples: ")
-        print("psptm2 eswi xxx.tm2 ./")
-        print("psptm2 iswi xxx.tm2 ./ xxx_rebuild.tm2")
-        print("psptm2 cdeswi1608 xxx.png xxx_deswi.png")
+        print("sony_tm2 eswi xxx.tm2 ./")
+        print("sony_tm2 iswi xxx.tm2 ./ xxx_rebuild.tm2")
+        print("sony_tm2 cdeswi1608 xxx.png xxx_deswi.png")
 
     def cmd_export():
         outdir = argv[3] if len(argv) > 3 else "out"
@@ -367,13 +372,13 @@ def cli(argv):
     else: raise NotImplementedError(f"unknow type {cmdtype}")
 
 if __name__=='__main__':
-    # debug()
     cli(sys.argv)
 
 """
 history:
-  v0.1, implement export iamge with COLOR_A8B8G8R8, COLOR_INDEX4, COLOR_INDEX8
-  v0.2, add swizzle deswizzle method
-  v0.3, add insert png32 to tim2, and convert with index4/index8 if necessory
-  v0.3.1, support index8 interlaced pallatte format 
+v0.1, implement export iamge with COLOR_A8B8G8R8, COLOR_INDEX4, COLOR_INDEX8
+v0.2, add swizzle deswizzle method
+v0.3, add insert png32 to tim2, and convert with index4/index8 if necessory
+v0.3.1, support index8 interlaced pallatte format 
+v0.3.2, change the extract to raw format, add inserting palette images
 """

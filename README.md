@@ -5,9 +5,11 @@
 Reverse util tools are moved to [ReverseTool](https://github.com/YuriSizuku/ReverseTool)  
 Localization util tools are moved to [Localization](https://github.com/YuriSizuku/LocalizationTool)  
 
-## 1. Console galgame  
+## 1. Console galgame
 
-* `psptm2.py`, encode or decode `tm2` format, support swizzle // 231218 added  
+### sony
+
+* `sony_tm2.py`, encode or decode `tm2` format, support swizzle // 231218 added  
 
 ### koei
 

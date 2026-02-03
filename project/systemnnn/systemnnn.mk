@@ -27,6 +27,7 @@ else ifneq (,$(findstring gcc, $(CC))) # for mingw-w64
 CFLAGS+=-m32
 LDFLAGS+= -Wl,--gc-sections \
 	-static-libgcc -static-libstdc++ \
+	-Wl,--version-script=src/systemnnn_patch.ld \
 	-Wl,-Bstatic,--whole-archive -lwinpthread \
 	-Wl,--no-whole-archive
 else ifneq (,$(findstring tcc, $(CC))) # for tcc

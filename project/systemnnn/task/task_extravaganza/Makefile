@@ -1,0 +1,79 @@
+# usage: 
+# in linux, "source ./_env.sh"
+# in windows, "msys2_shell -here -no-start -defterm -full-path" to activate, then "source ./_env.sh"
+
+# _env.sh example
+# if [ -n "$(uname -a | grep Msys)" ]; then
+#     export BASE_DIR=/d/Downloads/WajinIbunroku
+#     export GAME_EXEC=start
+# else
+#     LOCPATH=~/.wine/locale
+#     if ! [ -d $LOCPATH/zh_CN.UTF-8 ]; then
+#         mkdir -p $LOCPATH
+#         localedef -f UTF-8 -i zh_CN $LOCPATH/zh_CN.UTF-8
+#     fi
+#     export BASE_DIR=~/Downloads/WajinIbunroku
+#     export GAME_EXEC=LOCPATH=$LOCPATH\ LANG=zh_CN.UTF-8\ wine
+# fi
+# source activate.sh
+
+SHELL := /bin/bash
+
+all: 
+	@echo build Sorairo chspatch
+	@make build_1txt
+	@make build_1spt
+	@make build_2dwq
+	@make build_3dll
+	@make build_3exe
+	
+init_gamedir init_workdir:
+	@./init.sh $@
+	
+build_1txt build_1spt build_2dwq build_3dll build_3exe:
+	@./build.sh $@
+
+release_patch:
+	@./build.sh $@
+
+# wine need
+# sudo apt install gstreamer1.0-libav:i386
+# sudo apt install gstreamer1.0-plugins-bad:i386
+# sudo apt install gstreamer1.0-plugins-base:i386
+# sudo apt install gstreamer1.0-plugins-good:i386
+run:
+	@cd $(GAME_DIR);$(GAME_EXEC) mushiai_chs.exe
+
+# vscode launch.json config
+# can not pause while running, can only set breakpoint on pause or before launch
+# "name": "linux wajin_asaki",
+# "type": "cppdbg",
+# "request": "launch",
+# "program": "mushiai_chs.exe",
+# "args": [],
+# "cwd": "~/Downloads/WajinIbunroku/vndb-v11340_rebuild/",
+# "stopAtEntry": false,
+# "environment": [],
+# "MIMode": "gdb",
+# "miDebuggerPath": "/usr/bin/i686-w64-mingw32-gdb",
+# "miDebuggerServerAddress": "localhost:1234",
+run_gdbserver:
+	@cd $(GAME_DIR); LOCPATH=~/.wine/locale LANG=zh_CN.UTF-8 \
+		wine Z:/usr/share/win32/gdbserver.exe localhost:1234 mushiai_chs.exe
+
+send: init_gamedir
+	@cp -rf $(WORK_DIR)/5.result/* $(GAME_DIR)
+
+test:
+	@make send
+	@make run
+
+clean:
+	@rm -f $(WORK_DIR)/*.7z
+	@rm -rf ${WORK_DIR}/4.post/*
+	@rm -rf ${WORK_DIR}/5.result/*
+
+.PHONY: all run run_gdbserver send test clean \
+	init_gamedir init_workdir \
+	build_1txt build_1spt build_2dwq build_3dll build_3exe \
+	release_patch

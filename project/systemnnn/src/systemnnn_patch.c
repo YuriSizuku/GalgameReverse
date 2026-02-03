@@ -30,9 +30,14 @@
 #include <shlwapi.h>
 
 #define WINOVERRIDE_IMPLEMENTATION
+#define WINOVERRIDE_STATIC
 #define WINHOOK_IMPLEMENTATION
+#define WINHOOK_STATIC
 #define MINHOOK_IMPLEMENTATION
+#define MINHOOK_STATIC
+#define WINDYN_NOINLINE
 #define STB_IMAGE_IMPLEMENTATION
+#define STB_IMAGE_STATIC
 #define STBI_NO_THREAD_LOCALS
 #ifdef __TINYC__
 #define STBI_NO_SIMD 
@@ -74,7 +79,7 @@ typedef BOOL (__fastcall *T_CPicture_LoadDWQ)(
 
 MINHOOK_DEFINE(CPicture_LoadDWQ);
 
-BOOL __fastcall CPicture_LoadDWQ_hook(void *this, size_t edx, 
+static BOOL __fastcall CPicture_LoadDWQ_hook(void *this, size_t edx, 
     LPSTR fileName, BOOL b256Flag, LPSTR dirName)
 {
     // https://github.com/tinyan/SystemNNN/blob/afd986747eaab074845cd9217f2427a3a438f5c6/nyanPictureLib/Picture.cpp#L938
@@ -93,7 +98,7 @@ BOOL __fastcall CPicture_LoadDWQ_hook(void *this, size_t edx,
         stbi_uc *img = stbi_load(tmp, &x, &y, &comp, 0);
         if(img)
         {
-            printf("-> %s(%dx%d, %d)\n", tmp, x, y, comp);
+            LOGi("-> %s (%dx%d, %d)\n", tmp, x, y, comp);
             for(int i=0;i<x*y;i++) // rgb -> bgr
             {
                 pic[4*i] = img[comp*i+2];
@@ -169,6 +174,10 @@ static void init()
     {
         MINHOOK_BINDADDR((void*)(base + g_systemnnncfg.CPicture_LoadDWQ), CPicture_LoadDWQ);
     }
+    // if (!PathFileExistsA("./sav"))
+    // {
+    //     CreateDirectoryA("./sav",NULL);
+    // }
 }
 
 static void deinit()

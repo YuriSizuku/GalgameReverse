@@ -103,7 +103,7 @@ class RPAv3ArchiveHandler(object):
 
         return index
     
-def extract_wjz(inpath, outdir="out"):
+def extract_rpa(inpath, outdir="out"):
     fp = open(inpath, "rb")
     infile = mmap.mmap(fp.fileno(), 0, access=mmap.ACCESS_READ)
     index = RPAv3ArchiveHandler.read_index(infile)
@@ -125,12 +125,12 @@ def debug():
 
 def cli(argv=sys.argv):
     if len(argv) < 2:
-        print("skyblue_wjz inpath [outdir] // inpath wjz *.blend")
+        print("skyblue_rpa inpath [outdir] // inpath wjz *.blend")
 
     inpath = argv[1]
     outdir = argv[2] if len(argv) > 2 else os.path.dirname(inpath)
 
-    extract_wjz(inpath, outdir)
+    extract_rpa(inpath, outdir)
 
 if __name__ == "__main__":
     cli()

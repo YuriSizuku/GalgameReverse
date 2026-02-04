@@ -284,7 +284,11 @@ Localization util tools are moved to [Localization](https://github.com/YuriSizuk
 
 > 苍空的彼端 // 250203 added
 
-* `skyblue_wjz.py` extract `*.blend` rpa file with sig `WJZ-4.9`
+* `skyblue_rpa.py` extract `*.blend` rpa file with sig `WJZ-4.9`
+
+> 海蓝星之梦 // 250205 added
+
+* `blueplanet_rpa.py` extract `*.dll` rpa file with sig `HLXZMENG`
 
 ### tyrano
 

@@ -33,7 +33,7 @@ namespace G1WIN
 {
     static Utils::FontManager FontManager{};
 
-    static constexpr const UINT_PTR FONT_MENU_ID  { 0x114514 };
+    static constexpr const UINT_PTR FONT_MENU_ID  { 0x114514   };
     static constexpr const wchar_t* FONT_MENU_TEXT{ L"更改字体" };
 
     DEBUG_ONLY(static HANDLE std_output_handle{});

@@ -289,16 +289,16 @@ namespace G1WIN
             #else
             __asm__ __volatile__
             (
-                "pushal\n"                    
-                "movl 0x34(%%esp), %%eax\n"
-                "pushl %%edx\n"
-                "pushl %%eax\n"
-                "pushl %%esi\n"
-                "pushl %%edi\n"
-                "call %P0\n"
-                "popal\n"
-                "pushl $0x041AB96\n"
-                "ret\n"
+                "pushal;"                    
+                "movl 0x34(%%esp), %%eax;"
+                "pushl %%edx;"
+                "pushl %%eax;"
+                "pushl %%esi;"
+                "pushl %%edi;"
+                "call %P0;"
+                "popal;"
+                "pushl $0x041AB96;"
+                "ret;"
                 :
                 : "i" (TargetDrawText)
                 : "cc", "memory"

@@ -105,7 +105,7 @@ namespace G1WIN
         // 更换字体
         ::TEXTMETRIC tm{};
         ::GetTextMetricsA(hdcMem, &tm);
-        auto tarFont = FontManager.GetSJISFont(tm.tmHeight);
+        auto tarFont = FontManager.GetGBKFont(tm.tmHeight);
         if (tarFont != nullptr)
         {
             ::SelectObject(hdcMem, tarFont);

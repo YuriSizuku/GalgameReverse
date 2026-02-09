@@ -33,8 +33,8 @@ namespace G1WIN
 {
     static Utils::FontManager FontManager{};
 
-    static constexpr const UINT_PTR MENU_ID { 0x114514 };
-    static constexpr const wchar_t* MenuText{ L"更改字体" };
+    static constexpr const UINT_PTR FONT_MENU_ID  { 0x114514 };
+    static constexpr const wchar_t* FONT_MENU_TEXT{ L"更改字体" };
 
     DEBUG_ONLY(static HANDLE std_output_handle{});
     DEBUG_ONLY(static auto debug_log(std::string_view str, uint32_t cp = ::GetACP()) -> void
@@ -249,11 +249,11 @@ namespace G1WIN
             {
                 if ((wParam & 0xFF) == VK_F1)
                 {
-                    ::SendMessageW(hWnd, WM_COMMAND, 0x114514, NULL);
+                    ::SendMessageW(hWnd, WM_COMMAND, FONT_MENU_ID, NULL);
                 }
                 return TRUE;
             }
-            else if (uMsg == WM_COMMAND && wParam == 0x114514)
+            else if (uMsg == WM_COMMAND && wParam == FONT_MENU_ID)
             {
                 G1WIN::FontManager.GUIChooseFont();
                 return TRUE;
@@ -313,8 +313,8 @@ namespace G1WIN
             __asm
             {
                 pushad
-                push MenuText
-                push MENU_ID
+                push FONT_MENU_TEXT
+                push FONT_MENU_ID
                 push MF_UNCHECKED
                 push eax // hMenu
                 call AppendMenuW
@@ -334,8 +334,8 @@ namespace G1WIN
                 "jmp *%4;"          
                 :
                 : 
-                "g" (MenuText),     
-                "g" (MENU_ID),      
+                "g" (FONT_MENU_TEXT),
+                "g" (FONT_MENU_ID),
                 "g" (MF_UNCHECKED), 
                 "s" (AppendMenuW),  
                 "m" (g_pfnOlds[7]) 

@@ -124,19 +124,31 @@ void install_fonthook()
 extern int __cdecl check_RegKey_hook(const char* key);
 // 0x422510
 extern int __cdecl get_reg_value_hook(const char* key, char* lpData);
+// 0x444590
+extern LRESULT CALLBACK WndProc_Hook(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+// 0x41A7A4
+extern void DrawText_Hook(void);
+// 0x42D3EA
+extern void AddFontManagerMenu(void);
 
 PVOID g_pfnTargets[] = {
     (PVOID)0x44850C, 
     (PVOID)0x44BD90, 
     (PVOID)0x44B9B0,
     (PVOID)0x4226A0,
-    (PVOID)0x422510 };
+    (PVOID)0x422510,
+    (PVOID)0x444590,
+    (PVOID)0x41A7A4,
+    (PVOID)0x42D3EA };
 PVOID g_pfnNews[] = {
     (PVOID)decodelzss_44850C_hook, 
     (PVOID)_ismbblead_hook,
     (PVOID)_setmbcp_hook,
     (PVOID)check_RegKey_hook,
-    (PVOID)get_reg_value_hook };
+    (PVOID)get_reg_value_hook,
+    (PVOID)WndProc_Hook,
+    (PVOID)DrawText_Hook,
+    (PVOID)AddFontManagerMenu };
 PVOID g_pfnOlds[sizeof(g_pfnTargets)/sizeof(PVOID)];
 
 void install_hooks()
@@ -144,7 +156,11 @@ void install_hooks()
     #ifdef _DEBUG
     AllocConsole();
     freopen("CONOUT$", "w", stdout);
-    printf("install hook, v0.1.1, build in 220702\n");
+    #if defined(PROJECT_NAME) && defined(PROJECT_VERSION) && defined(PROJECT_BUILD_TIME)
+        printf("install hook " PROJECT_NAME ", v" PROJECT_VERSION ", build in " PROJECT_BUILD_TIME ".\n\n");
+    #else
+        printf("install hook, v0.1.1, build in 220702\n");
+    #endif
     #endif
     install_fonthook();
     winhook_inlinehooks(

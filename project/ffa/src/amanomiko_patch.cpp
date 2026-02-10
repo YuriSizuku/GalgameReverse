@@ -21,12 +21,12 @@
 #endif
 
 #if defined(_MSC_VER) && !defined(__clang__)
-#define naked_function __declspec(naked)
-#define Naked_Function __declspec(naked)
+#define naked_function __declspec(naked, noinline)
+#define Naked_Function __declspec(naked, noinline)
 #define MSVC_COMPILER
 #else
-#define naked_function __attribute__((naked))
-#define Naked_Function __attribute__((naked))
+#define naked_function __attribute__((naked, noinline, used))
+#define Naked_Function __attribute__((naked, noinline, used))
 #endif
 
 namespace G1WIN
@@ -232,9 +232,11 @@ namespace G1WIN
         }
 
         // 0x444590
+        static auto CALLBACK JmpWndProc(void) -> void;
+
         auto CALLBACK WndProc_Hook(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) -> LRESULT
         {
-            const auto call_from_raw = reinterpret_cast<decltype(WndProc_Hook)*>(g_pfnOlds[5]);
+            const auto call_from_raw = reinterpret_cast<decltype(WndProc_Hook)*>(JmpWndProc);
 
             if (uMsg == WM_CREATE)
             {
@@ -264,6 +266,35 @@ namespace G1WIN
             }
 
             return call_from_raw(hWnd, uMsg, wParam, lParam);
+        }
+
+        static Naked_Function auto CALLBACK JmpWndProc(void) -> void
+        {
+            #ifdef MSVC_COMPILER
+            __asm
+            {
+                sub esp, 0x48
+                push ebx
+                push ebp
+                mov ebp, dword ptr ss:[esp+0x58]
+                push 0x444599
+                ret
+            }
+            #else
+            __asm__ __volatile__ 
+            (
+                "subl $0x48, %%esp;"      
+                "pushl %%ebx;"            
+                "pushl %%ebp;"            
+                "movl 0x58(%%esp), %%ebp;"
+    
+                "pushl $0x444599;"
+                "ret;"            
+                :
+                :
+                : "cc", "memory"
+            );
+            #endif
         }
 
         // 0x41A7A4
@@ -319,29 +350,82 @@ namespace G1WIN
                 push eax // hMenu
                 call AppendMenuW
                 popad
-                jmp dword ptr ds:[g_pfnOlds + 0x1C];
+
+                test eax, eax
+                jz __42D3C9
+                push 0x42D3F5
+                ret
+
+            __42D3C9:
+                push 0x42D3C9
+                ret
             }
             #else
             __asm__ __volatile__
             (
                 "pushal;"
-                "pushl %0;"         
-                "pushl %1;"         
-                "pushl %2;"         
-                "pushl %%eax;"      
-                "call %P3;"         
-                "popal;"
-                "jmp *%4;"          
-                :
+                "pushl %[text];"
+                "pushl %[id];"
+                "pushl %[flag];"
+                "pushl %%eax;"       
+                "call %P[func];"     
+                "popal;"             
+
+                "testl %%eax, %%eax;"
+                "jz 1f;"             
+
+                "pushl $0x42D3F5;"
+                "ret;"
+
+                "1:"
+                "pushl $0x42D3C9;"
+                "ret;"
+                
                 : 
-                "g" (FONT_MENU_TEXT),
-                "g" (FONT_MENU_ID),
-                "g" (MF_UNCHECKED), 
-                "s" (AppendMenuW),  
-                "m" (g_pfnOlds[7]) 
+                : [text] "g" (FONT_MENU_TEXT),
+                  [id]   "g" (FONT_MENU_ID),
+                  [flag] "g" (MF_UNCHECKED),
+                  [func] "s" (AppendMenuW)
                 : "cc", "memory"
             );
             #endif
         }
+
+        #ifdef libfontmanager
+        
+        PVOID g_pfnOlds[]{ nullptr };
+        
+        static auto JmpWrite(LPVOID OrgAddr, LPVOID TarAddr) -> bool
+        {
+            BYTE _Asm[5] = { 0xE9, 0x0, 0x0, 0x0, 0x0 };
+            auto _Tar{ reinterpret_cast<DWORD>(TarAddr) };
+            auto _Org{ reinterpret_cast<DWORD>(OrgAddr) };
+            auto Addr{ static_cast<DWORD>(_Tar - _Org - 5) };
+            *reinterpret_cast<DWORD*>(_Asm + 1) = Addr;
+
+            DWORD  Protect{};
+            SIZE_T Written{};
+            if (::VirtualProtect(OrgAddr, sizeof(_Asm), PAGE_EXECUTE_READWRITE, &Protect))
+            {
+                static_cast<void>(WriteProcessMemory(INVALID_HANDLE_VALUE, OrgAddr, &_Asm, sizeof(_Asm), &Written));
+                static_cast<void>(VirtualProtect(OrgAddr, sizeof(_Asm), Protect, &Protect));
+                return sizeof(_Asm) == Written;
+            }
+
+            return FALSE;
+        }
+        
+        auto APIENTRY DllMain(HMODULE, DWORD ul_reason_for_call, LPVOID) -> BOOL
+        {
+            if (DLL_PROCESS_ATTACH == ul_reason_for_call)
+            {
+                JmpWrite(reinterpret_cast<LPVOID>(0x444590), reinterpret_cast<LPVOID>(WndProc_Hook));
+                JmpWrite(reinterpret_cast<LPVOID>(0x41A7A4), reinterpret_cast<LPVOID>(DrawText_Hook));
+                JmpWrite(reinterpret_cast<LPVOID>(0x42D3EA), reinterpret_cast<LPVOID>(AddFontManagerMenu));
+            }
+            return { TRUE };
+        }
+
+        #endif
     }
 }

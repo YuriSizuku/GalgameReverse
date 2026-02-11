@@ -108,13 +108,13 @@ namespace G1WIN
         ::SetTextCharacterExtra(hdcMem, extra);
 
         // 清空画布上的内容
-        if (::BITMAP bmp{}; ::GetObjectA(hTargetBitmap, sizeof(BITMAP), &bmp))
+        if (BITMAP bmp{}; ::GetObjectA(hTargetBitmap, sizeof(BITMAP), &bmp))
         {
             ::BitBlt(hdcMem, 0, 0, bmp.bmWidth, bmp.bmHeight, NULL, 0, 0, RGB(0, 0, 0));
         }
         
         // 更换字体
-        if (::TEXTMETRIC tm{}; ::GetTextMetricsA(hdcMem, &tm))
+        if (TEXTMETRIC tm{}; ::GetTextMetricsA(hdcMem, &tm))
         {
             const HFONT tarFont{ FontManager.GetGBKFont(tm.tmHeight) };
             //const HFONT tarFont{ FontManager.GetSJISFont(tm.tmHeight) };

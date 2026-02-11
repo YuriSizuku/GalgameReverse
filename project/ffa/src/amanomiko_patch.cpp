@@ -102,19 +102,20 @@ namespace G1WIN
         const HGDIOBJ hOldBmp{ ::SelectObject(hdcMem, hTargetBitmap) };
         const HGDIOBJ hOldFont{ hFont ? ::SelectObject(hdcMem, hFont) : nullptr };
 
-        // 清空画布上的内容
-        BITMAP bmp{};
-        ::GetObjectA(hTargetBitmap, sizeof(BITMAP), &bmp);
-        ::BitBlt(hdcMem, 0, 0, bmp.bmWidth, bmp.bmHeight, NULL, 0, 0, RGB(0, 0, 0));
-
         // 设置背景以及文字颜色
         ::SetBkColor(hdcMem, RGB(0, 0, 0));
         ::SetTextColor(hdcMem, RGB(255, 255, 255));
         ::SetTextCharacterExtra(hdcMem, extra);
+
+        // 清空画布上的内容
+        if (::BITMAP bmp{}; ::GetObjectA(hTargetBitmap, sizeof(BITMAP), &bmp))
         {
-            // 更换字体
-            ::TEXTMETRIC tm{};
-            ::GetTextMetricsA(hdcMem, &tm);
+            ::BitBlt(hdcMem, 0, 0, bmp.bmWidth, bmp.bmHeight, NULL, 0, 0, RGB(0, 0, 0));
+        }
+        
+        // 更换字体
+        if (::TEXTMETRIC tm{}; ::GetTextMetricsA(hdcMem, &tm))
+        {
             const HFONT tarFont{ FontManager.GetGBKFont(tm.tmHeight) };
             //const HFONT tarFont{ FontManager.GetSJISFont(tm.tmHeight) };
             if (tarFont != nullptr)

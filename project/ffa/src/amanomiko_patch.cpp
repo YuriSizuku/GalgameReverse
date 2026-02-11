@@ -75,22 +75,22 @@ namespace G1WIN
 
     static auto __cdecl PreparePaletteContext(HDC hdc) -> HGDIOBJ
     {
-        return reinterpret_cast<decltype(PreparePaletteContext)*>(0x429CE0)(hdc);
+        return reinterpret_cast<decltype(&PreparePaletteContext)>(0x429CE0)(hdc);
     }
 
     static auto __cdecl RestorePalette(HDC hdc) -> HPALETTE
     {
-        return reinterpret_cast<decltype(RestorePalette)*>(0x429D10)(hdc);
+        return reinterpret_cast<decltype(&RestorePalette)>(0x429D10)(hdc);
     }
 
     static auto __cdecl UpdateLayer(uintptr_t obj, int a2, int a3, int a4, int x, int y, int width, int height) -> int
     {
-        return reinterpret_cast<decltype(UpdateLayer)*>(0x41BBA0)(obj, a2, a3, a4, x, y, width, height);
+        return reinterpret_cast<decltype(&UpdateLayer)>(0x41BBA0)(obj, a2, a3, a4, x, y, width, height);
     }
 
     static auto __cdecl CharCount(int uchar) -> int
     {
-        return (reinterpret_cast<decltype(CharCount)*>(0x44BD90)(uchar) != 0) + 1;
+        return (reinterpret_cast<decltype(&CharCount)>(0x44BD90)(uchar) != 0) + 1;
     }
 
     static auto DrawText(HDC hdc, const char* text, int count, int extra) -> SIZE
@@ -102,29 +102,61 @@ namespace G1WIN
         const HGDIOBJ hOldBmp{ ::SelectObject(hdcMem, hTargetBitmap) };
         const HGDIOBJ hOldFont{ hFont ? ::SelectObject(hdcMem, hFont) : nullptr };
 
-        // 更换字体
-        ::TEXTMETRIC tm{};
-        ::GetTextMetricsA(hdcMem, &tm);
-        auto tarFont = FontManager.GetGBKFont(tm.tmHeight);
-        if (tarFont != nullptr)
-        {
-            ::SelectObject(hdcMem, tarFont);
-        }
+
 
         // 清空画布上的内容
         BITMAP bmp{};
         ::GetObjectA(hTargetBitmap, sizeof(BITMAP), &bmp);
-        ::BitBlt(hdcMem, 0, 0, bmp.bmWidth, bmp.bmHeight, NULL, 0, 0, BLACKNESS);
+        ::BitBlt(hdcMem, 0, 0, bmp.bmWidth, bmp.bmHeight, NULL, 0, 0, RGB(0, 0, 0));
 
         // 设置背景以及文字颜色
         ::SetBkColor(hdcMem, RGB(0, 0, 0));
         ::SetTextColor(hdcMem, RGB(255, 255, 255));
         ::SetTextCharacterExtra(hdcMem, extra);
+        {
+            // 更换字体
+            ::TEXTMETRIC tm{};
+            ::GetTextMetricsA(hdcMem, &tm);
+            HFONT tarFont = FontManager.GetGBKFont(tm.tmHeight);
+            //auto tarFont = FontManager.GetSJISFont(tm.tmHeight);
+            if (tarFont != nullptr)
+            {
+                ::SelectObject(hdcMem, tarFont);
+            }
+        }
 
         // 绘制文字
-        SIZE sizeTotal{};
-        ::GetTextExtentPoint32A(hdcMem, text, count, &sizeTotal);
-        ::TextOutA(hdcMem, 0, 0, text, count);
+        SIZE sizeTotal{}, size{};
+        for (int index{}; index < count;)
+        {
+            const char* current{ text + index };
+            const int charCount{ CharCount(*current) };
+
+            if (charCount == 2)
+            {
+                // 字符替换 § -> ♪
+                if (*reinterpret_cast<const uint16_t*>(current) == 0xECA1) 
+                {
+                    constexpr wchar_t musical_note{ L'♪' };
+                    ::GetTextExtentPoint32W(hdcMem, &musical_note, 1, &size);
+                    ::TextOutW(hdcMem, sizeTotal.cx, 0, &musical_note, 1);
+                    goto __done;
+                }
+            }
+
+            ::GetTextExtentPoint32A(hdcMem, current, charCount, &size);
+            ::TextOutA(hdcMem, sizeTotal.cx, 0, current, charCount);
+
+        __done:
+            sizeTotal.cy = std::max(sizeTotal.cy, size.cy);
+
+            index += charCount;
+            sizeTotal.cx += size.cx;
+            if (index == count)
+            {
+                break;
+            }
+        }
 
         ::SelectObject(hdcMem, hOldBmp);
         if (hOldFont)
@@ -264,8 +296,13 @@ namespace G1WIN
             {
                 G1WIN::FontManager.GUIUpdateDisplayState();
             }
-
             return call_from_raw(hWnd, uMsg, wParam, lParam);
+        }
+
+        // 0x41BDA0
+        auto __cdecl DrawText_Hook(HDC hdc, const char* text, int count, int extra, int, int, int) -> int
+        {
+            return { DrawText(hdc, text, count, extra).cx };
         }
 
         static Naked_Function auto CALLBACK JmpWndProc(void) -> void
@@ -298,7 +335,7 @@ namespace G1WIN
         }
 
         // 0x41A7A4
-        Naked_Function auto DrawText_Hook(void) -> void
+        Naked_Function auto ScenarioDrawText_Hook(void) -> void
         {
             #ifdef MSVC_COMPILER
             __asm
@@ -391,13 +428,45 @@ namespace G1WIN
             #endif
         }
 
+        // 0x42D576
+        Naked_Function auto FixCheckMenuItemIndex(void) -> void
+        {
+            #ifdef MSVC_COMPILER
+            __asm 
+            {
+                cmp edi, 0x03
+                jne __42D57C
+                inc ebx
+            __42D57C:
+                mov ebp, dword ptr ds:[0x00455310]
+                push 0x42D57C
+                ret
+            }
+            #else
+            __asm__ __volatile__ 
+            (
+                "cmpl $0x03, %%edi;"     
+                "jne 1f;"                
+                "incl %%ebx;"            
+                
+                "1:"                        
+                "movl 0x00455310, %%ebp;"
+                "pushl $0x42D57C;"       
+                "ret"                    
+                : 
+                : 
+                : "cc", "memory"
+            );
+            #endif
+        }
+
         #ifdef libfontmanager
         
         PVOID g_pfnOlds[]{ nullptr };
         
         static auto JmpWrite(LPVOID OrgAddr, LPVOID TarAddr) -> bool
         {
-            BYTE _Asm[5] = { 0xE9, 0x0, 0x0, 0x0, 0x0 };
+            BYTE _Asm[5]{ 0xE9, 0x0, 0x0, 0x0, 0x0      };
             auto _Tar{ reinterpret_cast<DWORD>(TarAddr) };
             auto _Org{ reinterpret_cast<DWORD>(OrgAddr) };
             auto Addr{ static_cast<DWORD>(_Tar - _Org - 5) };
@@ -407,8 +476,8 @@ namespace G1WIN
             SIZE_T Written{};
             if (::VirtualProtect(OrgAddr, sizeof(_Asm), PAGE_EXECUTE_READWRITE, &Protect))
             {
-                static_cast<void>(WriteProcessMemory(INVALID_HANDLE_VALUE, OrgAddr, &_Asm, sizeof(_Asm), &Written));
-                static_cast<void>(VirtualProtect(OrgAddr, sizeof(_Asm), Protect, &Protect));
+                static_cast<void>(::WriteProcessMemory(INVALID_HANDLE_VALUE, OrgAddr, &_Asm, sizeof(_Asm), &Written));
+                static_cast<void>(::VirtualProtect(OrgAddr, sizeof(_Asm), Protect, &Protect));
                 return sizeof(_Asm) == Written;
             }
 
@@ -420,8 +489,10 @@ namespace G1WIN
             if (DLL_PROCESS_ATTACH == ul_reason_for_call)
             {
                 JmpWrite(reinterpret_cast<LPVOID>(0x444590), reinterpret_cast<LPVOID>(WndProc_Hook));
-                JmpWrite(reinterpret_cast<LPVOID>(0x41A7A4), reinterpret_cast<LPVOID>(DrawText_Hook));
+                JmpWrite(reinterpret_cast<LPVOID>(0x41BDA0), reinterpret_cast<LPVOID>(DrawText_Hook));
+                JmpWrite(reinterpret_cast<LPVOID>(0x41A7A4), reinterpret_cast<LPVOID>(ScenarioDrawText_Hook));
                 JmpWrite(reinterpret_cast<LPVOID>(0x42D3EA), reinterpret_cast<LPVOID>(AddFontManagerMenu));
+                JmpWrite(reinterpret_cast<LPVOID>(0x42D576), reinterpret_cast<LPVOID>(FixCheckMenuItemIndex));
             }
             return { TRUE };
         }

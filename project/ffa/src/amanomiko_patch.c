@@ -126,10 +126,14 @@ extern int __cdecl check_RegKey_hook(const char* key);
 extern int __cdecl get_reg_value_hook(const char* key, char* lpData);
 // 0x444590
 extern LRESULT CALLBACK WndProc_Hook(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+// 0x41BDA0
+extern int __cdecl DrawText_Hook(HDC hdc, const char* text, int count, int extra, int, int, int);
 // 0x41A7A4
-extern void DrawText_Hook(void);
+extern void ScenarioDrawText_Hook(void);
 // 0x42D3EA
 extern void AddFontManagerMenu(void);
+// 0x42D576
+extern void FixCheckMenuItemIndex(void);
 
 PVOID g_pfnTargets[] = {
     (PVOID)0x44850C, 
@@ -139,7 +143,9 @@ PVOID g_pfnTargets[] = {
     (PVOID)0x422510,
     (PVOID)0x444590,
     (PVOID)0x41A7A4,
-    (PVOID)0x42D3EA };
+    (PVOID)0x42D3EA,
+    (PVOID)0x41BDA0,
+    (PVOID)0x42D576 };
 PVOID g_pfnNews[] = {
     (PVOID)decodelzss_44850C_hook, 
     (PVOID)_ismbblead_hook,
@@ -147,8 +153,10 @@ PVOID g_pfnNews[] = {
     (PVOID)check_RegKey_hook,
     (PVOID)get_reg_value_hook,
     (PVOID)WndProc_Hook,
+    (PVOID)ScenarioDrawText_Hook,
+    (PVOID)AddFontManagerMenu,
     (PVOID)DrawText_Hook,
-    (PVOID)AddFontManagerMenu };
+    (PVOID)FixCheckMenuItemIndex };
 PVOID g_pfnOlds[sizeof(g_pfnTargets)/sizeof(PVOID)];
 
 void install_hooks()

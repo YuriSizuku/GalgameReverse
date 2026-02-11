@@ -309,20 +309,20 @@ namespace G1WIN
             #ifdef MSVC_COMPILER
             __asm
             {
-                sub esp, 0x48
+                sub  esp, 0x48
                 push ebx
                 push ebp
-                mov ebp, dword ptr ss:[esp+0x58]
+                mov  ebp, dword ptr ss:[esp+0x58]
                 push 0x444599
                 ret
             }
             #else
             __asm__ __volatile__ 
             (
-                "subl $0x48, %%esp;"      
+                "subl  $0x48, %%esp;"      
                 "pushl %%ebx;"            
                 "pushl %%ebp;"            
-                "movl 0x58(%%esp), %%ebp;"
+                "movl  0x58(%%esp), %%ebp;"
     
                 "pushl $0x444599;"
                 "ret;"            
@@ -356,14 +356,15 @@ namespace G1WIN
             #else
             __asm__ __volatile__
             (
-                "pushal;"                    
-                "movl 0x34(%%esp), %%eax;"
+                "pushal;"
+                "movl  0x34(%%esp), %%eax;"
                 "pushl %%edx;"
                 "pushl %%eax;"
                 "pushl %%esi;"
                 "pushl %%edi;"
-                "call %P0;"
+                "call  %P0;"
                 "popal;"
+
                 "pushl $0x041AB96;"
                 "ret;"
                 :
@@ -404,7 +405,7 @@ namespace G1WIN
                 "pushl %[id];"
                 "pushl %[flag];"
                 "pushl %%eax;"       
-                "call %P[func];"     
+                "call  %P[func];"     
                 "popal;"             
 
                 "testl %%eax, %%eax;"
@@ -437,7 +438,7 @@ namespace G1WIN
                 jne __42D57C
                 inc ebx
             __42D57C:
-                mov ebp, dword ptr ds:[0x00455310]
+                mov  ebp, dword ptr ds:[0x00455310]
                 push 0x42D57C
                 ret
             }
@@ -445,11 +446,11 @@ namespace G1WIN
             __asm__ __volatile__ 
             (
                 "cmpl $0x03, %%edi;"     
-                "jne 1f;"                
+                "jne  1f;"                
                 "incl %%ebx;"            
                 
                 "1:"                        
-                "movl 0x00455310, %%ebp;"
+                "movl  0x00455310, %%ebp;"
                 "pushl $0x42D57C;"       
                 "ret"                    
                 : 

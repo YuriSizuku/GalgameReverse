@@ -102,8 +102,6 @@ namespace G1WIN
         const HGDIOBJ hOldBmp{ ::SelectObject(hdcMem, hTargetBitmap) };
         const HGDIOBJ hOldFont{ hFont ? ::SelectObject(hdcMem, hFont) : nullptr };
 
-
-
         // 清空画布上的内容
         BITMAP bmp{};
         ::GetObjectA(hTargetBitmap, sizeof(BITMAP), &bmp);

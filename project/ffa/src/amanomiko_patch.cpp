@@ -167,7 +167,7 @@ namespace G1WIN
         return sizeTotal;
     }
 
-    static auto __stdcall TargetDrawText(uintptr_t obj, const char** pStr, int width, int flag) -> void
+    static auto __stdcall DrawTextSingle(uintptr_t obj, const char** pStr, int width, int flag) -> void
     {
         auto&& x{ *reinterpret_cast<int*>(obj + 0x38) };
         auto&& y{ *reinterpret_cast<int*>(obj + 0x3C) };
@@ -334,7 +334,7 @@ namespace G1WIN
         }
 
         // 0x41A7A4
-        Naked_Function auto ScenarioDrawText_Hook(void) -> void
+        Naked_Function auto DrawTextSingle_Hook(void) -> void
         {
             #ifdef MSVC_COMPILER
             __asm
@@ -346,7 +346,7 @@ namespace G1WIN
                 push eax  // width:int
                 push esi  // pStr :char**
                 push edi  // info :void*
-                call TargetDrawText
+                call DrawTextSingle
 
                 popad
 
@@ -367,7 +367,7 @@ namespace G1WIN
                 "pushl $0x041AB96;"
                 "ret;"
                 :
-                : "i" (TargetDrawText)
+                : "i" (DrawTextSingle)
                 : "cc", "memory"
             );
             #endif
@@ -489,7 +489,7 @@ namespace G1WIN
             {
                 JmpWrite(reinterpret_cast<LPVOID>(0x444590), reinterpret_cast<LPVOID>(WndProc_Hook));
                 JmpWrite(reinterpret_cast<LPVOID>(0x41BDA0), reinterpret_cast<LPVOID>(DrawText_Hook));
-                JmpWrite(reinterpret_cast<LPVOID>(0x41A7A4), reinterpret_cast<LPVOID>(ScenarioDrawText_Hook));
+                JmpWrite(reinterpret_cast<LPVOID>(0x41A7A4), reinterpret_cast<LPVOID>(DrawTextSingle_Hook));
                 JmpWrite(reinterpret_cast<LPVOID>(0x42D3EA), reinterpret_cast<LPVOID>(AddFontManagerMenu));
                 JmpWrite(reinterpret_cast<LPVOID>(0x42D576), reinterpret_cast<LPVOID>(FixCheckMenuItemIndex));
             }

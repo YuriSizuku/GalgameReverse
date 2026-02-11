@@ -129,7 +129,7 @@ extern LRESULT CALLBACK WndProc_Hook(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM
 // 0x41BDA0
 extern int __cdecl DrawText_Hook(HDC hdc, const char* text, int count, int extra, int, int, int);
 // 0x41A7A4
-extern void ScenarioDrawText_Hook(void);
+extern void DrawTextSingle_Hook(void);
 // 0x42D3EA
 extern void AddFontManagerMenu(void);
 // 0x42D576
@@ -153,7 +153,7 @@ PVOID g_pfnNews[] = {
     (PVOID)check_RegKey_hook,
     (PVOID)get_reg_value_hook,
     (PVOID)WndProc_Hook,
-    (PVOID)ScenarioDrawText_Hook,
+    (PVOID)DrawTextSingle_Hook,
     (PVOID)AddFontManagerMenu,
     (PVOID)DrawText_Hook,
     (PVOID)FixCheckMenuItemIndex };

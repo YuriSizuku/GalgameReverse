@@ -125,7 +125,7 @@ namespace G1WIN
         {
             
             const char* current{ text + index };
-            const int charCount{ static_cast<int>(*current > 0x80u) + 1 };
+            const int charCount{ (static_cast<uint32_t>(*current) > 0x80u) + 1 };
 
             if (charCount == 2)
             {
@@ -169,7 +169,7 @@ namespace G1WIN
         auto&& y{ *reinterpret_cast<int*>(obj + 0x3C) };
 
         const char* pszText{ *pStr };
-        const int charCount{ static_cast<int>(*pszText > 0x80u) + 1 };
+        const int charCount{ (static_cast<uint32_t>(*pszText) > 0x80u) + 1 };
         if (!pszText || !*pszText)
         {
             *pStr += charCount;

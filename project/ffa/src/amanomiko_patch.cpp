@@ -88,11 +88,6 @@ namespace G1WIN
         return reinterpret_cast<decltype(&UpdateLayer)>(0x41BBA0)(obj, a2, a3, a4, x, y, width, height);
     }
 
-    static auto __cdecl CharCount(int uchar) -> int
-    {
-        return (reinterpret_cast<decltype(&CharCount)>(0x44BD90)(uchar) != 0) + 1;
-    }
-
     static auto DrawText(HDC hdc, const char* text, int count, int extra) -> SIZE
     {
         const auto& hTargetBitmap{ *reinterpret_cast<HGDIOBJ*>(0x45FA24) };
@@ -128,8 +123,9 @@ namespace G1WIN
         SIZE sizeTotal{}, size{};
         for (int index{}; index < count;)
         {
+            
             const char* current{ text + index };
-            const int charCount{ CharCount(*current) };
+            const int charCount{ static_cast<int>(*current > 0x80u) + 1 };
 
             if (charCount == 2)
             {
@@ -173,7 +169,7 @@ namespace G1WIN
         auto&& y{ *reinterpret_cast<int*>(obj + 0x3C) };
 
         const char* pszText{ *pStr };
-        const int charCount{ CharCount(*pszText) };
+        const int charCount{ static_cast<int>(*pszText > 0x80u) + 1 };
         if (!pszText || !*pszText)
         {
             *pStr += charCount;

@@ -88,11 +88,6 @@ namespace G1WIN
         return reinterpret_cast<decltype(&UpdateLayer)>(0x41BBA0)(obj, a2, a3, a4, x, y, width, height);
     }
 
-    static auto __cdecl CharCount(int uchar) -> int
-    {
-        return (reinterpret_cast<decltype(&CharCount)>(0x44BD90)(uchar) != 0) + 1;
-    }
-
     static auto DrawText(HDC hdc, const char* text, int count, int extra) -> SIZE
     {
         const auto& hTargetBitmap{ *reinterpret_cast<HGDIOBJ*>(0x45FA24) };
@@ -102,21 +97,20 @@ namespace G1WIN
         const HGDIOBJ hOldBmp{ ::SelectObject(hdcMem, hTargetBitmap) };
         const HGDIOBJ hOldFont{ hFont ? ::SelectObject(hdcMem, hFont) : nullptr };
 
-
-
-        // 清空画布上的内容
-        BITMAP bmp{};
-        ::GetObjectA(hTargetBitmap, sizeof(BITMAP), &bmp);
-        ::BitBlt(hdcMem, 0, 0, bmp.bmWidth, bmp.bmHeight, NULL, 0, 0, RGB(0, 0, 0));
-
         // 设置背景以及文字颜色
         ::SetBkColor(hdcMem, RGB(0, 0, 0));
         ::SetTextColor(hdcMem, RGB(255, 255, 255));
         ::SetTextCharacterExtra(hdcMem, extra);
+
+        // 清空画布上的内容
+        if (BITMAP bmp{}; ::GetObjectA(hTargetBitmap, sizeof(BITMAP), &bmp))
         {
-            // 更换字体
-            ::TEXTMETRIC tm{};
-            ::GetTextMetricsA(hdcMem, &tm);
+            ::BitBlt(hdcMem, 0, 0, bmp.bmWidth, bmp.bmHeight, NULL, 0, 0, RGB(0, 0, 0));
+        }
+        
+        // 更换字体
+        if (TEXTMETRIC tm{}; ::GetTextMetricsA(hdcMem, &tm))
+        {
             const HFONT tarFont{ FontManager.GetGBKFont(tm.tmHeight) };
             //const HFONT tarFont{ FontManager.GetSJISFont(tm.tmHeight) };
             if (tarFont != nullptr)
@@ -129,13 +123,14 @@ namespace G1WIN
         SIZE sizeTotal{}, size{};
         for (int index{}; index < count;)
         {
+            
             const char* current{ text + index };
-            const int charCount{ CharCount(*current) };
+            const int charCount{ (static_cast<uint32_t>(*current) > 0x80u) + 1 };
 
             if (charCount == 2)
             {
                 // 字符替换 § -> ♪
-                if (*reinterpret_cast<const uint16_t*>(current) == 0xECA1) 
+                if (*reinterpret_cast<const uint16_t*>(current) == 0xECA1)
                 {
                     constexpr wchar_t musical_note{ L'♪' };
                     ::GetTextExtentPoint32W(hdcMem, &musical_note, 1, &size);
@@ -168,13 +163,13 @@ namespace G1WIN
         return sizeTotal;
     }
 
-    static auto __stdcall TargetDrawText(uintptr_t obj, const char** pStr, int width, int flag) -> void
+    static auto __stdcall DrawTextSingle(uintptr_t obj, const char** pStr, int width, int flag) -> void
     {
         auto&& x{ *reinterpret_cast<int*>(obj + 0x38) };
         auto&& y{ *reinterpret_cast<int*>(obj + 0x3C) };
 
         const char* pszText{ *pStr };
-        const int charCount{ CharCount(*pszText) };
+        const int charCount{ (static_cast<uint32_t>(*pszText) > 0x80u) + 1 };
         if (!pszText || !*pszText)
         {
             *pStr += charCount;
@@ -302,7 +297,7 @@ namespace G1WIN
         // 0x41BDA0
         auto __cdecl DrawText_Hook(HDC hdc, const char* text, int count, int extra, int, int, int) -> int
         {
-            return { DrawText(hdc, text, count, extra).cx };
+            return static_cast<int>(DrawText(hdc, text, count, extra).cx);
         }
 
         static Naked_Function auto CALLBACK JmpWndProc(void) -> void
@@ -310,20 +305,20 @@ namespace G1WIN
             #ifdef MSVC_COMPILER
             __asm
             {
-                sub esp, 0x48
+                sub  esp, 0x48
                 push ebx
                 push ebp
-                mov ebp, dword ptr ss:[esp+0x58]
+                mov  ebp, dword ptr ss:[esp+0x58]
                 push 0x444599
                 ret
             }
             #else
             __asm__ __volatile__ 
             (
-                "subl $0x48, %%esp;"      
+                "subl  $0x48, %%esp;"      
                 "pushl %%ebx;"            
                 "pushl %%ebp;"            
-                "movl 0x58(%%esp), %%ebp;"
+                "movl  0x58(%%esp), %%ebp;"
     
                 "pushl $0x444599;"
                 "ret;"            
@@ -335,7 +330,7 @@ namespace G1WIN
         }
 
         // 0x41A7A4
-        Naked_Function auto ScenarioDrawText_Hook(void) -> void
+        Naked_Function auto DrawTextSingle_Hook(void) -> void
         {
             #ifdef MSVC_COMPILER
             __asm
@@ -347,7 +342,7 @@ namespace G1WIN
                 push eax  // width:int
                 push esi  // pStr :char**
                 push edi  // info :void*
-                call TargetDrawText
+                call DrawTextSingle
 
                 popad
 
@@ -357,18 +352,19 @@ namespace G1WIN
             #else
             __asm__ __volatile__
             (
-                "pushal;"                    
-                "movl 0x34(%%esp), %%eax;"
+                "pushal;"
+                "movl  0x34(%%esp), %%eax;"
                 "pushl %%edx;"
                 "pushl %%eax;"
                 "pushl %%esi;"
                 "pushl %%edi;"
-                "call %P0;"
+                "call  %P0;"
                 "popal;"
+
                 "pushl $0x041AB96;"
                 "ret;"
                 :
-                : "i" (TargetDrawText)
+                : "i" (DrawTextSingle)
                 : "cc", "memory"
             );
             #endif
@@ -405,7 +401,7 @@ namespace G1WIN
                 "pushl %[id];"
                 "pushl %[flag];"
                 "pushl %%eax;"       
-                "call %P[func];"     
+                "call  %P[func];"     
                 "popal;"             
 
                 "testl %%eax, %%eax;"
@@ -438,7 +434,7 @@ namespace G1WIN
                 jne __42D57C
                 inc ebx
             __42D57C:
-                mov ebp, dword ptr ds:[0x00455310]
+                mov  ebp, dword ptr ds:[0x00455310]
                 push 0x42D57C
                 ret
             }
@@ -446,11 +442,11 @@ namespace G1WIN
             __asm__ __volatile__ 
             (
                 "cmpl $0x03, %%edi;"     
-                "jne 1f;"                
+                "jne  1f;"                
                 "incl %%ebx;"            
                 
                 "1:"                        
-                "movl 0x00455310, %%ebp;"
+                "movl  0x00455310, %%ebp;"
                 "pushl $0x42D57C;"       
                 "ret"                    
                 : 
@@ -490,7 +486,7 @@ namespace G1WIN
             {
                 JmpWrite(reinterpret_cast<LPVOID>(0x444590), reinterpret_cast<LPVOID>(WndProc_Hook));
                 JmpWrite(reinterpret_cast<LPVOID>(0x41BDA0), reinterpret_cast<LPVOID>(DrawText_Hook));
-                JmpWrite(reinterpret_cast<LPVOID>(0x41A7A4), reinterpret_cast<LPVOID>(ScenarioDrawText_Hook));
+                JmpWrite(reinterpret_cast<LPVOID>(0x41A7A4), reinterpret_cast<LPVOID>(DrawTextSingle_Hook));
                 JmpWrite(reinterpret_cast<LPVOID>(0x42D3EA), reinterpret_cast<LPVOID>(AddFontManagerMenu));
                 JmpWrite(reinterpret_cast<LPVOID>(0x42D576), reinterpret_cast<LPVOID>(FixCheckMenuItemIndex));
             }

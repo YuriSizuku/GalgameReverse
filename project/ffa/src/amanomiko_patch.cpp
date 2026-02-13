@@ -297,7 +297,7 @@ namespace G1WIN
         // 0x41BDA0
         auto __cdecl DrawText_Hook(HDC hdc, const char* text, int count, int extra, int, int, int) -> int
         {
-            return { DrawText(hdc, text, count, extra).cx };
+            return static_cast<int>(DrawText(hdc, text, count, extra).cx);
         }
 
         static Naked_Function auto CALLBACK JmpWndProc(void) -> void

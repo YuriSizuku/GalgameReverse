@@ -130,7 +130,7 @@ namespace G1WIN
             if (charCount == 2)
             {
                 // 字符替换 § -> ♪
-                if (*reinterpret_cast<const uint16_t*>(current) == 0xECA1) 
+                if (*reinterpret_cast<const uint16_t*>(current) == 0xECA1)
                 {
                     constexpr wchar_t musical_note{ L'♪' };
                     ::GetTextExtentPoint32W(hdcMem, &musical_note, 1, &size);
